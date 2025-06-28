@@ -1,5 +1,5 @@
 {
-  "name": "dreams-ai",
+  "name": "dreams-ai-luxury",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,7 +14,9 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.1",
     "framer-motion": "^10.16.4",
-    "lucide-react": "^0.263.1"
+    "lucide-react": "^0.263.1",
+    "three": "^0.158.0",
+    "@types/three": "^0.158.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
