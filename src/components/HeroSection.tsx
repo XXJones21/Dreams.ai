@@ -1,10 +1,25 @@
 import React, { useState } from 'react';
 import MarbleBust from './MarbleBust';
 import ArtDecoColumns from './ArtDecoColumns';
-import { ChevronDown, Play, Sparkles } from 'lucide-react';
+import { ChevronDown, Play, Sparkles, Zap } from 'lucide-react';
+
+const taglines = [
+  "Conscious Creation",
+  "Reality Reimagined", 
+  "Vision Unleashed",
+  "Dream Directed"
+];
 
 const HeroSection: React.FC = () => {
   const [dreamPrompt, setDreamPrompt] = useState('');
+  const [currentTagline, setCurrentTagline] = useState(0);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTagline((prev) => (prev + 1) % taglines.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDreamSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +46,20 @@ const HeroSection: React.FC = () => {
           <div className="space-y-6">
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-cinzel font-bold text-stardust-silver leading-tight">
               <span className="bg-gradient-to-r from-brass via-stardust-silver to-brass bg-clip-text text-transparent">
-                DREAMS
+                LUCID
               </span>
               <br />
               <span className="text-stardust-silver">
-                COME ALIVE
+                VISIONS
               </span>
             </h1>
+            
+            {/* Dynamic Tagline */}
+            <div className="h-16 flex items-center justify-center">
+              <h2 className="text-2xl md:text-3xl font-cinzel font-semibold text-brass transition-all duration-500 transform">
+                {taglines[currentTagline]}
+              </h2>
+            </div>
             
             <p className="text-xl md:text-2xl text-stardust-silver/80 font-inter font-light leading-relaxed max-w-4xl mx-auto">
               Where AI agents craft dynamic interactive narratives that respond to your every choice.
@@ -66,25 +88,40 @@ const HeroSection: React.FC = () => {
               >
                 <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300 flex items-center justify-center space-x-2">
                   <Play className="w-5 h-5" />
-                  <span>Begin Your Dream</span>
+                  <span>Begin Your Vision</span>
                 </span>
               </button>
             </form>
           </div>
 
-          {/* Feature Highlights */}
+          {/* Feature Highlights with Taglines */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8">
-            <div className="glass-card p-6">
-              <h3 className="text-brass font-cinzel font-semibold text-lg mb-2">AI Agent Network</h3>
-              <p className="text-stardust-silver/70 font-inter text-sm">Carthir, Narnion, and Cenedril work together to craft your perfect narrative experience.</p>
+            <div className="glass-card p-6 group hover:border-brass/40 transition-all duration-300">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-brass to-yellow-400 rounded-full flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-black-marble" />
+                </div>
+              </div>
+              <h3 className="text-brass font-cinzel font-semibold text-lg mb-2">Conscious Creation</h3>
+              <p className="text-stardust-silver/70 font-inter text-sm">Take control of your narrative destiny. Every choice you make consciously shapes the story's evolution.</p>
             </div>
-            <div className="glass-card p-6">
-              <h3 className="text-brass font-cinzel font-semibold text-lg mb-2">Dynamic Storytelling</h3>
-              <p className="text-stardust-silver/70 font-inter text-sm">Every choice matters. Watch as your decisions reshape the story in real-time.</p>
+            <div className="glass-card p-6 group hover:border-electric-blue/40 transition-all duration-300">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-electric-blue to-cyan-400 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-black-marble" />
+                </div>
+              </div>
+              <h3 className="text-electric-blue font-cinzel font-semibold text-lg mb-2">Reality Reimagined</h3>
+              <p className="text-stardust-silver/70 font-inter text-sm">Transform the impossible into the inevitable. Watch as AI agents reshape reality according to your vision.</p>
             </div>
-            <div className="glass-card p-6">
-              <h3 className="text-brass font-cinzel font-semibold text-lg mb-2">Visual Narratives</h3>
-              <p className="text-stardust-silver/70 font-inter text-sm">Experience your dreams through cinematic visuals that adapt to your journey.</p>
+            <div className="glass-card p-6 group hover:border-nebula-pink/40 transition-all duration-300">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-nebula-pink to-purple-400 rounded-full flex items-center justify-center">
+                  <Play className="w-6 h-6 text-black-marble" />
+                </div>
+              </div>
+              <h3 className="text-nebula-pink font-cinzel font-semibold text-lg mb-2">Vision Unleashed</h3>
+              <p className="text-stardust-silver/70 font-inter text-sm">Break free from linear storytelling. Experience narratives that adapt, surprise, and evolve with unlimited potential.</p>
             </div>
           </div>
         </div>
