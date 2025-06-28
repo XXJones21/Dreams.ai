@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cosmic-black text-cosmic-white font-modern;
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a1b2f 50%, #2d1b3d 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .cosmic-text {
+    @apply bg-gradient-to-r from-cosmic-gold via-cosmic-white to-cosmic-gold bg-clip-text text-transparent;
+  }
+  
+  .nebula-glow {
+    filter: drop-shadow(0 0 20px rgba(201, 176, 135, 0.5));
+  }
+  
+  .vapor-text {
+    @apply font-cosmic tracking-wider;
+    text-shadow: 0 0 20px rgba(201, 176, 135, 0.6);
+  }
+  
+  .cosmic-border {
+    border: 1px solid rgba(201, 176, 135, 0.3);
+    box-shadow: 0 0 20px rgba(201, 176, 135, 0.1);
+  }
+  
+  .ethereal-backdrop {
+    backdrop-filter: blur(20px);
+    background: rgba(26, 27, 47, 0.8);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #c9b087, #2d1b3d);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #c9b087, #1a1b2f);
+}
