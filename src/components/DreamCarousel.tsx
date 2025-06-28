@@ -8,7 +8,8 @@ const dreamExamples = [
     image: "https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=800",
     genre: "Horror",
     duration: "15-20 min",
-    players: "1.2k"
+    players: "1.2k",
+    tagline: "Dream Directed"
   },
   {
     title: "Dragon's Castle",
@@ -16,7 +17,8 @@ const dreamExamples = [
     image: "https://images.pexels.com/photos/161154/castle-hohenschwangau-alps-alpsee-161154.jpeg?auto=compress&cs=tinysrgb&w=800",
     genre: "Fantasy",
     duration: "20-25 min",
-    players: "2.8k"
+    players: "2.8k",
+    tagline: "Conscious Creation"
   },
   {
     title: "Neon Cyberpunk",
@@ -24,7 +26,8 @@ const dreamExamples = [
     image: "https://images.pexels.com/photos/2387793/pexels-photo-2387793.jpeg?auto=compress&cs=tinysrgb&w=800",
     genre: "Sci-Fi",
     duration: "18-22 min",
-    players: "3.1k"
+    players: "3.1k",
+    tagline: "Reality Reimagined"
   },
   {
     title: "Pirate's Treasure",
@@ -32,7 +35,8 @@ const dreamExamples = [
     image: "https://images.pexels.com/photos/1118873/pexels-photo-1118873.jpeg?auto=compress&cs=tinysrgb&w=800",
     genre: "Adventure",
     duration: "16-20 min",
-    players: "1.9k"
+    players: "1.9k",
+    tagline: "Vision Unleashed"
   }
 ];
 
@@ -66,11 +70,11 @@ const DreamCarousel: React.FC = () => {
         <div className="text-center mb-12">
           <h2 className="text-4xl md:text-5xl font-cinzel font-bold text-stardust-silver mb-4">
             <span className="bg-gradient-to-r from-brass to-nebula-pink bg-clip-text text-transparent">
-              Popular Dreams
+              Popular Visions
             </span>
           </h2>
           <p className="text-xl text-stardust-silver/70 font-inter max-w-2xl mx-auto">
-            Discover what others are dreaming about, or let these inspire your next adventure
+            Discover what others are envisioning, or let these inspire your next adventure
           </p>
         </div>
 
@@ -98,6 +102,9 @@ const DreamCarousel: React.FC = () => {
                           <span className="px-3 py-1 bg-brass/20 border border-brass/40 rounded-full text-brass text-sm font-inter font-medium">
                             {dream.genre}
                           </span>
+                          <span className="px-3 py-1 bg-nebula-pink/20 border border-nebula-pink/40 rounded-full text-nebula-pink text-sm font-cinzel font-medium">
+                            {dream.tagline}
+                          </span>
                           <div className="flex items-center space-x-1 text-stardust-silver/60">
                             <Clock className="w-4 h-4" />
                             <span className="text-sm font-inter">{dream.duration}</span>
@@ -118,7 +125,7 @@ const DreamCarousel: React.FC = () => {
                         <div className="flex space-x-4">
                           <button className="marble-button">
                             <span className="relative z-10 text-brass font-inter font-semibold">
-                              Experience Dream
+                              Experience Vision
                             </span>
                           </button>
                           <button className="glass-button">
