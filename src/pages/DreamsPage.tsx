@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Sparkles, Terminal, Crown } from 'lucide-react';
+import { Sparkles, Terminal, Crown, Zap, Play, ChevronRight } from 'lucide-react';
+import WebGLBackground from '../components/WebGLBackground';
+import InteractiveButton from '../components/InteractiveButton';
+import FluidMenu from '../components/FluidMenu';
+import CorporateCard from '../components/CorporateCard';
 
 const DreamsPage: React.FC = () => {
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [promptIndex, setPromptIndex] = useState(0);
-  const [isTyping, setIsTyping] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
 
   const examplePrompts = [
-    'explore a haunted hospital',
-    'slay the dragon',
-    'escape from a space station',
-    'solve a murder mystery',
-    'survive a zombie apocalypse',
-    'discover ancient treasures',
-    'infiltrate a corporate conspiracy',
-    'command a starship fleet'
+    'infiltrate a corporate conspiracy...',
+    'command a stellar empire...',
+    'escape from a space station...',
+    'solve a murder in the clouds...',
+    'survive a digital apocalypse...',
+    'discover ancient alien tech...',
+    'rule from a marble throne...',
+    'navigate quantum realities...'
   ];
 
   const dreamExamples = [
@@ -23,238 +28,403 @@ const DreamsPage: React.FC = () => {
       id: 1,
       title: 'Corporate Conspiracy',
       image: 'https://images.pexels.com/photos/2041627/pexels-photo-2041627.jpeg',
-      description: 'Infiltrate the marble towers of power',
+      description: 'Infiltrate the marble towers of power and uncover secrets that could topple empires',
       category: 'Thriller'
     },
     {
       id: 2,
       title: 'Cosmic Dragon',
       image: 'https://images.pexels.com/photos/1205301/pexels-photo-1205301.jpeg',
-      description: 'Face the stellar beast in nebula realms',
+      description: 'Face the stellar beast in nebula realms where physics bend to will',
       category: 'Fantasy'
     },
     {
       id: 3,
       title: 'Space Station Omega',
       image: 'https://images.pexels.com/photos/2159/flight-sky-earth-space.jpg',
-      description: 'Escape through the cosmic void',
+      description: 'Escape through the cosmic void as reality fragments around you',
       category: 'Sci-Fi'
     },
     {
       id: 4,
       title: 'Wall Street Phantom',
       image: 'https://images.pexels.com/photos/2041396/pexels-photo-2041396.jpeg',
-      description: 'Uncover secrets in golden towers',
+      description: 'Uncover supernatural secrets in golden towers of infinite wealth',
       category: 'Mystery'
-    },
-    {
-      id: 5,
-      title: 'Nebula Kingdom',
-      image: 'https://images.pexels.com/photos/1205301/pexels-photo-1205301.jpeg',
-      description: 'Rule among the stars',
-      category: 'Adventure'
     }
   ];
 
   useEffect(() => {
     const interval = setInterval(() => {
       setPromptIndex((prev) => (prev + 1) % examplePrompts.length);
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
   const handleDreamSubmit = () => {
     if (currentPrompt.trim()) {
       console.log('Starting dream:', currentPrompt);
-      // Here we would integrate with the agent system
     }
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Corporate Cosmic Background */}
-      <div className="absolute inset-0">
-        {/* Marble texture base */}
-        <div className="absolute inset-0 bg-marble-texture opacity-90"></div>
-        
-        {/* Floating geometric elements */}
-        <div className="absolute inset-0">
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-gold rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{
-                opacity: [0.3, 1, 0.3],
-                scale: [1, 1.5, 1],
-              }}
-              transition={{
-                duration: 3 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
-        </div>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-marble-black via-marble-dark to-marble-black">
+      {/* WebGL Background */}
+      <WebGLBackground />
 
-        {/* Art Deco geometric patterns */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-10">
-          <div className="absolute top-20 left-20 w-32 h-32 border-2 border-gold transform rotate-45"></div>
-          <div className="absolute top-40 right-32 w-24 h-24 border border-brass transform rotate-12"></div>
-          <div className="absolute bottom-32 left-1/4 w-40 h-40 border border-gold transform -rotate-30"></div>
-          <div className="absolute bottom-20 right-20 w-28 h-28 border-2 border-brass transform rotate-60"></div>
+      {/* Luxury Art Deco Border Frame */}
+      <div className="fixed inset-0 pointer-events-none z-10">
+        <div className="absolute inset-4 border-4 border-gold/30 rounded-lg">
+          {/* Corner decorations */}
+          <div className="absolute -top-2 -left-2 w-8 h-8 border-l-4 border-t-4 border-gold"></div>
+          <div className="absolute -top-2 -right-2 w-8 h-8 border-r-4 border-t-4 border-gold"></div>
+          <div className="absolute -bottom-2 -left-2 w-8 h-8 border-l-4 border-b-4 border-gold"></div>
+          <div className="absolute -bottom-2 -right-2 w-8 h-8 border-r-4 border-b-4 border-gold"></div>
         </div>
-
-        {/* Nebula effects */}
-        <div className="absolute inset-0 bg-nebula-gradient opacity-20"></div>
-        
-        {/* Corporate scan lines */}
-        <div className="absolute inset-0 corporate-scan-line"></div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
-        {/* Header Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-          className="text-center mb-16"
-        >
-          {/* Corporate Crown Icon */}
+      {/* Premium cursor follower */}
+      <motion.div
+        className="fixed w-6 h-6 pointer-events-none z-50 mix-blend-screen"
+        style={{
+          left: mousePosition.x - 12,
+          top: mousePosition.y - 12,
+        }}
+        animate={{
+          scale: isHovered ? 2 : 1,
+          opacity: isHovered ? 0.8 : 0.4,
+        }}
+      >
+        <div className="w-full h-full bg-gradient-to-br from-gold via-brass to-gold rounded-full blur-sm"></div>
+        <div className="absolute inset-2 bg-gold rounded-full"></div>
+      </motion.div>
+
+      {/* Navigation */}
+      <div className="absolute top-8 left-8 z-40">
+        <FluidMenu />
+      </div>
+
+      {/* Main Content Container */}
+      <div className="relative z-30 min-h-screen flex flex-col">
+        
+        {/* Hero Section */}
+        <div className="flex-1 flex flex-col items-center justify-center px-8 py-20">
+          
+          {/* Luxury Header */}
           <motion.div
-            className="flex justify-center mb-8"
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 4, repeat: Infinity }}
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="text-center mb-16 relative"
           >
-            <Crown className="w-16 h-16 text-gold drop-shadow-lg" />
+            {/* Art Deco Crown with Cosmic Aura */}
+            <motion.div
+              className="flex justify-center mb-12 relative"
+              animate={{ 
+                rotate: [0, 2, -2, 0],
+              }}
+              transition={{ duration: 8, repeat: Infinity }}
+            >
+              <div className="relative">
+                {/* Cosmic aura */}
+                <motion.div
+                  className="absolute inset-0 w-32 h-32 -m-6"
+                  animate={{
+                    background: [
+                      'radial-gradient(circle, rgba(255,215,0,0.3) 0%, rgba(74,20,140,0.2) 50%, transparent 100%)',
+                      'radial-gradient(circle, rgba(74,20,140,0.3) 0%, rgba(255,215,0,0.2) 50%, transparent 100%)',
+                      'radial-gradient(circle, rgba(255,215,0,0.3) 0%, rgba(74,20,140,0.2) 50%, transparent 100%)'
+                    ]
+                  }}
+                  transition={{ duration: 4, repeat: Infinity }}
+                />
+                
+                {/* Main crown */}
+                <div className="relative w-20 h-20 bg-gradient-to-br from-gold via-brass to-gold rounded-lg flex items-center justify-center shadow-2xl">
+                  <Crown className="w-12 h-12 text-marble-black" />
+                  
+                  {/* Luxury shine effect */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent rounded-lg"
+                    animate={{
+                      x: ['-100%', '100%'],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                </div>
+
+                {/* Orbiting luxury particles */}
+                {[...Array(8)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-3 h-3 bg-gradient-to-br from-gold to-brass rounded-full shadow-lg"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                    }}
+                    animate={{
+                      rotate: [0, 360],
+                      x: Math.cos((i / 8) * Math.PI * 2) * 60,
+                      y: Math.sin((i / 8) * Math.PI * 2) * 60,
+                    }}
+                    transition={{
+                      duration: 12,
+                      repeat: Infinity,
+                      delay: i * 0.2,
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Luxury Typography */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5, duration: 1.2 }}
+              className="relative"
+            >
+              <h1 className="text-8xl md:text-9xl font-luxury font-bold mb-4 relative">
+                <span className="bg-gradient-to-r from-gold via-brass to-gold bg-clip-text text-transparent drop-shadow-2xl">
+                  What will you
+                </span>
+              </h1>
+              
+              <h1 className="text-8xl md:text-9xl font-luxury font-bold mb-8 relative">
+                <span className="bg-gradient-to-r from-gold via-brass to-gold bg-clip-text text-transparent drop-shadow-2xl">
+                  DREAM?
+                </span>
+                
+                {/* Lightning accent */}
+                <motion.div
+                  className="absolute -top-4 -right-8"
+                  animate={{
+                    opacity: [0, 1, 0],
+                    scale: [0.8, 1.2, 0.8],
+                    rotate: [0, 10, -10, 0],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    delay: 2,
+                  }}
+                >
+                  <Zap className="w-16 h-16 text-terminal-green drop-shadow-lg" />
+                </motion.div>
+              </h1>
+
+              {/* Luxury subtitle */}
+              <motion.p
+                className="text-2xl md:text-3xl text-platinum font-corporate tracking-wide max-w-5xl mx-auto leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1, duration: 1 }}
+              >
+                Enter the realm where{' '}
+                <span className="text-gold font-bold">corporate power</span>{' '}
+                meets{' '}
+                <span className="text-nebula-purple font-bold">cosmic infinity</span>
+              </motion.p>
+            </motion.div>
           </motion.div>
 
-          <h1 className="text-6xl md:text-8xl font-luxury font-bold mb-6 wall-street-text">
-            What will you
-          </h1>
-          <h1 className="text-6xl md:text-8xl font-luxury font-bold mb-8 wall-street-text">
-            DREAM?
-          </h1>
-          
-          <motion.p
-            className="text-xl md:text-2xl text-platinum/80 font-corporate tracking-wide max-w-2xl mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 1 }}
+          {/* Premium Dream Examples */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.5, duration: 1 }}
+            className="w-full max-w-7xl mb-16"
           >
-            Enter the realm where <span className="text-gold font-bold">corporate power</span> meets <span className="text-nebula-purple font-bold">cosmic infinity</span>
-          </motion.p>
-        </motion.div>
-
-        {/* Dream Examples Carousel */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8, duration: 0.8 }}
-          className="w-full max-w-6xl mb-12"
-        >
-          <div className="flex overflow-x-auto space-x-6 pb-4 scrollbar-hide">
-            {dreamExamples.map((dream, index) => (
-              <motion.div
-                key={dream.id}
-                className="flex-shrink-0 w-80 marble-surface rounded-lg overflow-hidden art-deco-corner group cursor-pointer"
-                whileHover={{ scale: 1.05, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={dream.image}
-                    alt={dream.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {dreamExamples.map((dream, index) => (
+                <motion.div
+                  key={dream.id}
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.7 + index * 0.1 }}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
+                >
+                  <CorporateCard
+                    title={dream.title}
+                    description={dream.description}
+                    image={dream.image}
+                    category={dream.category}
+                    onClick={() => console.log('Selected dream:', dream.title)}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-marble-black via-transparent to-transparent"></div>
-                  <div className="absolute top-4 right-4 brass-accent px-3 py-1 rounded-full">
-                    <span className="text-marble-black font-corporate font-bold text-sm">{dream.category}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Luxury Dream Input Terminal */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 2, duration: 1 }}
+            className="w-full max-w-4xl"
+          >
+            <div className="relative">
+              {/* Art Deco frame */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-gold/20 via-brass/30 to-gold/20 rounded-2xl blur-xl"></div>
+              
+              <div className="relative bg-gradient-to-br from-marble-black via-marble-dark to-marble-black rounded-2xl border-2 border-gold/40 p-12 shadow-2xl">
+                
+                {/* Luxury terminal header */}
+                <div className="flex items-center justify-between mb-10 pb-8 border-b-2 border-gold/30">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-gold to-brass rounded-lg flex items-center justify-center shadow-lg">
+                      <Terminal className="w-6 h-6 text-marble-black" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-corporate font-bold text-gold tracking-wider">
+                        DREAM INTERFACE
+                      </h3>
+                      <p className="text-platinum/70 font-terminal text-sm tracking-wider">
+                        NEURAL LINK v3.0 • QUANTUM ENCRYPTED
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Status indicators */}
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-terminal-green rounded-full animate-pulse shadow-lg"></div>
+                      <span className="font-terminal text-terminal-green text-sm font-bold">ONLINE</span>
+                    </div>
+                    <div className="flex space-x-1">
+                      {[...Array(4)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="w-1 h-6 bg-gold/60 rounded-full"
+                          animate={{
+                            scaleY: [0.3, 1, 0.3],
+                            opacity: [0.3, 1, 0.3],
+                          }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            delay: i * 0.2,
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-corporate font-bold text-gold mb-2">{dream.title}</h3>
-                  <p className="text-platinum/70 font-modern">{dream.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
 
-        {/* Dream Input Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2, duration: 0.8 }}
-          className="w-full max-w-2xl"
-        >
-          <div className="marble-surface rounded-lg p-8 art-deco-corner relative">
-            {/* Terminal header */}
-            <div className="flex items-center mb-6 pb-4 border-b border-gold/30">
-              <Terminal className="w-6 h-6 text-terminal-green mr-3" />
-              <span className="terminal-glow font-terminal text-lg">DREAM_INTERFACE_v2.0</span>
-              <div className="ml-auto flex space-x-2">
-                <div className="w-3 h-3 rounded-full bg-terminal-red"></div>
-                <div className="w-3 h-3 rounded-full bg-terminal-amber"></div>
-                <div className="w-3 h-3 rounded-full bg-terminal-green"></div>
-              </div>
-            </div>
+                {/* Input area */}
+                <div className="relative">
+                  <textarea
+                    value={currentPrompt}
+                    onChange={(e) => setCurrentPrompt(e.target.value)}
+                    placeholder=""
+                    className="w-full h-48 bg-gradient-to-br from-marble-dark/90 to-marble-black/90 border-2 border-brass/40 rounded-xl p-8 text-platinum placeholder-platinum/50 font-corporate text-xl resize-none focus:border-gold focus:outline-none focus:ring-4 focus:ring-gold/20 transition-all duration-500 backdrop-blur-sm shadow-inner"
+                  />
+                  
+                  {/* Animated placeholder */}
+                  {!currentPrompt && (
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={promptIndex}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 1 }}
+                        className="absolute left-8 top-8 text-2xl text-gold/60 pointer-events-none font-terminal italic"
+                      >
+                        {examplePrompts[promptIndex]}
+                      </motion.div>
+                    </AnimatePresence>
+                  )}
 
-            <div className="relative">
-              <textarea
-                value={currentPrompt}
-                onChange={(e) => setCurrentPrompt(e.target.value)}
-                placeholder="Describe your dream..."
-                className="w-full h-32 bg-marble-dark border-2 border-gold/30 rounded-lg p-4 text-platinum placeholder-platinum/50 font-corporate text-lg resize-none focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/20 transition-all duration-300"
-              />
-              
-              {/* Animated example prompt */}
-              {!currentPrompt && (
-                <AnimatePresence mode="wait">
+                  {/* Luxury scan line */}
                   <motion.div
-                    key={promptIndex}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.5 }}
-                    className="absolute left-4 top-4 text-xl text-gold/60 pointer-events-none font-terminal italic"
+                    className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-terminal-green to-transparent rounded-full"
+                    animate={{
+                      x: ['-100%', '100%'],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                </div>
+
+                {/* Luxury action button */}
+                <div className="mt-10">
+                  <motion.button
+                    onClick={handleDreamSubmit}
+                    className="w-full bg-gradient-to-r from-gold via-brass to-gold text-marble-black font-corporate font-bold text-2xl py-6 rounded-xl shadow-2xl relative overflow-hidden group"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
                   >
-                    {examplePrompts[promptIndex]}
-                  </motion.div>
-                </AnimatePresence>
-              )}
-            </div>
-
-            <motion.button
-              onClick={handleDreamSubmit}
-              className="w-full mt-6 trump-tower-gold text-marble-black font-corporate font-bold text-xl py-4 rounded-lg wall-street-shadow transition-all duration-300 hover:scale-105 active:scale-95"
-              whileHover={{ boxShadow: "0 0 30px rgba(255, 215, 0, 0.5)" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className="flex items-center justify-center space-x-3">
-                <Sparkles className="w-6 h-6" />
-                <span>INITIATE DREAM SEQUENCE</span>
-                <Sparkles className="w-6 h-6" />
+                    {/* Button shine effect */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                      animate={{
+                        x: ['-100%', '100%'],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                    />
+                    
+                    <div className="relative flex items-center justify-center space-x-4">
+                      <Play className="w-8 h-8" />
+                      <span>INITIATE DREAM SEQUENCE</span>
+                      <ChevronRight className="w-8 h-8" />
+                    </div>
+                  </motion.button>
+                </div>
               </div>
-            </motion.button>
-          </div>
-        </motion.div>
+            </div>
+          </motion.div>
+        </div>
 
-        {/* Corporate Footer */}
+        {/* Luxury Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.5, duration: 1 }}
-          className="mt-16 text-center"
+          transition={{ delay: 2.5, duration: 1 }}
+          className="relative z-30 py-12 border-t border-gold/20"
         >
-          <p className="text-platinum/60 font-terminal text-sm tracking-wider">
-            POWERED BY ARTIFICIAL INTELLIGENCE • SECURED BY BLOCKCHAIN • INSPIRED BY INFINITY
-          </p>
+          <div className="max-w-7xl mx-auto px-8">
+            <div className="flex items-center justify-center space-x-12 text-platinum/60 font-terminal text-sm tracking-wider">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-terminal-green rounded-full animate-pulse"></div>
+                <span>POWERED BY ARTIFICIAL INTELLIGENCE</span>
+              </div>
+              <div className="w-px h-6 bg-gold/30"></div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-gold rounded-full animate-pulse delay-300"></div>
+                <span>SECURED BY QUANTUM ENCRYPTION</span>
+              </div>
+              <div className="w-px h-6 bg-gold/30"></div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-nebula-purple rounded-full animate-pulse delay-500"></div>
+                <span>INSPIRED BY INFINITY</span>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>
