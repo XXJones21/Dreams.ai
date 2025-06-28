@@ -1,0 +1,18 @@
+### Example
+
+```json
+{
+  "dream_name": "The Princess Rescue",
+  "user_prompt": "rescue a princess from a castle",
+  "story_prompt": "You are a brave knight navigating through an ancient Castle Drakon to rescue Princess Aurelia from the clutches of the fearsome dragon, Ignis. The castle is riddled with traps and guarded by enchanted creatures.",
+  "dream_tone": "Epic Fantasy",
+  "actionable_goal": "Reach the princess and defeat the dragon.",
+  "characters": ["Princess Aurelia", "Ignis"],
+  "locations": ["Castle Drakon", "Dragon's Lair"],
+  "plot_points": ["Navigate the castle's traps", "Defeat the enchanted creatures", "Confront Ignis"],
+  "video_generation_prompt": "Dragon's Lair style, You are a brave knight facing a dragon",
+  "camera_angles": ["low angle, hero shot", "tracking shot", "aerial view"],
+  "scene_transitions": ["fade in", "wipe", "dissolve"],
+  "created_by": "User"
+}
+```
