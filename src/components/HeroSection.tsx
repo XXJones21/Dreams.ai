@@ -46,7 +46,7 @@ const HeroSection: React.FC = () => {
           <div className="space-y-6">
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-cinzel font-bold text-stardust-silver leading-tight">
               <span className="bg-gradient-to-r from-brass via-stardust-silver to-brass bg-clip-text text-transparent">
-                LUCID
+                DREAM
               </span>
               <br />
               <span className="text-stardust-silver">
@@ -88,7 +88,7 @@ const HeroSection: React.FC = () => {
               >
                 <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300 flex items-center justify-center space-x-2">
                   <Play className="w-5 h-5" />
-                  <span>Begin Your Vision</span>
+                  <span>Begin Your Dream</span>
                 </span>
               </button>
             </form>
