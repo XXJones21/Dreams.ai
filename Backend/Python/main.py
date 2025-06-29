@@ -37,7 +37,7 @@ def write_imn(data: dict):
 
 
 ### Converts a user's inital prompt into a basic .imn file stucture
-def convert_prompt_to_imn(state: State) -> dict:
+def convert_prompt_to_imn(state: State):
     """
     Classifies a user prompt and extracts information.  Handles potential errors.
     """
@@ -51,32 +51,30 @@ def convert_prompt_to_imn(state: State) -> dict:
                 "role": "system",
                 "content": """
                 Classify the user's prompt into the following specific sections to draft an interactive narrative:
-                - story_prompt: You are embarking on a dream in first person inspired by the following prompt: {last_message}.
-                - dream_name: A name for the user's dream journey based on the 'story_prompt'.
-                - initial_goal: An initial goal or natural conclusion of how you think the dream will end with an achieveable goal for the user.
+                - 'story_prompt': You are embarking on a dream in first person inspired by the following prompt: {last_message}.
+                - 'dream_name': A name for the user's dream journey based on the 'story_prompt'.
+                - 'initial_goal': An initial goal or natural conclusion of how you think the dream will end with an achieveable goal for the user.
                 """
             },
             {
                 "role": "user",
-                "content": str(last_message['content'])
+                "content": last_message.content
             }
         ])
 
         # Safely extract values, providing defaults if keys are missing
-        dream_name = result.get("dream_name", "Untitled Dream")  # Default name
-        initial_goal = result.get("initial_goal", "Achieve a simple goal.")  # Default Goal
-        message_type = result.get("message_type", None)
+        dream_name = result.get("dream_name")  # Default name
+        initial_goal = result.get("initial_goal")  # Default Goal
 
         imn_data = {
-            "story_prompt": last_message['content'],
+            "story_prompt": last_message.content,
             "dream_name": dream_name,
             "initial_goal": initial_goal,
-            "message_type": message_type
         }
 
         write_imn(imn_data)
         return {
-            "message_type": message_type  # Pass the string directly
+            "message_type": result.message_type
         }
     except Exception as e:
         print(f"Error in convert_prompt_to_imn: {e}")
@@ -91,31 +89,25 @@ def Carthir(state: State):
     """
 
     last_message = state["messages"][-1]
+    
+    pitch = [
+        {
+            "role": "system",
+            "content": """You are a creative film pitch generator. 
+            Use the following information to create a compelling minute long film in first person perspective pitch:
+            - story_prompt: {story_prompt}
+            - dream_name: {dream_name}
+            - initial_goal: {initial_goal}
+            """
+        },
+        {
+            "role": "user",
+            "content": last_message.content
+        }
+    ]
 
-    try:
-        filename = last_message["dream_name"] + ".imn"
-        with open(filename, "r") as f:
-            imn_data = json.load(f)
-
-        pitch = f"""
-        Film Pitch for '{imn_data['dream_name']}' :
-
-        Based on the story prompt: "{imn_data['story_prompt']}"
-
-        Initial Goal: {imn_data['initial_goal']}
-
-        This film will be a first-person interactive experience... [rest of pitch]
-        """
-
-        print("Carthir Film Pitch:\n", pitch)
-
-        return {"film_pitch": pitch, "message_type": str(last_message['content'])} # Pass the string directly
-    except FileNotFoundError:
-        print("Error: .imn file not found. Please ensure the file exists.")
-        return {}
-    except Exception as e:
-        print(f"Error in Carthir: {e}")
-        return {}
+    reply = llm.invoke(pitch)
+    return {"messages": [{"role": "assistant", "content": reply.content}]}
 
 
 # Build the state graph
@@ -147,20 +139,12 @@ def run_chatbot():
             {"role": "user", "content": user_input}
         ]
 
-
-        initial_state = State(messages=state["messages"], message_type=None)
-        imn_data = convert_prompt_to_imn(initial_state)
+        ## imn_data = convert_prompt_to_imn(initial_state)
         state = graph.invoke(state)
 
         if state.get("messages") and len(state["messages"]) > 0:
-            # Check if the last element is a dictionary containing 'message' key
-            if isinstance(state["messages"][-1], dict) and "message" in state["messages"][-1]:
-                last_message = str(state["messages"][-1]["message"].content)
-                print(f"Bot: {last_message}")
-            else:
-                # Access the content attribute of HumanMessage directly
-                last_message = str(state["messages"][-1]['content'])
-                print(f"Bot: {last_message}")
+                last_message = state["messages"][-1]
+                print(f"Bot: {last_message.content}")
 
 
 if __name__ == "__main__":
