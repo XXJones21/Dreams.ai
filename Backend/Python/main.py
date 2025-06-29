@@ -72,9 +72,11 @@ def convert_prompt_to_imn(state: State):
             "initial_goal": initial_goal,
         }
 
+        filename = dream_name + ".imn"
         write_imn(imn_data)
         return {
-            "message_type": result.message_type
+            "message_type": result.message_type,
+            "imn_filename": filename
         }
     except Exception as e:
         print(f"Error in convert_prompt_to_imn: {e}")
