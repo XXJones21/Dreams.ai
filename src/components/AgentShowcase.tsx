@@ -5,16 +5,16 @@ const agents = [
   {
     name: "Carthir",
     title: "The Narrative Architect",
-    description: "Responsible for outlining the overarching narrative structure, establishing plot points, and ensuring logical progression. Carthir creates the foundation of your vision experience.",
+    description: "Responsible for outlining the overarching narrative structure, establishing plot points, and ensuring logical progression. Carthir creates the foundation of your dream experience.",
     icon: Brain,
     color: "from-brass to-yellow-400",
-    features: ["Story Structure", "Plot Development", "Narrative Logic", "Vision Campaigns"],
+    features: ["Story Structure", "Plot Development", "Narrative Logic", "Dream Campaigns"],
     tagline: "Conscious Creation"
   },
   {
     name: "Narnion",
     title: "The Dynamic Storyteller",
-    description: "Dynamically adapts narratives based on your choices, improvises scenes, and manages story flow. Narnion brings your visions to life through intelligent storytelling.",
+    description: "Dynamically adapts narratives based on your choices, improvises scenes, and manages story flow. Narnion brings your dreams to life through intelligent storytelling.",
     icon: Pen,
     color: "from-electric-blue to-cyan-400",
     features: ["Dynamic Adaptation", "Player Checks", "Scene Improvisation", "Choice Integration"],
@@ -60,14 +60,14 @@ const AgentShowcase: React.FC = () => {
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-cinzel font-bold text-stardust-silver mb-6">
             <span className="bg-gradient-to-r from-brass via-electric-blue to-nebula-pink bg-clip-text text-transparent">
-              Meet Your AI Vision Team
+              Meet Your AI Dream Team
             </span>
           </h2>
           <div className="text-2xl font-cinzel font-semibold text-brass mb-4">
             Vision Unleashed
           </div>
           <p className="text-xl text-stardust-silver/70 font-inter max-w-3xl mx-auto leading-relaxed">
-            Our specialized AI agents work in harmony to create dynamic, responsive narratives that adapt to your every choice. Each agent brings unique expertise to craft your perfect vision experience.
+            Our specialized AI agents work in harmony to create dynamic, responsive narratives that adapt to your every choice. Each agent brings unique expertise to craft your perfect dream experience.
           </p>
         </div>
 
@@ -135,7 +135,7 @@ const AgentShowcase: React.FC = () => {
         {/* Technical Workflow */}
         <div className="p-8 glass-card">
           <h3 className="text-2xl font-cinzel font-bold text-center text-stardust-silver mb-4">
-            How Lucids.Vision Works
+            How Dreams.AI Works
           </h3>
           <div className="text-center text-brass font-cinzel font-medium mb-8">
             Conscious Creation in Action

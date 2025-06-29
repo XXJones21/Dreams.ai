@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Eye, Sparkles } from 'lucide-react';
+import { Menu, X, Brain, Sparkles } from 'lucide-react';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,12 +11,12 @@ const Header: React.FC = () => {
           {/* Logo */}
           <div className="logo-container flex items-center space-x-3">
             <div className="relative">
-              <Eye className="text-brass w-8 h-8" />
+              <Brain className="text-brass w-8 h-8" />
               <Sparkles className="absolute -top-1 -right-1 text-nebula-pink w-4 h-4" />
             </div>
             <div>
               <span className="text-brass text-2xl font-cinzel font-bold tracking-wider">
-                LUCIDS.VISION
+                DREAMS.AI
               </span>
               <div className="logo-underline"></div>
             </div>

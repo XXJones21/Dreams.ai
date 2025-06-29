@@ -70,11 +70,11 @@ const DreamCarousel: React.FC = () => {
         <div className="text-center mb-12">
           <h2 className="text-4xl md:text-5xl font-cinzel font-bold text-stardust-silver mb-4">
             <span className="bg-gradient-to-r from-brass to-nebula-pink bg-clip-text text-transparent">
-              Popular Visions
+              Popular Dreams
             </span>
           </h2>
           <p className="text-xl text-stardust-silver/70 font-inter max-w-2xl mx-auto">
-            Discover what others are envisioning, or let these inspire your next adventure
+            Discover what others are dreaming, or let these inspire your next adventure
           </p>
         </div>
 
@@ -125,7 +125,7 @@ const DreamCarousel: React.FC = () => {
                         <div className="flex space-x-4">
                           <button className="marble-button">
                             <span className="relative z-10 text-brass font-inter font-semibold">
-                              Experience Vision
+                              Experience Dream
                             </span>
                           </button>
                           <button className="glass-button">
