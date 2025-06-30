@@ -11,11 +11,27 @@ const Header: React.FC = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
   
-  // Use the global auth context instead of managing local state
+  // Use the global auth context
   const { user, loading, isAuthenticated } = useAuthContext();
 
+  // CRITICAL FIX: Don't show loading spinner indefinitely
+  // Only show loading for the first 3 seconds, then assume no user
+  const [hasTimedOut, setHasTimedOut] = useState(false);
+  
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasTimedOut(true);
+    }, 3000); // 3 second timeout
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // If we've timed out or we're not loading, determine auth state
+  const shouldShowLoading = loading && !hasTimedOut;
+  const effectivelyAuthenticated = isAuthenticated && user;
+
   const handleSignOut = async () => {
-    if (isSigningOut) return; // Prevent double-clicks
+    if (isSigningOut) return;
     
     try {
       setIsSigningOut(true);
@@ -25,19 +41,15 @@ const Header: React.FC = () => {
       
       if (error) {
         console.error('❌ Sign out error:', error);
-        // Show error but still redirect as fallback
-        alert('Sign out failed, but redirecting anyway');
-      } else {
-        console.log('✅ Sign out successful');
       }
       
-      // Clear any cached data and redirect
+      // Always redirect regardless of error
       localStorage.clear();
       sessionStorage.clear();
       window.location.href = '/';
     } catch (err) {
       console.error('❌ Sign out exception:', err);
-      // Force redirect anyway as fallback
+      // Force redirect anyway
       localStorage.clear();
       sessionStorage.clear();
       window.location.href = '/';
@@ -47,18 +59,15 @@ const Header: React.FC = () => {
   };
 
   const handleStartDreaming = () => {
-    if (isAuthenticated) {
-      // User is logged in, go to profile or dreams
+    if (effectivelyAuthenticated) {
       window.location.href = '/profile';
     } else {
-      // User not logged in, open auth modal
       setIsAuthModalOpen(true);
     }
   };
 
   const handleAuthSuccess = () => {
     setIsAuthModalOpen(false);
-    // Refresh the page to update user state
     window.location.reload();
   };
 
@@ -77,13 +86,11 @@ const Header: React.FC = () => {
         { href: '/profile', label: 'Library', icon: Library, requiresAuth: true }
       ];
     } else {
-      // For home page - only show Dreams when no user is logged in
-      if (!isAuthenticated) {
+      if (!effectivelyAuthenticated) {
         return [
           { href: '/feed', label: 'Dreams', icon: TrendingUp }
         ];
       } else {
-        // When user is logged in on home page, show more options
         return [
           { href: '/feed', label: 'Dreams', icon: TrendingUp },
           { href: '/profile', label: 'Library', icon: Library }
@@ -118,8 +125,7 @@ const Header: React.FC = () => {
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 
-                // Skip items that require auth when user is not authenticated
-                if (item.requiresAuth && !isAuthenticated) return null;
+                if (item.requiresAuth && !effectivelyAuthenticated) return null;
                 
                 return (
                   <a
@@ -134,11 +140,11 @@ const Header: React.FC = () => {
               })}
             </div>
 
-            {/* User Actions */}
+            {/* User Actions - FIXED LOADING LOGIC */}
             <div className="hidden md:flex items-center space-x-4">
-              {loading ? (
+              {shouldShowLoading ? (
                 <div className="w-8 h-8 animate-spin border-2 border-brass border-t-transparent rounded-full"></div>
-              ) : isAuthenticated ? (
+              ) : effectivelyAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   {!isProfilePage && (
                     <a
@@ -194,8 +200,7 @@ const Header: React.FC = () => {
                 {navigationItems.map((item) => {
                   const Icon = item.icon;
                   
-                  // Skip items that require auth when user is not authenticated
-                  if (item.requiresAuth && !isAuthenticated) return null;
+                  if (item.requiresAuth && !effectivelyAuthenticated) return null;
                   
                   return (
                     <a
@@ -210,12 +215,12 @@ const Header: React.FC = () => {
                   );
                 })}
                 
-                {loading ? (
+                {shouldShowLoading ? (
                   <div className="flex items-center space-x-2 pt-4 border-t border-brass/20">
                     <div className="w-5 h-5 animate-spin border-2 border-brass border-t-transparent rounded-full"></div>
                     <span className="text-stardust-silver font-inter font-medium">Loading...</span>
                   </div>
-                ) : isAuthenticated ? (
+                ) : effectivelyAuthenticated ? (
                   <div className="space-y-4 pt-4 border-t border-brass/20">
                     {!isProfilePage && (
                       <a

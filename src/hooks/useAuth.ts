@@ -21,13 +21,32 @@ export const useAuth = () => {
 
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
-    // Simplified initialization - no race conditions
+    // CRITICAL FIX: Set a maximum loading time to prevent infinite loading
+    const setLoadingTimeout = () => {
+      timeoutId = setTimeout(() => {
+        if (mounted) {
+          console.warn('⚠️ Auth loading timed out, setting loading to false');
+          setAuthState(prev => ({ ...prev, loading: false }));
+        }
+      }, 5000); // 5 second maximum loading time
+    };
+
+    const clearLoadingTimeout = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+
     const initializeAuth = async () => {
       try {
         console.log('🔄 Initializing authentication...');
+        setLoadingTimeout(); // Start timeout
         
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        clearLoadingTimeout(); // Clear timeout since we got a response
         
         if (!mounted) return;
         
@@ -46,31 +65,29 @@ export const useAuth = () => {
         if (session?.user) {
           console.log('✅ Session found for user:', session.user.email);
           
-          // Handle profile loading - keep loading true until complete
+          // Set user immediately, then handle profile separately
+          setAuthState({
+            user: session.user,
+            session,
+            profile: null,
+            loading: false, // CRITICAL: Set loading to false immediately when we have a user
+            error: null
+          });
+
+          // Handle profile loading in background
           try {
             const { data: profile, error: profileError } = await ensureProfile(session.user);
             
             if (mounted) {
-              setAuthState({
-                user: session.user,
-                session,
+              setAuthState(prev => ({
+                ...prev,
                 profile: profile || null,
-                loading: false,
                 error: profileError ? `Profile issue: ${profileError.message}` : null
-              });
+              }));
             }
           } catch (profileErr: any) {
             console.warn('⚠️ Profile handling failed:', profileErr);
-            if (mounted) {
-              // User is authenticated even if profile has issues
-              setAuthState({
-                user: session.user,
-                session,
-                profile: null,
-                loading: false,
-                error: `Profile loading failed: ${profileErr.message}`
-              });
-            }
+            // Don't update loading state here since user is already authenticated
           }
         } else {
           console.log('ℹ️ No active session found');
@@ -84,6 +101,7 @@ export const useAuth = () => {
         }
       } catch (err: any) {
         console.error('❌ Auth initialization error:', err);
+        clearLoadingTimeout();
         if (mounted) {
           setAuthState({
             user: null,
@@ -98,7 +116,7 @@ export const useAuth = () => {
 
     initializeAuth();
 
-    // Listen for auth changes with proper state management
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         if (!mounted) return;
@@ -108,39 +126,28 @@ export const useAuth = () => {
         if (session?.user) {
           console.log('✅ User authenticated via state change:', session.user.email);
           
-          // Set loading state while handling profile
-          setAuthState(prev => ({
-            ...prev,
+          // CRITICAL: Set user and loading false immediately
+          setAuthState({
             user: session.user,
             session,
-            loading: true,
+            profile: null,
+            loading: false, // Don't keep loading true
             error: null
-          }));
+          });
 
-          // Handle profile loading
+          // Handle profile in background
           try {
             const { data: profile, error: profileError } = await ensureProfile(session.user);
             
             if (mounted) {
-              setAuthState({
-                user: session.user,
-                session,
+              setAuthState(prev => ({
+                ...prev,
                 profile: profile || null,
-                loading: false,
                 error: profileError ? `Profile issue: ${profileError.message}` : null
-              });
+              }));
             }
           } catch (profileErr: any) {
             console.warn('⚠️ Profile handling failed after auth change:', profileErr);
-            if (mounted) {
-              setAuthState({
-                user: session.user,
-                session,
-                profile: null,
-                loading: false,
-                error: `Profile loading failed: ${profileErr.message}`
-              });
-            }
           }
         } else {
           console.log('ℹ️ User signed out');
@@ -157,6 +164,7 @@ export const useAuth = () => {
 
     return () => {
       mounted = false;
+      clearLoadingTimeout();
       subscription.unsubscribe();
     };
   }, []);
@@ -170,16 +178,12 @@ export const useAuth = () => {
     try {
       console.log('🔄 Refreshing profile for user:', authState.user.email);
       
-      // Set loading state for profile refresh
-      setAuthState(prev => ({ ...prev, loading: true, error: null }));
-      
       const { data: profile, error } = await getProfile(authState.user.id);
       
       if (error) {
         console.error('❌ Error refreshing profile:', error);
         setAuthState(prev => ({ 
           ...prev, 
-          loading: false, 
           error: `Profile refresh failed: ${error.message}` 
         }));
         return;
@@ -189,14 +193,12 @@ export const useAuth = () => {
       setAuthState(prev => ({ 
         ...prev, 
         profile, 
-        loading: false, 
         error: null 
       }));
     } catch (err: any) {
       console.error('❌ Error in refreshProfile:', err);
       setAuthState(prev => ({ 
         ...prev, 
-        loading: false, 
         error: `Profile refresh failed: ${err.message}` 
       }));
     }
