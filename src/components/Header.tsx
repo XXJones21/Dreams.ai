@@ -1,8 +1,43 @@
-import React, { useState } from 'react';
-import { Menu, X, Brain, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, X, Brain, Sparkles, User, LogOut } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
+
+  const handleStartDreaming = () => {
+    if (user) {
+      // User is logged in, go to profile or dreams
+      window.location.href = '/profile';
+    } else {
+      // User not logged in, go to login
+      window.location.href = '/login';
+    }
+  };
 
   return (
     <header className="relative z-50 w-full">
@@ -15,16 +50,16 @@ const Header: React.FC = () => {
               <Sparkles className="absolute -top-1 -right-1 text-nebula-pink w-4 h-4" />
             </div>
             <div>
-              <span className="text-brass text-2xl font-cinzel font-bold tracking-wider">
+              <a href="/" className="text-brass text-2xl font-cinzel font-bold tracking-wider">
                 DREAMS.AI
-              </span>
+              </a>
               <div className="logo-underline"></div>
             </div>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {['Technology', 'Agents', 'Dreams', 'Community'].map((item) => (
+            {['Technology', 'Agents', 'Dreams', 'Library'].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase()}`}
@@ -35,12 +70,43 @@ const Header: React.FC = () => {
             ))}
           </div>
 
-          {/* CTA Button */}
-          <button className="hidden md:block marble-button">
-            <span className="relative z-10 text-brass font-inter font-semibold tracking-wide">
-              Start Dreaming
-            </span>
-          </button>
+          {/* User Actions */}
+          <div className="hidden md:flex items-center space-x-4">
+            {isLoading ? (
+              <div className="w-8 h-8 animate-spin border-2 border-brass border-t-transparent rounded-full"></div>
+            ) : user ? (
+              <div className="flex items-center space-x-4">
+                <a
+                  href="/profile"
+                  className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="font-inter font-medium">Profile</span>
+                </a>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-inter font-medium">Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <a
+                  href="/login"
+                  className="text-stardust-silver hover:text-brass transition-colors font-inter font-medium"
+                >
+                  Sign In
+                </a>
+                <button onClick={handleStartDreaming} className="marble-button">
+                  <span className="relative z-10 text-brass font-inter font-semibold tracking-wide">
+                    Start Dreaming
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Mobile Menu Toggle */}
           <button
@@ -55,7 +121,7 @@ const Header: React.FC = () => {
         {isMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-black-marble/95 backdrop-blur-md border-t border-brass/20">
             <div className="container mx-auto px-6 py-6 space-y-4">
-              {['Technology', 'Agents', 'Dreams', 'Community'].map((item) => (
+              {['Technology', 'Agents', 'Dreams', 'Library'].map((item) => (
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
@@ -65,11 +131,44 @@ const Header: React.FC = () => {
                   {item}
                 </a>
               ))}
-              <button className="marble-button w-full mt-4">
-                <span className="relative z-10 text-brass font-inter font-semibold">
-                  Start Dreaming
-                </span>
-              </button>
+              
+              {user ? (
+                <div className="space-y-4 pt-4 border-t border-brass/20">
+                  <a
+                    href="/profile"
+                    className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <User className="w-5 h-5" />
+                    <span className="font-inter font-medium">Profile</span>
+                  </a>
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}
+                    className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-inter font-medium">Sign Out</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4 pt-4 border-t border-brass/20">
+                  <a
+                    href="/login"
+                    className="block text-stardust-silver hover:text-brass transition-colors font-inter font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sign In
+                  </a>
+                  <button onClick={handleStartDreaming} className="marble-button w-full">
+                    <span className="relative z-10 text-brass font-inter font-semibold">
+                      Start Dreaming
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
