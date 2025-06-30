@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from .main import graph  # Import your LangGraph pipeline
+from main import graph  # Import your LangGraph pipeline
 
 app = FastAPI()
 
