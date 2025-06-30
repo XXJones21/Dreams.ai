@@ -13,19 +13,39 @@ const taglines = [
 const HeroSection: React.FC = () => {
   const [dreamPrompt, setDreamPrompt] = useState('');
   const [currentTagline, setCurrentTagline] = useState(0);
+  const [dreamResult, setDreamResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
 
   React.useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTagline((prev) => (prev + 1) % taglines.length);
+      setCurrentTagline((prev: number) => (prev + 1) % taglines.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleDreamSubmit = (e: React.FormEvent) => {
+  const handleDreamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (dreamPrompt.trim()) {
-      // This would trigger the agent workflow
-      console.log('Starting dream:', dreamPrompt);
+    if (!dreamPrompt.trim()) return;
+    setLoading(true);
+    setError(null);
+    setDreamResult(null);
+    setShowPopup(false);
+    try {
+      const response = await fetch("http://localhost:8000/api/dream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: dreamPrompt }),
+      });
+      if (!response.ok) throw new Error("Failed to generate dream.");
+      const data = await response.json();
+      setDreamResult(data);
+      setShowPopup(true);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,14 +104,40 @@ const HeroSection: React.FC = () => {
               <button 
                 type="submit"
                 className="marble-button-large group w-full"
-                disabled={!dreamPrompt.trim()}
+                disabled={!dreamPrompt.trim() || loading}
               >
                 <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300 flex items-center justify-center space-x-2">
                   <Play className="w-5 h-5" />
-                  <span>Begin Your Dream</span>
+                  <span>{loading ? "Generating..." : "Begin Your Dream"}</span>
                 </span>
               </button>
             </form>
+            {loading && <div className="text-brass mt-4">Generating your dream...</div>}
+            {error && <div className="text-red-500 mt-4">{error}</div>}
+            {dreamResult && (
+              <div className="dream-result mt-8 p-6 rounded-lg bg-black-marble/70 border border-brass/30">
+                <h2 className="text-3xl font-cinzel font-bold text-brass mb-2">{dreamResult.dream_name}</h2>
+                <p className="text-lg text-stardust-silver/80 mb-2"><strong>Prompt:</strong> {dreamResult.story_prompt}</p>
+                <p className="text-lg text-stardust-silver/80 mb-2"><strong>Goal:</strong> {dreamResult.initial_goal}</p>
+                <p className="text-stardust-silver/90 mt-4">{dreamResult.pitch}</p>
+                <p className="text-xs text-stardust-silver/50 mt-2">IMN file: {dreamResult.imn_filename}</p>
+              </div>
+            )}
+            {showPopup && dreamResult && (
+              <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-60">
+                <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+                  <h2 className="text-2xl font-bold text-brass mb-4">Dream Created!</h2>
+                  <p className="text-lg text-black-marble mb-2">Your dream title:</p>
+                  <div className="text-xl font-cinzel text-electric-blue mb-4">{dreamResult.dream_name}</div>
+                  <button
+                    className="marble-button-large mt-2"
+                    onClick={() => setShowPopup(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Feature Highlights with Taglines */}
