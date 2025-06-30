@@ -3,17 +3,30 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Enhanced error checking for environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase environment variables not found. Using demo mode.');
+  console.error('❌ Missing Supabase environment variables!');
+  console.error('VITE_SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
+  console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
+  console.error('Please check your .env file and ensure it contains valid Supabase credentials.');
 }
 
-// Provide fallback values for development/demo
-const defaultUrl = 'https://demo.supabase.co';
-const defaultKey = 'demo-key';
-
+// Create Supabase client with error handling
 export const supabase = createClient(
-  supabaseUrl || defaultUrl, 
-  supabaseAnonKey || defaultKey
+  supabaseUrl || 'https://demo.supabase.co', 
+  supabaseAnonKey || 'demo-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'dreams-ai-web'
+      }
+    }
+  }
 );
 
 // Database Types
@@ -73,25 +86,60 @@ export interface AuthError {
   status?: number;
 }
 
-// Connection Test Function
-export const testSupabaseConnection = async (): Promise<{ success: boolean; error?: string }> => {
+// Enhanced Connection Test Function
+export const testSupabaseConnection = async (): Promise<{ success: boolean; error?: string; details?: any }> => {
   try {
-    const { data, error } = await supabase.from('profiles').select('count').limit(1);
+    console.log('🔍 Testing Supabase connection...');
+    console.log('URL:', supabaseUrl);
+    console.log('Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'Missing');
+
+    // Test basic connection
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
     
     if (error) {
-      console.error('Supabase connection test failed:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Supabase connection test failed:', error);
+      return { 
+        success: false, 
+        error: error.message,
+        details: {
+          code: error.code,
+          hint: error.hint,
+          details: error.details
+        }
+      };
     }
     
     console.log('✅ Supabase connection successful');
     return { success: true };
-  } catch (err) {
-    console.error('Supabase connection test error:', err);
-    return { success: false, error: 'Failed to connect to Supabase' };
+  } catch (err: any) {
+    console.error('❌ Supabase connection test error:', err);
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to connect to Supabase';
+    
+    if (err.message?.includes('fetch')) {
+      errorMessage = 'Network error: Unable to reach Supabase. Check your internet connection and Supabase URL.';
+    } else if (err.message?.includes('Invalid API key')) {
+      errorMessage = 'Invalid Supabase API key. Please check your VITE_SUPABASE_ANON_KEY.';
+    } else if (err.message?.includes('Project not found')) {
+      errorMessage = 'Supabase project not found. Please check your VITE_SUPABASE_URL.';
+    }
+    
+    return { 
+      success: false, 
+      error: errorMessage,
+      details: {
+        originalError: err.message,
+        stack: err.stack
+      }
+    };
   }
 };
 
-// Auth functions with comprehensive error handling
+// Enhanced Auth functions with better error handling
 export const signUp = async (email: string, password: string) => {
   try {
     // Validate inputs
@@ -102,6 +150,8 @@ export const signUp = async (email: string, password: string) => {
     if (password.length < 8) {
       return { data: null, error: { message: 'Password must be at least 8 characters long' } };
     }
+
+    console.log('🔐 Attempting to sign up user:', email);
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -115,14 +165,23 @@ export const signUp = async (email: string, password: string) => {
     });
 
     if (error) {
-      console.error('SignUp error:', error);
+      console.error('❌ SignUp error:', error);
       return { data: null, error };
     }
 
     console.log('✅ User signed up successfully:', data.user?.email);
     return { data, error: null };
-  } catch (err) {
-    console.error('SignUp exception:', err);
+  } catch (err: any) {
+    console.error('❌ SignUp exception:', err);
+    
+    // Check for network errors
+    if (err.message?.includes('fetch') || err.name === 'TypeError') {
+      return { 
+        data: null, 
+        error: { message: 'Network error: Unable to connect to authentication service. Please check your internet connection.' } 
+      };
+    }
+    
     return { data: null, error: { message: 'Authentication service unavailable' } };
   }
 };
@@ -133,17 +192,23 @@ export const signIn = async (email: string, password: string) => {
       return { data: null, error: { message: 'Email and password are required' } };
     }
 
+    console.log('🔐 Attempting to sign in user:', email);
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
     if (error) {
-      console.error('SignIn error:', error);
+      console.error('❌ SignIn error:', error);
       
       // Provide user-friendly error messages
       if (error.message.includes('Invalid login credentials')) {
         return { data: null, error: { message: 'Invalid email or password' } };
+      }
+      
+      if (error.message.includes('Email not confirmed')) {
+        return { data: null, error: { message: 'Please check your email and confirm your account' } };
       }
       
       return { data: null, error };
@@ -151,8 +216,17 @@ export const signIn = async (email: string, password: string) => {
 
     console.log('✅ User signed in successfully:', data.user?.email);
     return { data, error: null };
-  } catch (err) {
-    console.error('SignIn exception:', err);
+  } catch (err: any) {
+    console.error('❌ SignIn exception:', err);
+    
+    // Check for network errors
+    if (err.message?.includes('fetch') || err.name === 'TypeError') {
+      return { 
+        data: null, 
+        error: { message: 'Network error: Unable to connect to authentication service. Please check your internet connection.' } 
+      };
+    }
+    
     return { data: null, error: { message: 'Authentication service unavailable' } };
   }
 };
@@ -162,14 +236,14 @@ export const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     
     if (error) {
-      console.error('SignOut error:', error);
+      console.error('❌ SignOut error:', error);
       return { error };
     }
 
     console.log('✅ User signed out successfully');
     return { error: null };
-  } catch (err) {
-    console.error('SignOut exception:', err);
+  } catch (err: any) {
+    console.error('❌ SignOut exception:', err);
     return { error: { message: 'Sign out failed' } };
   }
 };
@@ -185,14 +259,14 @@ export const resetPassword = async (email: string) => {
     });
 
     if (error) {
-      console.error('Reset password error:', error);
+      console.error('❌ Reset password error:', error);
       return { data: null, error };
     }
 
     console.log('✅ Password reset email sent to:', email);
     return { data, error: null };
-  } catch (err) {
-    console.error('Reset password exception:', err);
+  } catch (err: any) {
+    console.error('❌ Reset password exception:', err);
     return { data: null, error: { message: 'Password reset service unavailable' } };
   }
 };
@@ -203,13 +277,13 @@ export const getCurrentUser = async () => {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) {
-      console.error('Get current user error:', error);
+      console.error('❌ Get current user error:', error);
       return { user: null, error };
     }
 
     return { user, error: null };
-  } catch (err) {
-    console.error('Get current user exception:', err);
+  } catch (err: any) {
+    console.error('❌ Get current user exception:', err);
     return { user: null, error: { message: 'Failed to get current user' } };
   }
 };
@@ -219,13 +293,13 @@ export const getCurrentSession = async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('Get current session error:', error);
+      console.error('❌ Get current session error:', error);
       return { session: null, error };
     }
 
     return { session, error: null };
-  } catch (err) {
-    console.error('Get current session exception:', err);
+  } catch (err: any) {
+    console.error('❌ Get current session exception:', err);
     return { session: null, error: { message: 'Failed to get current session' } };
   }
 };
@@ -245,7 +319,7 @@ export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_a
       .single();
 
     if (error) {
-      console.error('Create profile error:', error);
+      console.error('❌ Create profile error:', error);
       
       if (error.code === '23505') { // Unique constraint violation
         return { data: null, error: { message: 'Profile already exists for this user' } };
@@ -256,8 +330,8 @@ export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_a
 
     console.log('✅ Profile created successfully for user:', profileData.user_id);
     return { data, error: null };
-  } catch (err) {
-    console.error('Create profile exception:', err);
+  } catch (err: any) {
+    console.error('❌ Create profile exception:', err);
     return { data: null, error: { message: 'Profile creation failed' } };
   }
 };
@@ -275,7 +349,7 @@ export const getProfile = async (userId: string) => {
       .single();
 
     if (error) {
-      console.error('Get profile error:', error);
+      console.error('❌ Get profile error:', error);
       
       if (error.code === 'PGRST116') { // No rows returned
         return { data: null, error: { message: 'Profile not found' } };
@@ -285,8 +359,8 @@ export const getProfile = async (userId: string) => {
     }
 
     return { data, error: null };
-  } catch (err) {
-    console.error('Get profile exception:', err);
+  } catch (err: any) {
+    console.error('❌ Get profile exception:', err);
     return { data: null, error: { message: 'Profile fetch failed' } };
   }
 };
@@ -308,14 +382,14 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
       .single();
 
     if (error) {
-      console.error('Update profile error:', error);
+      console.error('❌ Update profile error:', error);
       return { data: null, error };
     }
 
     console.log('✅ Profile updated successfully for user:', userId);
     return { data, error: null };
-  } catch (err) {
-    console.error('Update profile exception:', err);
+  } catch (err: any) {
+    console.error('❌ Update profile exception:', err);
     return { data: null, error: { message: 'Profile update failed' } };
   }
 };
@@ -349,7 +423,7 @@ export const uploadProfilePicture = async (userId: string, file: File) => {
       });
     
     if (error) {
-      console.error('Upload profile picture error:', error);
+      console.error('❌ Upload profile picture error:', error);
       return { data: null, error };
     }
     
@@ -359,8 +433,8 @@ export const uploadProfilePicture = async (userId: string, file: File) => {
     
     console.log('✅ Profile picture uploaded successfully for user:', userId);
     return { data: { ...data, publicUrl: urlData.publicUrl }, error: null };
-  } catch (err) {
-    console.error('Upload profile picture exception:', err);
+  } catch (err: any) {
+    console.error('❌ Upload profile picture exception:', err);
     return { data: null, error: { message: 'File upload failed' } };
   }
 };
@@ -376,14 +450,14 @@ export const deleteProfilePicture = async (filePath: string) => {
       .remove([filePath]);
 
     if (error) {
-      console.error('Delete profile picture error:', error);
+      console.error('❌ Delete profile picture error:', error);
       return { data: null, error };
     }
 
     console.log('✅ Profile picture deleted successfully:', filePath);
     return { data, error: null };
-  } catch (err) {
-    console.error('Delete profile picture exception:', err);
+  } catch (err: any) {
+    console.error('❌ Delete profile picture exception:', err);
     return { data: null, error: { message: 'File deletion failed' } };
   }
 };
@@ -398,14 +472,14 @@ export const createDream = async (dreamData: Omit<Dream, 'id' | 'created_at'>) =
       .single();
 
     if (error) {
-      console.error('Create dream error:', error);
+      console.error('❌ Create dream error:', error);
       return { data: null, error };
     }
 
     console.log('✅ Dream created successfully:', data.dream_name);
     return { data, error: null };
-  } catch (err) {
-    console.error('Create dream exception:', err);
+  } catch (err: any) {
+    console.error('❌ Create dream exception:', err);
     return { data: null, error: { message: 'Dream creation failed' } };
   }
 };
@@ -423,13 +497,13 @@ export const getUserDreams = async (userId: string) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Get user dreams error:', error);
+      console.error('❌ Get user dreams error:', error);
       return { data: null, error };
     }
 
     return { data, error: null };
-  } catch (err) {
-    console.error('Get user dreams exception:', err);
+  } catch (err: any) {
+    console.error('❌ Get user dreams exception:', err);
     return { data: null, error: { message: 'Failed to fetch dreams' } };
   }
 };
@@ -443,5 +517,6 @@ export const onAuthStateChange = (callback: (event: string, session: any) => voi
 testSupabaseConnection().then(result => {
   if (!result.success) {
     console.warn('⚠️ Supabase connection failed:', result.error);
+    console.warn('Details:', result.details);
   }
 });
