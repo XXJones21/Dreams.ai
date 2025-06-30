@@ -237,25 +237,19 @@ export const signIn = async (email: string, password: string) => {
 
 export const signOut = async () => {
   try {
-    console.log('🔐 Attempting to sign out user...');
-    
+    console.log('[supabase] 🔐 Attempting to sign out user...');
     const { error } = await supabase.auth.signOut();
-    
     if (error) {
-      console.error('❌ SignOut error:', error);
+      console.error('[supabase] ❌ SignOut error:', error);
       return { error };
     }
-
-    console.log('✅ User signed out successfully');
-    
-    // Clear any cached data
+    console.log('[supabase] ✅ User signed out successfully');
     localStorage.removeItem('supabase.auth.token');
     sessionStorage.clear();
-    
     return { error: null };
   } catch (err: any) {
-    console.error('❌ SignOut exception:', err);
-    return { error: { message: 'Sign out failed' } };
+    console.error('[supabase] ❌ SignOut exception:', err);
+    return { error: { message: err.message } };
   }
 };
 
