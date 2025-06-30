@@ -23,19 +23,24 @@ const FeedPage: React.FC = () => {
   }, []);
 
   const loadUserData = async () => {
+    console.count('loadUserData called');
     try {
       setIsLoading(true);
       setError('');
-
-      // Add timeout for auth check
+      console.log('Starting getSession...');
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Authentication check timed out')), 10000)
+        setTimeout(() => {
+          console.log('Timeout reached');
+          reject(new Error('Authentication check timed out'));
+        }, 10000)
       );
-
-      const sessionPromise = supabase.auth.getSession();
-      
+      const sessionPromise = supabase.auth.getSession().then((result) => {
+        console.log('getSession result:', result);
+        return result;
+      });
       const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-      
+      console.log('Session:', session, 'Session error:', sessionError);
+
       if (sessionError) {
         console.error('Session error:', sessionError);
         setError('Failed to check authentication status');
