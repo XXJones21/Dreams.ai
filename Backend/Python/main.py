@@ -1,5 +1,8 @@
 import json
 import re
+import uuid
+import os
+from datetime import datetime
 
 from dotenv import load_dotenv
 from typing import Annotated, Literal, TypedDict
@@ -21,22 +24,24 @@ class State(TypedDict):
     initial_goal: str | None
     pitch: str | None
     imn_filename: str | None
+    id: str | None
+    user_id: str | None
 
 
 class convert_prompt_to_imn(TypedDict):
 
-    message_type: Literal["story_prompt", "dream_name", "initial_goal"]
+    message_type: Literal["story_prompt", "dream_name", "initial_goal", "pitch"]
 
 
-def write_imn(data: dict):
+def write_imn(data: dict, directory: str):
     """
-    Write the IMN structure to a file.
+    Write the IMN structure to a file in the specified directory.
     """
-    filename = data["dream_name"] + ".imn"
-
+    os.makedirs(directory, exist_ok=True)
+    filename = os.path.join(directory, f"{data['id']}.imn")
     try:
-        with open(filename, "w") as f:  # 'w' for write mode - overwrites existing file
-            json.dump(data, f, indent=4)  # Use json.dump to write the dictionary to the file with indentation for readability
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=4)
         print(f"Successfully wrote .imn file: {filename}")
     except Exception as e:
         print(f"Error writing to .imn file: {e}")
@@ -51,22 +56,29 @@ def convert_prompt_to_imn(state: State):
     dream_name = state.get("dream_name")
     story_prompt = state.get("story_prompt")
     initial_goal = state.get("initial_goal")
+    pitch = state.get("pitch")
+    user_id = state.get("user_id", "user-uuid-placeholder")  # Replace with real user_id logic
 
-    if not dream_name:
-        dream_name = "untitled_dream"
-        print("Warning: dream_name missing, using default.")
+    dream_id = str(uuid.uuid4())
+    created_at = datetime.utcnow().isoformat() + "Z"
 
     imn_data = {
-        "dream_name": dream_name,
+        "id": dream_id,
+        "user_id": user_id,
+        "dream_name": dream_name or "untitled_dream",
         "story_prompt": story_prompt,
         "initial_goal": initial_goal,
+        "pitch": pitch,
+        "created_at": created_at
     }
 
-    filename = dream_name + ".imn"
-    write_imn(imn_data)
+    directory = os.path.join("Backend", "Dreams")
+    write_imn(imn_data, directory)
 
-    # Pass along the state, adding the filename
-    state["imn_filename"] = filename
+    # Pass along the state, adding the filename and IDs
+    state["imn_filename"] = os.path.join(directory, f"{dream_id}.imn")
+    state["id"] = dream_id
+    state["user_id"] = user_id
     return state
 
 
@@ -177,7 +189,7 @@ graph = graph_builder.compile()
 
 
 def run_chatbot():
-    state = {"messages": [], "message_type": None, "dream_name": None, "story_prompt": None, "initial_goal": None, "pitch": None, "imn_filename": None}
+    state = {"messages": [], "message_type": None, "dream_name": None, "story_prompt": None, "initial_goal": None, "pitch": None, "imn_filename": None, "id": None, "user_id": None}
 
     while True:
         user_input = input("You: ")
