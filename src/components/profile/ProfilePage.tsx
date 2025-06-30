@@ -8,67 +8,53 @@ const ProfilePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  const [timedOut, setTimedOut] = useState(false);
 
   const loadProfile = async () => {
+    setIsLoading(true);
+    setError('');
+    setTimedOut(false);
     try {
-      setIsLoading(true);
-      setError('');
-
-      // Add timeout for profile loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile loading timed out')), 10000)
-      );
-
-      const userPromise = supabase.auth.getUser();
-      
-      const { data: { user }, error: userError } = await Promise.race([userPromise, timeoutPromise]) as any;
-      
-      if (userError) {
-        setError('Failed to get user information');
-        console.error('User error:', userError);
-        return;
-      }
-
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // Redirect to home if no user
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+        setError('Not authenticated');
+        setIsLoading(false);
         return;
       }
-
       const { data: profileData, error: profileError } = await getProfile(user.id);
-      
       if (profileError) {
-        if (profileError.message === 'Profile not found') {
-          setError('Profile not found. Please complete your registration.');
-        } else {
-          setError('Failed to load profile');
-        }
-        console.error('Profile error:', profileError);
+        setError('Failed to load profile: ' + profileError.message);
+      } else if (!profileData) {
+        setError('Profile not found');
       } else {
         setProfile(profileData);
-        setError('');
       }
-    } catch (error: any) {
-      console.error('Error loading profile:', error);
-      if (error.message?.includes('timeout')) {
-        setError('Profile loading timed out. Please try again.');
-      } else {
-        setError('An unexpected error occurred');
-      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError('Unexpected error: ' + message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadProfile();
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        setTimedOut(true);
+        setIsLoading(false);
+        setError('Profile loading timed out. Please try again.');
+      }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [retryCount]);
+
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
-    loadProfile();
+    setProfile(null);
+    setError('');
+    setTimedOut(false);
+    setIsLoading(true);
   };
 
   const handleSignOut = async () => {
@@ -111,6 +97,19 @@ const ProfilePage: React.FC = () => {
               <p className="text-stardust-silver/60 text-sm mt-2">
                 Attempt {retryCount + 1}
               </p>
+            )}
+            {timedOut && (
+              <div className="mt-4">
+                <p className="text-red-400 font-inter">Profile loading timed out.</p>
+                <button
+                  onClick={handleRetry}
+                  className="marble-button mt-2"
+                >
+                  <span className="relative z-10 text-brass font-inter font-medium">
+                    Try Again
+                  </span>
+                </button>
+              </div>
             )}
           </div>
         </div>
