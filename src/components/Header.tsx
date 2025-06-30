@@ -118,6 +118,13 @@ const Header: React.FC = () => {
                 </a>
                 <div className="logo-underline"></div>
               </div>
+              {/* Powered by Bolt Image */}
+              <img
+                src="/white_circle_360x360.png"
+                alt="Powered by Bolt.New"
+                className="ml-4 w-10 h-10 object-contain"
+                style={{ borderRadius: '50%' }}
+              />
             </div>
 
             {/* Desktop Navigation */}
