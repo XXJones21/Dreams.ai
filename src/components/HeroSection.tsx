@@ -4,6 +4,9 @@ import ArtDecoColumns from './ArtDecoColumns';
 import { ChevronDown, Play, Sparkles, Zap, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import AuthModal from './auth/AuthModal';
+// If '@supabase/supabase-js' types are not available, provide fallback types:
+type SessionFallback = { user: any } | null;
+type AuthChangeEventFallback = string;
 
 const taglines = [
   "Conscious Creation",
@@ -24,15 +27,17 @@ const HeroSection: React.FC = () => {
 
   useEffect(() => {
     // Check authentication status
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data }: { data: { session: SessionFallback } }) => {
+      setUser(data.session?.user ?? null);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEventFallback, session: SessionFallback) => {
+        setUser(session?.user ?? null);
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
