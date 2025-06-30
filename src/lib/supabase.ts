@@ -237,6 +237,8 @@ export const signIn = async (email: string, password: string) => {
 
 export const signOut = async () => {
   try {
+    console.log('🔐 Attempting to sign out user...');
+    
     const { error } = await supabase.auth.signOut();
     
     if (error) {
@@ -245,6 +247,11 @@ export const signOut = async () => {
     }
 
     console.log('✅ User signed out successfully');
+    
+    // Clear any cached data
+    localStorage.removeItem('supabase.auth.token');
+    sessionStorage.clear();
+    
     return { error: null };
   } catch (err: any) {
     console.error('❌ SignOut exception:', err);
@@ -316,6 +323,8 @@ export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_a
       return { data: null, error: { message: 'Missing required profile fields' } };
     }
 
+    console.log('📝 Creating profile for user:', profileData.user_id);
+
     const { data, error } = await supabase
       .from('profiles')
       .insert([profileData])
@@ -346,6 +355,8 @@ export const getProfile = async (userId: string) => {
       return { data: null, error: { message: 'User ID is required' } };
     }
 
+    console.log('📖 Fetching profile for user:', userId);
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -356,16 +367,68 @@ export const getProfile = async (userId: string) => {
       console.error('❌ Get profile error:', error);
       
       if (error.code === 'PGRST116') { // No rows returned
+        console.log('ℹ️ No profile found for user:', userId);
         return { data: null, error: { message: 'Profile not found' } };
       }
       
       return { data: null, error };
     }
 
+    console.log('✅ Profile found for user:', userId);
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ Get profile exception:', err);
     return { data: null, error: { message: 'Profile fetch failed' } };
+  }
+};
+
+// Helper function to create profile for authenticated user if it doesn't exist
+export const ensureProfile = async (user: any) => {
+  try {
+    if (!user) {
+      return { data: null, error: { message: 'No user provided' } };
+    }
+
+    console.log('🔍 Checking if profile exists for user:', user.email);
+
+    // First, try to get existing profile
+    const { data: existingProfile, error: getError } = await getProfile(user.id);
+    
+    if (existingProfile) {
+      console.log('✅ Profile already exists for user:', user.email);
+      return { data: existingProfile, error: null };
+    }
+
+    // If profile doesn't exist and it's not a "not found" error, return the error
+    if (getError && getError.message !== 'Profile not found') {
+      return { data: null, error: getError };
+    }
+
+    console.log('📝 Creating new profile for user:', user.email);
+
+    // Create a basic profile with available user data
+    const profileData = {
+      user_id: user.id,
+      full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      email: user.email,
+      date_of_birth: user.user_metadata?.date_of_birth || '1990-01-01', // Default date
+      bio: user.user_metadata?.bio || null,
+      profile_picture_url: user.user_metadata?.avatar_url || null
+    };
+
+    const { data: newProfile, error: createError } = await createProfile(profileData);
+    
+    if (createError) {
+      console.error('❌ Failed to create profile for user:', user.email, createError);
+      return { data: null, error: createError };
+    }
+
+    console.log('✅ Profile created successfully for user:', user.email);
+    return { data: newProfile, error: null };
+    
+  } catch (err: any) {
+    console.error('❌ ensureProfile exception:', err);
+    return { data: null, error: { message: 'Failed to ensure profile exists' } };
   }
 };
 

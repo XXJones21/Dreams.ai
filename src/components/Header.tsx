@@ -14,8 +14,24 @@ const Header: React.FC = () => {
   const { user, loading, isAuthenticated } = useAuthContext();
 
   const handleSignOut = async () => {
-    await signOut();
-    window.location.href = '/';
+    try {
+      console.log('🔐 Signing out user...');
+      const { error } = await signOut();
+      
+      if (error) {
+        console.error('❌ Sign out error:', error);
+        // Still redirect even if there's an error
+      } else {
+        console.log('✅ Sign out successful');
+      }
+      
+      // Force a page reload to clear all state
+      window.location.href = '/';
+    } catch (err) {
+      console.error('❌ Sign out exception:', err);
+      // Force redirect anyway
+      window.location.href = '/';
+    }
   };
 
   const handleStartDreaming = () => {
@@ -30,8 +46,8 @@ const Header: React.FC = () => {
 
   const handleAuthSuccess = () => {
     setIsAuthModalOpen(false);
-    // Redirect to main page after successful authentication
-    window.location.href = '/';
+    // Refresh the page to update user state
+    window.location.reload();
   };
 
   const isProfilePage = location.pathname === '/profile';

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase, Profile, getProfile } from '../lib/supabase';
+import { supabase, Profile, getProfile, ensureProfile } from '../lib/supabase';
 
 interface AuthState {
   user: User | null;
@@ -46,27 +46,32 @@ export const useAuth = () => {
         if (session?.user) {
           console.log('✅ Session found for user:', session.user.email);
           
-          // Set authenticated state immediately, then load profile
+          // Set authenticated state immediately
           setAuthState({
             user: session.user,
             session,
             profile: null,
-            loading: false, // Set loading to false immediately
+            loading: false,
             error: null
           });
 
-          // Load profile in background
+          // Ensure profile exists and load it
           try {
-            const { data: profile, error: profileError } = await getProfile(session.user.id);
+            const { data: profile, error: profileError } = await ensureProfile(session.user);
             
-            if (mounted && !profileError) {
-              setAuthState(prev => ({
-                ...prev,
-                profile
-              }));
+            if (mounted) {
+              if (profileError) {
+                console.warn('⚠️ Profile creation/loading failed:', profileError);
+                // Don't set error state, user is still authenticated
+              } else {
+                setAuthState(prev => ({
+                  ...prev,
+                  profile
+                }));
+              }
             }
           } catch (profileErr) {
-            console.warn('⚠️ Profile loading failed, but user is authenticated:', profileErr);
+            console.warn('⚠️ Profile handling failed, but user is authenticated:', profileErr);
           }
         } else {
           console.log('ℹ️ No active session found');
@@ -109,22 +114,26 @@ export const useAuth = () => {
             user: session.user,
             session,
             profile: null,
-            loading: false, // Always set loading to false when we have a user
+            loading: false,
             error: null
           });
 
-          // Load profile in background
+          // Ensure profile exists and load it
           try {
-            const { data: profile, error: profileError } = await getProfile(session.user.id);
+            const { data: profile, error: profileError } = await ensureProfile(session.user);
             
-            if (mounted && !profileError) {
-              setAuthState(prev => ({
-                ...prev,
-                profile
-              }));
+            if (mounted) {
+              if (profileError) {
+                console.warn('⚠️ Profile creation/loading failed after auth change:', profileError);
+              } else {
+                setAuthState(prev => ({
+                  ...prev,
+                  profile
+                }));
+              }
             }
           } catch (profileErr) {
-            console.warn('⚠️ Profile loading failed after auth change:', profileErr);
+            console.warn('⚠️ Profile handling failed after auth change:', profileErr);
           }
         } else {
           console.log('ℹ️ User signed out');

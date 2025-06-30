@@ -1,72 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Calendar, MessageSquare, Edit, Camera, LogOut, Home, Library, Sparkles, Brain, AlertCircle } from 'lucide-react';
-import { supabase, getProfile, signOut, Profile } from '../../lib/supabase';
+import { User, Mail, Calendar, MessageSquare, Edit, Camera, LogOut, Home, Library, Sparkles, Brain, AlertCircle, RefreshCw } from 'lucide-react';
+import { useAuthContext } from '../auth/AuthProvider';
+import { signOut } from '../../lib/supabase';
 import CosmicBackground from '../CosmicBackground';
 
 const ProfilePage: React.FC = () => {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { user, profile, loading, error, refreshProfile, isAuthenticated } = useAuthContext();
   const [retryCount, setRetryCount] = useState(0);
-  const [timedOut, setTimedOut] = useState(false);
 
-  const loadProfile = async () => {
-    setIsLoading(true);
-    setError('');
-    setTimedOut(false);
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      window.location.href = '/';
+    }
+  }, [loading, isAuthenticated]);
+
+  const handleSignOut = async () => {
     try {
-      console.log('Fetching user...');
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('User:', user);
-      if (!user) {
-        setError('Not authenticated');
-        setIsLoading(false);
-        return;
-      }
-      console.log('Fetching profile for user id:', user.id);
-      const { data: profileData, error: profileError } = await getProfile(user.id);
-      console.log('Profile data:', profileData, 'Profile error:', profileError);
-      if (profileError) {
-        setError('Failed to load profile: ' + profileError.message);
-      } else if (!profileData) {
-        setError('Profile not found');
-      } else {
-        setProfile(profileData);
+      const { error } = await signOut();
+      if (!error) {
+        window.location.href = '/';
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError('Unexpected error: ' + message);
-      console.error('Unexpected error:', err);
-    } finally {
-      setIsLoading(false);
+      console.error('Sign out error:', err);
+      // Force redirect anyway
+      window.location.href = '/';
     }
   };
-
-  useEffect(() => {
-    loadProfile();
-    const timeout = setTimeout(() => {
-      if (isLoading) {
-        setTimedOut(true);
-        setIsLoading(false);
-        setError('Profile loading timed out. Please try again.');
-      }
-    }, 15000);
-    return () => clearTimeout(timeout);
-  }, [retryCount]);
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
-    setProfile(null);
-    setError('');
-    setTimedOut(false);
-    setIsLoading(true);
-  };
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (!error) {
-      window.location.href = '/';
-    }
+    refreshProfile();
   };
 
   const formatDate = (dateString: string) => {
@@ -90,7 +54,7 @@ const ProfilePage: React.FC = () => {
     return age;
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black-marble overflow-hidden">
         <CosmicBackground />
@@ -103,19 +67,30 @@ const ProfilePage: React.FC = () => {
                 Attempt {retryCount + 1}
               </p>
             )}
-            {timedOut && (
-              <div className="mt-4">
-                <p className="text-red-400 font-inter">Profile loading timed out.</p>
-                <button
-                  onClick={handleRetry}
-                  className="marble-button mt-2"
-                >
-                  <span className="relative z-10 text-brass font-inter font-medium">
-                    Try Again
-                  </span>
-                </button>
-              </div>
-            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-black-marble overflow-hidden">
+        <CosmicBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="glass-card p-8 text-center max-w-md">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-cinzel font-bold text-stardust-silver mb-4">
+              Authentication Required
+            </h2>
+            <p className="text-stardust-silver/70 mb-6">
+              Please sign in to access your profile.
+            </p>
+            <a href="/" className="marble-button block w-full">
+              <span className="relative z-10 text-brass font-inter font-medium">
+                Return Home
+              </span>
+            </a>
           </div>
         </div>
       </div>
@@ -130,22 +105,21 @@ const ProfilePage: React.FC = () => {
           <div className="glass-card p-8 text-center max-w-md">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-2xl font-cinzel font-bold text-stardust-silver mb-4">
-              {error.includes('timeout') ? 'Connection Timeout' : 'Profile Not Found'}
+              Profile Loading Issue
             </h2>
             <p className="text-stardust-silver/70 mb-6">
-              {error || 'Unable to load your profile.'}
+              {error || 'Unable to load your profile. This might be because your profile is still being created.'}
             </p>
             <div className="space-y-4">
-              {error.includes('timeout') || error.includes('Failed to load') ? (
-                <button
-                  onClick={handleRetry}
-                  className="marble-button block w-full"
-                >
-                  <span className="relative z-10 text-brass font-inter font-medium">
-                    Try Again
-                  </span>
-                </button>
-              ) : null}
+              <button
+                onClick={handleRetry}
+                className="marble-button flex items-center space-x-2 w-full justify-center"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="relative z-10 text-brass font-inter font-medium">
+                  Try Again
+                </span>
+              </button>
               <a href="/" className="glass-button block w-full">
                 <span className="relative z-10 text-stardust-silver font-inter font-medium">
                   Return Home
