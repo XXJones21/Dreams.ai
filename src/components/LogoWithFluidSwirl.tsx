@@ -198,23 +198,19 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
         {/* Actual Logo Image - ABOVE the flame particles */}
         <div className="absolute inset-4 flex items-center justify-center z-20">
           <img 
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+            src="/ChatGPT Image Jun 29, 2025, 09_05_56 PM copy copy.png"
             alt="Dreams.AI Logo - Art Deco Bust with Cosmic Swirl" 
-            className="w-full h-full object-contain opacity-0"
+            className="w-full h-full object-contain"
             style={{
               filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 30px rgba(207, 181, 59, 0.4))',
             }}
             onLoad={() => setImageLoaded(true)}
-          />
-          
-          {/* Fallback: Use the provided image directly */}
-          <div 
-            className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url('/image copy copy.png')`,
-              filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 30px rgba(207, 181, 59, 0.4))',
+            onError={() => {
+              // Fallback to the other image names if this one fails
+              const img = document.createElement('img');
+              img.src = '/image copy copy.png';
+              img.onload = () => setImageLoaded(true);
             }}
-            onLoad={() => setImageLoaded(true)}
           />
         </div>
       </div>
