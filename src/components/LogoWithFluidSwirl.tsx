@@ -198,7 +198,7 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
         {/* Actual Logo Image - ABOVE the flame particles */}
         <div className="absolute inset-4 flex items-center justify-center z-20">
           <img 
-            src="/ChatGPT Image Jun 29, 2025, 09_05_56 PM copy copy.png"
+            src="/logo.png"
             alt="Dreams.AI Logo - Art Deco Bust with Cosmic Swirl" 
             className="w-full h-full object-contain"
             style={{
