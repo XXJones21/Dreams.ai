@@ -6,6 +6,7 @@ import CosmicBackground from './components/CosmicBackground';
 import AgentShowcase from './components/AgentShowcase';
 import DreamCarousel from './components/DreamCarousel';
 import ProfilePage from './components/profile/ProfilePage';
+import FeedPage from './pages/FeedPage';
 
 function HomePage() {
   return (
@@ -25,6 +26,8 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/feed" element={<FeedPage />} />
+        <Route path="/dreams" element={<FeedPage />} />
       </Routes>
     </Router>
   );
