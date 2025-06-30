@@ -117,25 +117,44 @@ body {
   left: 0;
 }
 
-/* Buttons */
+/* Enhanced Liquid Glass Buttons with 20% Opacity */
 .marble-button, .marble-button-large {
   position: relative;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #2a2a2a 0%, var(--black-marble) 50%, #2a2a2a 100%);
+  background: 
+    /* Primary liquid glass surface - 20% opacity for cosmic visibility */
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(26, 26, 26, 0.2) 50%,
+      rgba(255, 255, 255, 0.03) 75%,
+      rgba(255, 255, 255, 0.06) 100%
+    ),
+    /* Subtle depth layer for glass effect */
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.1) 0%, transparent 50%);
   border: 2px solid var(--brass);
   border-radius: 8px;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   text-decoration: none;
   display: inline-block;
+  backdrop-filter: blur(8px) saturate(150%);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 .marble-button-large {
   padding: 16px 32px;
   font-size: 1.1rem;
+  backdrop-filter: blur(10px) saturate(160%);
 }
 
+/* Liquid Glass Surface Flow Effect */
 .marble-button::before, .marble-button-large::before {
   content: '';
   position: absolute;
@@ -143,18 +162,70 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, var(--brass), transparent);
-  transition: left 0.5s ease;
+  background: 
+    linear-gradient(
+      90deg, 
+      transparent, 
+      rgba(255, 255, 255, 0.2) 30%,
+      rgba(207, 181, 59, 0.15) 50%,
+      rgba(255, 255, 255, 0.2) 70%,
+      transparent
+    );
+  transition: left 0.6s ease;
   z-index: 1;
+  filter: blur(1px);
+}
+
+/* Liquid Glass Refraction Effect */
+.marble-button::after, .marble-button-large::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(207, 181, 59, 0.15) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(0, 102, 204, 0.1) 75%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  border-radius: 10px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  filter: blur(2px);
 }
 
 .marble-button:hover::before, .marble-button-large:hover::before {
   left: 100%;
 }
 
+.marble-button:hover::after, .marble-button-large:hover::after {
+  opacity: 1;
+}
+
 .marble-button:hover, .marble-button-large:hover {
-  box-shadow: 0 8px 32px rgba(207, 181, 59, 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.25),
+    0 8px 32px rgba(207, 181, 59, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+  border-color: rgba(207, 181, 59, 0.8);
+  background: 
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.06) 25%,
+      rgba(26, 26, 26, 0.15) 50%,
+      rgba(255, 255, 255, 0.04) 75%,
+      rgba(255, 255, 255, 0.1) 100%
+    ),
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.15) 0%, transparent 60%);
 }
 
 .marble-button:disabled, .marble-button-large:disabled {
@@ -163,64 +234,543 @@ body {
   transform: none;
 }
 
+/* Enhanced Glass Button with 20% Opacity */
 .glass-button {
   position: relative;
   padding: 16px 32px;
-  background: rgba(192, 192, 192, 0.1);
+  background: 
+    linear-gradient(
+      135deg,
+      rgba(192, 192, 192, 0.08) 0%,
+      rgba(192, 192, 192, 0.04) 25%,
+      rgba(26, 26, 26, 0.2) 50%,
+      rgba(192, 192, 192, 0.03) 75%,
+      rgba(192, 192, 192, 0.06) 100%
+    );
   border: 1px solid rgba(192, 192, 192, 0.3);
   border-radius: 8px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px) saturate(150%);
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   text-decoration: none;
   display: inline-block;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.glass-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+    linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 40%,
+      transparent 60%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 8px;
+  opacity: 0.7;
+  animation: liquid-flow 8s ease-in-out infinite;
 }
 
 .glass-button:hover {
-  background: rgba(192, 192, 192, 0.2);
+  background: 
+    linear-gradient(
+      135deg,
+      rgba(192, 192, 192, 0.12) 0%,
+      rgba(192, 192, 192, 0.06) 25%,
+      rgba(26, 26, 26, 0.15) 50%,
+      rgba(192, 192, 192, 0.04) 75%,
+      rgba(192, 192, 192, 0.1) 100%
+    );
   border-color: var(--brass);
-  box-shadow: 0 8px 32px rgba(192, 192, 192, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(192, 192, 192, 0.08),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+  transform: translateY(-3px) scale(1.01);
 }
 
-/* Glass Card */
+.glass-button:hover::before {
+  opacity: 1;
+  animation-duration: 4s;
+}
+
+/* Liquid Glass Card with 20% Opacity for Cosmic Visibility */
 .glass-card {
-  background: rgba(26, 26, 26, 0.8);
-  border: 1px solid rgba(207, 181, 59, 0.2);
-  border-radius: 16px;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-}
-
-.glass-card:hover {
-  border-color: rgba(207, 181, 59, 0.4);
-  box-shadow: 0 8px 32px rgba(207, 181, 59, 0.1);
-}
-
-/* Agent Card */
-.agent-card {
-  background: linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(42, 42, 42, 0.8) 100%);
-  border: 1px solid rgba(207, 181, 59, 0.2);
-  border-radius: 20px;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  overflow: hidden;
   position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(26, 26, 26, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 75%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  backdrop-filter: blur(12px) saturate(180%);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  overflow: hidden;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Liquid Glass Surface Effect */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.1) 0%, transparent 50%),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 30%,
+      transparent 70%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 24px;
+  opacity: 0.6;
+  animation: liquid-flow 8s ease-in-out infinite;
+}
+
+/* Liquid Glass Refraction Effect */
+.glass-card::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(207, 181, 59, 0.15) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(0, 102, 204, 0.1) 75%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  border-radius: 26px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  filter: blur(1px);
+}
+
+/* Liquid Glass Hover State */
+.glass-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.25),
+    0 8px 32px rgba(207, 181, 59, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.glass-card:hover::before {
+  opacity: 0.8;
+  animation-duration: 4s;
+}
+
+.glass-card:hover::after {
+  opacity: 1;
+}
+
+/* Liquid Glass Content Layer */
+.glass-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Enhanced Agent Card with Liquid Glass and 20% Opacity */
+.agent-card {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(26, 26, 26, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 75%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  backdrop-filter: blur(15px) saturate(200%);
+  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  overflow: hidden;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Agent Card Liquid Surface */
+.agent-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 75% 75%, rgba(207, 181, 59, 0.12) 0%, transparent 60%),
+    linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 40%,
+      transparent 60%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 28px;
+  opacity: 0.5;
+  animation: liquid-swirl 12s ease-in-out infinite;
+}
+
+/* Agent Card Chromatic Edge */
+.agent-card::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(
+    60deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(207, 181, 59, 0.2) 20%,
+    rgba(0, 102, 204, 0.15) 40%,
+    rgba(255, 105, 180, 0.15) 60%,
+    rgba(207, 181, 59, 0.2) 80%,
+    rgba(255, 255, 255, 0.25) 100%
+  );
+  border-radius: 31px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  filter: blur(2px);
 }
 
 .agent-card:hover {
-  border-color: rgba(207, 181, 59, 0.4);
-  box-shadow: 0 20px 40px rgba(207, 181, 59, 0.1);
-  transform: translateY(-5px);
+  transform: translateY(-12px) scale(1.03);
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.3),
+    0 12px 40px rgba(207, 181, 59, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Marble Bust */
+.agent-card:hover::before {
+  opacity: 0.8;
+  animation-duration: 6s;
+}
+
+.agent-card:hover::after {
+  opacity: 1;
+}
+
+.agent-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Liquid Flow Animation */
+@keyframes liquid-flow {
+  0%, 100% {
+    background-position: 0% 0%, 100% 100%, 0% 0%;
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    background-position: 100% 0%, 0% 100%, 25% 25%;
+    transform: rotate(1deg) scale(1.01);
+  }
+  50% {
+    background-position: 100% 100%, 0% 0%, 50% 50%;
+    transform: rotate(0deg) scale(1.02);
+  }
+  75% {
+    background-position: 0% 100%, 100% 0%, 75% 75%;
+    transform: rotate(-1deg) scale(1.01);
+  }
+}
+
+/* Liquid Swirl Animation */
+@keyframes liquid-swirl {
+  0%, 100% {
+    background-position: 0% 0%, 100% 100%, 0% 0%;
+    transform: rotate(0deg) scale(1);
+    opacity: 0.5;
+  }
+  33% {
+    background-position: 50% 0%, 50% 100%, 33% 33%;
+    transform: rotate(2deg) scale(1.02);
+    opacity: 0.7;
+  }
+  66% {
+    background-position: 100% 50%, 0% 50%, 66% 66%;
+    transform: rotate(-1deg) scale(1.01);
+    opacity: 0.6;
+  }
+}
+
+/* Logo with Fluid Swirl Styles */
+.logo-with-fluid-swirl {
+  position: relative;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+}
+
+/* Art Deco Frame */
+.art-deco-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.frame-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--brass);
+}
+
+.frame-corner.top-left {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+
+.frame-corner.top-right {
+  top: 0;
+  right: 0;
+  border-left: none;
+  border-bottom: none;
+}
+
+.frame-corner.bottom-left {
+  bottom: 0;
+  left: 0;
+  border-right: none;
+  border-top: none;
+}
+
+.frame-corner.bottom-right {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+}
+
+.frame-border {
+  position: absolute;
+  background: linear-gradient(90deg, transparent, var(--brass), transparent);
+  opacity: 0.6;
+}
+
+.frame-border.top {
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+}
+
+.frame-border.bottom {
+  bottom: 0;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+}
+
+.frame-border.left {
+  left: 0;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--brass), transparent);
+}
+
+.frame-border.right {
+  right: 0;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--brass), transparent);
+}
+
+/* Cosmic Swirl Container - positioned over the swirl in the logo */
+.cosmic-swirl-container {
+  position: absolute;
+  top: -10%;
+  left: 50%;
+  width: 80%;
+  height: 80%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* Flame-like Swirl Layers - Slow swaying motion like a flame */
+.cosmic-swirl {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+/* Flame Swirl Layer 1 - Base flame with deep purple/blue */
+.flame-swirl-1 {
+  background: 
+    radial-gradient(ellipse 50% 70% at 40% 30%, var(--deep-purple) 0%, transparent 70%),
+    radial-gradient(ellipse 35% 60% at 60% 50%, var(--electric-blue) 0%, transparent 60%);
+  animation: flame-sway-1 4s ease-in-out infinite;
+  transform-origin: 50% 85%;
+}
+
+/* Flame Swirl Layer 2 - Middle flame with electric blue/pink */
+.flame-swirl-2 {
+  background: 
+    radial-gradient(ellipse 40% 65% at 45% 40%, var(--electric-blue) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 50% at 55% 60%, var(--nebula-pink) 0%, transparent 55%);
+  animation: flame-sway-2 4s ease-in-out infinite 1s;
+  transform-origin: 50% 85%;
+}
+
+/* Flame Swirl Layer 3 - Top flame with pink/white highlights */
+.flame-swirl-3 {
+  background: 
+    radial-gradient(ellipse 35% 55% at 50% 35%, var(--nebula-pink) 0%, transparent 60%),
+    radial-gradient(ellipse 25% 40% at 55% 45%, rgba(255, 255, 255, 0.4) 0%, transparent 50%);
+  animation: flame-sway-3 4s ease-in-out infinite 2s;
+  transform-origin: 50% 85%;
+}
+
+/* Flame Sway Animations - Slow back and forth like a real flame */
+@keyframes flame-sway-1 {
+  0%, 100% {
+    transform: rotate(-6deg) scaleY(1) scaleX(1);
+    opacity: 0.5;
+  }
+  25% {
+    transform: rotate(-10deg) scaleY(1.1) scaleX(0.9);
+    opacity: 0.6;
+  }
+  50% {
+    transform: rotate(8deg) scaleY(1.3) scaleX(0.7);
+    opacity: 0.7;
+  }
+  75% {
+    transform: rotate(12deg) scaleY(1.2) scaleX(0.8);
+    opacity: 0.6;
+  }
+}
+
+@keyframes flame-sway-2 {
+  0%, 100% {
+    transform: rotate(4deg) scaleY(1) scaleX(1);
+    opacity: 0.4;
+  }
+  30% {
+    transform: rotate(-8deg) scaleY(1.2) scaleX(0.8);
+    opacity: 0.6;
+  }
+  70% {
+    transform: rotate(10deg) scaleY(1.4) scaleX(0.6);
+    opacity: 0.5;
+  }
+}
+
+@keyframes flame-sway-3 {
+  0%, 100% {
+    transform: rotate(-3deg) scaleY(1) scaleX(1);
+    opacity: 0.3;
+  }
+  40% {
+    transform: rotate(6deg) scaleY(1.5) scaleX(0.5);
+    opacity: 0.5;
+  }
+  80% {
+    transform: rotate(-9deg) scaleY(1.6) scaleX(0.4);
+    opacity: 0.4;
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .cosmic-swirl-container {
+    top: -5%;
+    left: 45%;
+    width: 70%;
+    height: 70%;
+  }
+  
+  .frame-corner {
+    width: 15px;
+    height: 15px;
+  }
+  
+  .frame-border.top,
+  .frame-border.bottom {
+    left: 15px;
+    right: 15px;
+  }
+  
+  .frame-border.left,
+  .frame-border.right {
+    top: 15px;
+    bottom: 15px;
+  }
+}
+
+/* Fallback for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cosmic-swirl {
+    animation: none;
+  }
+  
+  .flame-swirl-1,
+  .flame-swirl-2,
+  .flame-swirl-3 {
+    animation: gentle-pulse 8s ease-in-out infinite;
+  }
+}
+
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+/* Marble Bust with Authentic Marble Texture */
 .marble-bust-container {
   position: relative;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
 }
 
+/* Marble Base with Reference-Matched Texture */
 .marble-base {
   position: absolute;
   bottom: 0;
@@ -228,31 +778,62 @@ body {
   transform: translateX(-50%);
   width: 200px;
   height: 60px;
-  background: linear-gradient(135deg, #2a2a2a 0%, var(--black-marble) 50%, #3a3a3a 100%);
+  background: 
+    /* Primary marble base - dark charcoal with warm undertones */
+    linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 25%, #2a2a2a 50%, #1e1e1e 75%, #252525 100%),
+    /* Marble veining layer 1 - major veins */
+    radial-gradient(ellipse 200px 50px at 30% 20%, rgba(180, 160, 140, 0.4) 0%, transparent 40%),
+    radial-gradient(ellipse 150px 30px at 70% 60%, rgba(160, 140, 120, 0.3) 0%, transparent 50%),
+    /* Marble veining layer 2 - secondary veins */
+    linear-gradient(45deg, transparent 30%, rgba(200, 180, 160, 0.2) 35%, rgba(180, 160, 140, 0.3) 40%, transparent 45%),
+    linear-gradient(-30deg, transparent 60%, rgba(160, 140, 120, 0.25) 65%, transparent 70%),
+    /* Marble veining layer 3 - fine detail veins */
+    linear-gradient(120deg, transparent 20%, rgba(220, 200, 180, 0.15) 22%, transparent 24%),
+    linear-gradient(-60deg, transparent 75%, rgba(190, 170, 150, 0.2) 77%, transparent 79%);
   border-radius: 100px 100px 20px 20px;
   border: 3px solid var(--brass);
   z-index: 10;
+  box-shadow: 
+    inset 0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+/* Enhanced Marble Texture with Reference Characteristics */
 .marble-texture {
   position: absolute;
   inset: 0;
   background: 
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 1px, transparent 1px),
-    radial-gradient(circle at 70% 70%, rgba(255,255,255,0.05) 1px, transparent 1px);
-  background-size: 20px 20px, 15px 15px;
+    /* Fine marble grain texture */
+    radial-gradient(circle at 25% 30%, rgba(200, 180, 160, 0.15) 1px, transparent 1px),
+    radial-gradient(circle at 75% 70%, rgba(180, 160, 140, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 50% 20%, rgba(220, 200, 180, 0.08) 1px, transparent 1px),
+    /* Marble crystalline structure */
+    linear-gradient(45deg, transparent 48%, rgba(240, 220, 200, 0.05) 49%, rgba(200, 180, 160, 0.1) 50%, rgba(240, 220, 200, 0.05) 51%, transparent 52%),
+    /* Surface polish reflection */
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 30%, transparent 70%, rgba(255, 255, 255, 0.05) 100%);
+  background-size: 20px 20px, 15px 15px, 25px 25px, 8px 8px, 100% 100%;
+  border-radius: 100px 100px 20px 20px;
+  opacity: 0.8;
 }
 
+/* Brass Trim with Enhanced Detail */
 .brass-trim {
   position: absolute;
   top: 10px;
   left: 20px;
   right: 20px;
   height: 4px;
-  background: linear-gradient(90deg, var(--brass), #e6d06f, var(--brass));
+  background: 
+    linear-gradient(90deg, var(--brass), #e6d06f, var(--brass)),
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
   border-radius: 2px;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+/* Bust Silhouette with Marble Texture */
 .bust-silhouette {
   position: absolute;
   top: 0;
@@ -260,19 +841,42 @@ body {
   transform: translateX(-50%);
   width: 160px;
   height: 200px;
-  background: linear-gradient(135deg, #3a3a3a 0%, var(--black-marble) 30%, #2a2a2a 100%);
+  background: 
+    /* Primary marble surface - matching reference tones */
+    linear-gradient(135deg, #3a3a3a 0%, #2c2c2c 25%, #1a1a1a 50%, #2a2a2a 75%, #353535 100%),
+    /* Major marble veining - diagonal flow */
+    linear-gradient(45deg, transparent 20%, rgba(180, 160, 140, 0.4) 25%, rgba(200, 180, 160, 0.5) 30%, transparent 35%),
+    linear-gradient(-30deg, transparent 60%, rgba(160, 140, 120, 0.3) 65%, rgba(180, 160, 140, 0.4) 70%, transparent 75%),
+    /* Secondary veining - cross patterns */
+    linear-gradient(120deg, transparent 40%, rgba(220, 200, 180, 0.2) 42%, rgba(190, 170, 150, 0.3) 45%, transparent 48%),
+    /* Fine detail veining */
+    radial-gradient(ellipse 80px 40px at 30% 40%, rgba(200, 180, 160, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 60px 30px at 70% 70%, rgba(180, 160, 140, 0.2) 0%, transparent 50%);
   border-radius: 80px 80px 60px 60px;
   overflow: hidden;
   z-index: 5;
+  box-shadow: 
+    inset 2px 2px 8px rgba(0, 0, 0, 0.4),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
+/* Enhanced Marble Bust Texture */
 .marble-bust-texture {
   position: absolute;
   inset: 0;
   background: 
-    linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%),
-    radial-gradient(circle at 40% 60%, rgba(255,255,255,0.1) 2px, transparent 2px);
-  background-size: 30px 30px, 25px 25px;
+    /* Marble surface polish - high contrast like reference */
+    linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.15) 35%, rgba(240, 220, 200, 0.2) 40%, transparent 45%),
+    linear-gradient(-45deg, transparent 55%, rgba(255, 255, 255, 0.1) 60%, transparent 65%),
+    /* Marble crystalline detail */
+    radial-gradient(circle at 40% 60%, rgba(220, 200, 180, 0.2) 2px, transparent 2px),
+    radial-gradient(circle at 60% 30%, rgba(200, 180, 160, 0.15) 1px, transparent 1px),
+    /* Surface depth and translucency */
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.05) 100%);
+  background-size: 30px 30px, 25px 25px, 20px 20px, 15px 15px, 100% 100%;
+  border-radius: 80px 80px 60px 60px;
+  opacity: 0.9;
 }
 
 .cosmic-head {
