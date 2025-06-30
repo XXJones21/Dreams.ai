@@ -140,7 +140,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         onSuccess?.();
         setTimeout(() => {
           handleClose();
-          window.location.reload();
+          // Redirect to main page after successful login
+          window.location.href = '/';
         }, 1000);
       }
     } catch (error) {
@@ -301,7 +302,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
       
       setTimeout(() => {
         handleClose();
-        window.location.reload();
+        // Redirect to main page after successful registration
+        window.location.href = '/';
       }, 2000);
 
     } catch (error) {
@@ -367,8 +369,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                  'Check Your Email'}
               </h2>
               <p className="text-stardust-silver/70">
-                {mode === 'register' ? 'Please check your email to verify your account.' :
-                 mode === 'login' ? 'Redirecting to your profile...' :
+                {mode === 'register' ? 'Please check your email to verify your account. Redirecting to home...' :
+                 mode === 'login' ? 'Redirecting to home page...' :
                  `We've sent a password reset link to ${forgotEmail}`}
               </p>
             </div>

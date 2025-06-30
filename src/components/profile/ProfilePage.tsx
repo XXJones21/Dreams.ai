@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Calendar, MessageSquare, Edit, Camera, LogOut } from 'lucide-react';
+import { User, Mail, Calendar, MessageSquare, Edit, Camera, LogOut, Home, Library, Sparkles, Brain } from 'lucide-react';
 import { supabase, getProfile, signOut, Profile } from '../../lib/supabase';
+import CosmicBackground from '../CosmicBackground';
 
 const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -16,7 +17,7 @@ const ProfilePage: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        window.location.href = '/login';
+        window.location.href = '/';
         return;
       }
 
@@ -39,7 +40,7 @@ const ProfilePage: React.FC = () => {
   const handleSignOut = async () => {
     const { error } = await signOut();
     if (!error) {
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   };
 
@@ -66,10 +67,13 @@ const ProfilePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black-marble flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-brass border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-stardust-silver">Loading profile...</p>
+      <div className="min-h-screen bg-black-marble overflow-hidden">
+        <CosmicBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-brass border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-stardust-silver">Loading profile...</p>
+          </div>
         </div>
       </div>
     );
@@ -77,46 +81,90 @@ const ProfilePage: React.FC = () => {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-black-marble flex items-center justify-center">
-        <div className="glass-card p-8 text-center max-w-md">
-          <h2 className="text-2xl font-cinzel font-bold text-stardust-silver mb-4">
-            Profile Not Found
-          </h2>
-          <p className="text-stardust-silver/70 mb-6">
-            {error || 'Unable to load your profile.'}
-          </p>
-          <a href="/register" className="marble-button">
-            <span className="relative z-10 text-brass font-inter font-medium">
-              Complete Registration
-            </span>
-          </a>
+      <div className="min-h-screen bg-black-marble overflow-hidden">
+        <CosmicBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="glass-card p-8 text-center max-w-md">
+            <h2 className="text-2xl font-cinzel font-bold text-stardust-silver mb-4">
+              Profile Not Found
+            </h2>
+            <p className="text-stardust-silver/70 mb-6">
+              {error || 'Unable to load your profile.'}
+            </p>
+            <div className="space-y-4">
+              <a href="/" className="marble-button block">
+                <span className="relative z-10 text-brass font-inter font-medium">
+                  Return Home
+                </span>
+              </a>
+              <button
+                onClick={handleSignOut}
+                className="glass-button w-full"
+              >
+                <span className="relative z-10 text-stardust-silver font-inter font-medium">
+                  Sign Out
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black-marble">
+    <div className="min-h-screen bg-black-marble overflow-hidden">
+      <CosmicBackground />
+      
       {/* Header */}
       <header className="relative z-50 w-full border-b border-brass/20">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-cinzel font-bold text-brass">
-              Dreams.AI Profile
-            </h1>
-            <button
-              onClick={handleSignOut}
-              className="glass-button flex items-center space-x-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </button>
+            {/* Logo */}
+            <div className="logo-container flex items-center space-x-3">
+              <div className="relative">
+                <Brain className="text-brass w-8 h-8" />
+                <Sparkles className="absolute -top-1 -right-1 text-nebula-pink w-4 h-4" />
+              </div>
+              <div>
+                <a href="/" className="text-brass text-2xl font-cinzel font-bold tracking-wider">
+                  DREAMS.AI
+                </a>
+                <div className="logo-underline"></div>
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
+              <a
+                href="/"
+                className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors font-inter font-medium"
+              >
+                <Home className="w-5 h-5" />
+                <span>Home</span>
+              </a>
+              <div className="flex items-center space-x-2 text-brass font-inter font-medium">
+                <Library className="w-5 h-5" />
+                <span>Library</span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleSignOut}
+                className="glass-button flex items-center space-x-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden md:inline">Sign Out</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Profile Content */}
-      <div className="container mx-auto px-6 py-12">
+      <div className="relative z-10 container mx-auto px-6 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="glass-card p-8">
             {/* Profile Header */}
@@ -205,6 +253,25 @@ const ProfilePage: React.FC = () => {
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Dreams Library Section */}
+            <div className="mt-8 pt-8 border-t border-brass/20">
+              <h3 className="text-xl font-cinzel font-bold text-stardust-silver mb-4 flex items-center space-x-2">
+                <Library className="w-6 h-6 text-brass" />
+                <span>Your Dreams Library</span>
+              </h3>
+              <div className="glass-card p-6 text-center">
+                <div className="text-stardust-silver/60 mb-4">
+                  <Sparkles className="w-12 h-12 mx-auto mb-2" />
+                  <p className="font-inter">No dreams created yet</p>
+                </div>
+                <a href="/" className="marble-button">
+                  <span className="relative z-10 text-brass font-inter font-medium">
+                    Create Your First Dream
+                  </span>
+                </a>
+              </div>
             </div>
 
             {/* Account Actions */}

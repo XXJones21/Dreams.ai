@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Brain, Sparkles, User, LogOut } from 'lucide-react';
+import { Menu, X, Brain, Sparkles, User, LogOut, Home, Library } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import AuthModal from './auth/AuthModal';
 
@@ -8,6 +9,7 @@ const Header: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     // Get initial session
@@ -28,7 +30,7 @@ const Header: React.FC = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.reload();
+    window.location.href = '/';
   };
 
   const handleStartDreaming = () => {
@@ -43,8 +45,11 @@ const Header: React.FC = () => {
 
   const handleAuthSuccess = () => {
     setIsAuthModalOpen(false);
-    // The auth modal will handle the redirect
+    // Redirect to main page after successful authentication
+    window.location.href = '/';
   };
+
+  const isProfilePage = location.pathname === '/profile';
 
   return (
     <>
@@ -67,15 +72,43 @@ const Header: React.FC = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              {['Technology', 'Agents', 'Dreams', 'Library'].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  className="nav-link text-stardust-silver hover:text-brass transition-all duration-300 font-inter font-medium tracking-wide"
-                >
-                  {item}
-                </a>
-              ))}
+              {/* Main Navigation Links */}
+              {!isProfilePage && (
+                <>
+                  {['Technology', 'Agents', 'Dreams'].map((item) => (
+                    <a
+                      key={item}
+                      href={`#${item.toLowerCase()}`}
+                      className="nav-link text-stardust-silver hover:text-brass transition-all duration-300 font-inter font-medium tracking-wide"
+                    >
+                      {item}
+                    </a>
+                  ))}
+                </>
+              )}
+
+              {/* Navigation based on auth status and current page */}
+              {user && (
+                <>
+                  {isProfilePage ? (
+                    <a
+                      href="/"
+                      className="nav-link text-stardust-silver hover:text-brass transition-all duration-300 font-inter font-medium tracking-wide flex items-center space-x-2"
+                    >
+                      <Home className="w-4 h-4" />
+                      <span>Home</span>
+                    </a>
+                  ) : (
+                    <a
+                      href="/profile"
+                      className="nav-link text-stardust-silver hover:text-brass transition-all duration-300 font-inter font-medium tracking-wide flex items-center space-x-2"
+                    >
+                      <Library className="w-4 h-4" />
+                      <span>Library</span>
+                    </a>
+                  )}
+                </>
+              )}
             </div>
 
             {/* User Actions */}
@@ -84,13 +117,15 @@ const Header: React.FC = () => {
                 <div className="w-8 h-8 animate-spin border-2 border-brass border-t-transparent rounded-full"></div>
               ) : user ? (
                 <div className="flex items-center space-x-4">
-                  <a
-                    href="/profile"
-                    className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
-                  >
-                    <User className="w-5 h-5" />
-                    <span className="font-inter font-medium">Profile</span>
-                  </a>
+                  {!isProfilePage && (
+                    <a
+                      href="/profile"
+                      className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                    >
+                      <User className="w-5 h-5" />
+                      <span className="font-inter font-medium">Profile</span>
+                    </a>
+                  )}
                   <button
                     onClick={handleSignOut}
                     className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
@@ -129,27 +164,59 @@ const Header: React.FC = () => {
           {isMenuOpen && (
             <div className="md:hidden absolute top-full left-0 w-full bg-black-marble/95 backdrop-blur-md border-t border-brass/20">
               <div className="container mx-auto px-6 py-6 space-y-4">
-                {['Technology', 'Agents', 'Dreams', 'Library'].map((item) => (
-                  <a
-                    key={item}
-                    href={`#${item.toLowerCase()}`}
-                    className="block text-stardust-silver hover:text-brass transition-colors duration-300 font-inter font-medium"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {item}
-                  </a>
-                ))}
+                {/* Main Navigation Links for Mobile */}
+                {!isProfilePage && (
+                  <>
+                    {['Technology', 'Agents', 'Dreams'].map((item) => (
+                      <a
+                        key={item}
+                        href={`#${item.toLowerCase()}`}
+                        className="block text-stardust-silver hover:text-brass transition-colors duration-300 font-inter font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {item}
+                      </a>
+                    ))}
+                  </>
+                )}
+
+                {/* Navigation Links */}
+                {user && (
+                  <>
+                    {isProfilePage ? (
+                      <a
+                        href="/"
+                        className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Home className="w-5 h-5" />
+                        <span className="font-inter font-medium">Home</span>
+                      </a>
+                    ) : (
+                      <a
+                        href="/profile"
+                        className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Library className="w-5 h-5" />
+                        <span className="font-inter font-medium">Library</span>
+                      </a>
+                    )}
+                  </>
+                )}
                 
                 {user ? (
                   <div className="space-y-4 pt-4 border-t border-brass/20">
-                    <a
-                      href="/profile"
-                      className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User className="w-5 h-5" />
-                      <span className="font-inter font-medium">Profile</span>
-                    </a>
+                    {!isProfilePage && (
+                      <a
+                        href="/profile"
+                        className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <User className="w-5 h-5" />
+                        <span className="font-inter font-medium">Profile</span>
+                      </a>
+                    )}
                     <button
                       onClick={() => {
                         handleSignOut();
