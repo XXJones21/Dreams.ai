@@ -106,8 +106,10 @@ const FeedPage: React.FC = () => {
       <div className="relative z-10 container mx-auto px-6 py-12">
         {/* Page Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-cinzel font-bold text-brass mb-4">
-            Dream Feed
+          <h1 className="text-4xl md:text-5xl font-cinzel font-bold text-stardust-silver mb-4">
+            <span className="text-brass">
+              Dream Feed
+            </span>
           </h1>
           <p className="text-xl text-stardust-silver/70 font-inter max-w-2xl mx-auto">
             Discover, explore, and experience the most captivating dreams from our community
