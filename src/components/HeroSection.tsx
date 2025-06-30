@@ -31,7 +31,7 @@ const HeroSection: React.FC = () => {
     setLoading(true);
     setError(null);
     setDreamResult(null);
-    setShowPopup(false);
+    setShowPopup(true);
     try {
       const response = await fetch("http://localhost:8000/api/dream", {
         method: "POST",
@@ -41,7 +41,6 @@ const HeroSection: React.FC = () => {
       if (!response.ok) throw new Error("Failed to generate dream.");
       const data = await response.json();
       setDreamResult(data);
-      setShowPopup(true);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -123,18 +122,41 @@ const HeroSection: React.FC = () => {
                 <p className="text-xs text-stardust-silver/50 mt-2">IMN file: {dreamResult.imn_filename}</p>
               </div>
             )}
-            {showPopup && dreamResult && (
+            {showPopup && (
               <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-60">
                 <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-                  <h2 className="text-2xl font-bold text-brass mb-4">Dream Created!</h2>
-                  <p className="text-lg text-black-marble mb-2">Your dream title:</p>
-                  <div className="text-xl font-cinzel text-electric-blue mb-4">{dreamResult.dream_name}</div>
-                  <button
-                    className="marble-button-large mt-2"
-                    onClick={() => setShowPopup(false)}
-                  >
-                    Close
-                  </button>
+                  {loading && (
+                    <>
+                      <div className="mb-4 animate-spin mx-auto w-12 h-12 border-4 border-brass border-t-transparent rounded-full"></div>
+                      <h2 className="text-2xl font-bold text-brass mb-2">Generating your dream...</h2>
+                      <p className="text-black-marble">Please wait while your dream is being created.</p>
+                    </>
+                  )}
+                  {error && !loading && (
+                    <>
+                      <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
+                      <p className="text-black-marble mb-4">{error}</p>
+                      <button
+                        className="marble-button-large mt-2"
+                        onClick={() => setShowPopup(false)}
+                      >
+                        Close
+                      </button>
+                    </>
+                  )}
+                  {dreamResult && !loading && !error && (
+                    <>
+                      <h2 className="text-2xl font-bold text-brass mb-4">Dream Created!</h2>
+                      <p className="text-lg text-black-marble mb-2">Your dream title:</p>
+                      <div className="text-xl font-cinzel text-electric-blue mb-4">{dreamResult.dream_name}</div>
+                      <button
+                        className="marble-button-large mt-2"
+                        onClick={() => setShowPopup(false)}
+                      >
+                        Close
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
