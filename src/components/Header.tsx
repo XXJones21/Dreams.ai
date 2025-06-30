@@ -1,40 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Menu, X, Brain, Sparkles, User, LogOut, Home, Library, TrendingUp } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useAuthContext } from './auth/AuthProvider';
+import { signOut } from '../lib/supabase';
 import AuthModal from './auth/AuthModal';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  
+  // Use the global auth context instead of managing local state
+  const { user, loading, isAuthenticated } = useAuthContext();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     window.location.href = '/';
   };
 
   const handleStartDreaming = () => {
-    if (user) {
+    if (isAuthenticated) {
       // User is logged in, go to profile or dreams
       window.location.href = '/profile';
     } else {
@@ -65,7 +50,7 @@ const Header: React.FC = () => {
       ];
     } else {
       // For home page - only show Dreams when no user is logged in
-      if (!user) {
+      if (!isAuthenticated) {
         return [
           { href: '/feed', label: 'Dreams', icon: TrendingUp }
         ];
@@ -106,7 +91,7 @@ const Header: React.FC = () => {
                 const Icon = item.icon;
                 
                 // Skip items that require auth when user is not authenticated
-                if (item.requiresAuth && !user) return null;
+                if (item.requiresAuth && !isAuthenticated) return null;
                 
                 return (
                   <a
@@ -123,9 +108,9 @@ const Header: React.FC = () => {
 
             {/* User Actions */}
             <div className="hidden md:flex items-center space-x-4">
-              {isLoading ? (
+              {loading ? (
                 <div className="w-8 h-8 animate-spin border-2 border-brass border-t-transparent rounded-full"></div>
-              ) : user ? (
+              ) : isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   {!isProfilePage && (
                     <a
@@ -179,7 +164,7 @@ const Header: React.FC = () => {
                   const Icon = item.icon;
                   
                   // Skip items that require auth when user is not authenticated
-                  if (item.requiresAuth && !user) return null;
+                  if (item.requiresAuth && !isAuthenticated) return null;
                   
                   return (
                     <a
@@ -194,7 +179,12 @@ const Header: React.FC = () => {
                   );
                 })}
                 
-                {user ? (
+                {loading ? (
+                  <div className="flex items-center space-x-2 pt-4 border-t border-brass/20">
+                    <div className="w-5 h-5 animate-spin border-2 border-brass border-t-transparent rounded-full"></div>
+                    <span className="text-stardust-silver font-inter font-medium">Loading...</span>
+                  </div>
+                ) : isAuthenticated ? (
                   <div className="space-y-4 pt-4 border-t border-brass/20">
                     {!isProfilePage && (
                       <a
