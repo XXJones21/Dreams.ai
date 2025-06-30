@@ -11,7 +11,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Please check your .env file and ensure it contains valid Supabase credentials.');
 }
 
-// Create Supabase client with error handling
+// Validate URL format
+const isValidUrl = (url: string) => {
+  try {
+    new URL(url);
+    return url.includes('supabase.co') || url.includes('localhost');
+  } catch {
+    return false;
+  }
+};
+
+if (supabaseUrl && !isValidUrl(supabaseUrl)) {
+  console.error('❌ Invalid Supabase URL format:', supabaseUrl);
+  console.error('Expected format: https://your-project-ref.supabase.co');
+}
+
+// Create Supabase client with enhanced configuration
 export const supabase = createClient(
   supabaseUrl || 'https://demo.supabase.co', 
   supabaseAnonKey || 'demo-key',
@@ -19,11 +34,32 @@ export const supabase = createClient(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
+      flowType: 'pkce'
     },
     global: {
       headers: {
         'X-Client-Info': 'dreams-ai-web'
+      },
+      fetch: (url, options = {}) => {
+        // Add timeout and better error handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        return fetch(url, {
+          ...options,
+          signal: controller.signal,
+        }).finally(() => {
+          clearTimeout(timeoutId);
+        });
+      }
+    },
+    db: {
+      schema: 'public'
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
       }
     }
   }
@@ -86,55 +122,141 @@ export interface AuthError {
   status?: number;
 }
 
-// Enhanced Connection Test Function
+// Enhanced Connection Test Function with detailed diagnostics
 export const testSupabaseConnection = async (): Promise<{ success: boolean; error?: string; details?: any }> => {
   try {
     console.log('🔍 Testing Supabase connection...');
     console.log('URL:', supabaseUrl);
     console.log('Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'Missing');
 
-    // Test basic connection
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('count')
-      .limit(1);
-    
-    if (error) {
-      console.error('❌ Supabase connection test failed:', error);
-      return { 
-        success: false, 
-        error: error.message,
+    // Check environment variables first
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return {
+        success: false,
+        error: 'Missing environment variables. Please check your .env file.',
         details: {
-          code: error.code,
-          hint: error.hint,
-          details: error.details
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseAnonKey,
+          envFile: 'Make sure .env file exists with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY'
         }
       };
     }
+
+    // Validate URL format
+    if (!isValidUrl(supabaseUrl)) {
+      return {
+        success: false,
+        error: 'Invalid Supabase URL format',
+        details: {
+          providedUrl: supabaseUrl,
+          expectedFormat: 'https://your-project-ref.supabase.co'
+        }
+      };
+    }
+
+    // Test basic connectivity with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      // Test basic connection to Supabase
+      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+        method: 'HEAD',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Supabase API returned ${response.status}: ${response.statusText}`,
+          details: {
+            status: response.status,
+            statusText: response.statusText,
+            url: `${supabaseUrl}/rest/v1/`
+          }
+        };
+      }
+
+      // Test database query
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        console.error('❌ Database query failed:', error);
+        return { 
+          success: false, 
+          error: `Database error: ${error.message}`,
+          details: {
+            code: error.code,
+            hint: error.hint,
+            details: error.details,
+            suggestion: 'Check if your database tables exist and RLS policies are configured correctly'
+          }
+        };
+      }
+      
+      console.log('✅ Supabase connection successful');
+      return { success: true };
+
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Connection timeout - Supabase is not responding',
+          details: {
+            timeout: '5 seconds',
+            suggestion: 'Check your internet connection and Supabase project status'
+          }
+        };
+      }
+      
+      throw fetchError;
+    }
     
-    console.log('✅ Supabase connection successful');
-    return { success: true };
   } catch (err: any) {
     console.error('❌ Supabase connection test error:', err);
     
     // Provide more specific error messages
     let errorMessage = 'Failed to connect to Supabase';
+    let details: any = {
+      originalError: err.message,
+      stack: err.stack
+    };
     
     if (err.message?.includes('fetch')) {
       errorMessage = 'Network error: Unable to reach Supabase. Check your internet connection and Supabase URL.';
+      details.networkIssue = true;
     } else if (err.message?.includes('Invalid API key')) {
       errorMessage = 'Invalid Supabase API key. Please check your VITE_SUPABASE_ANON_KEY.';
+      details.authIssue = true;
     } else if (err.message?.includes('Project not found')) {
       errorMessage = 'Supabase project not found. Please check your VITE_SUPABASE_URL.';
+      details.projectIssue = true;
+    } else if (err.name === 'TypeError' && err.message?.includes('Failed to fetch')) {
+      errorMessage = 'Network connection failed. This could be due to CORS, firewall, or network issues.';
+      details.corsIssue = true;
+      details.troubleshooting = [
+        'Check if your Supabase project is active',
+        'Verify your internet connection',
+        'Check browser console for CORS errors',
+        'Ensure Supabase URL is correct and accessible'
+      ];
     }
     
     return { 
       success: false, 
       error: errorMessage,
-      details: {
-        originalError: err.message,
-        stack: err.stack
-      }
+      details
     };
   }
 };
