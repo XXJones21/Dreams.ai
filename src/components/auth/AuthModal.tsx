@@ -380,7 +380,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
           {!isSuccess && mode === 'login' && (
             <>
               <h2 className="text-3xl font-cinzel font-bold text-center text-stardust-silver mb-8">
-                <span className="bg-gradient-to-r from-brass to-electric-blue bg-clip-text text-transparent">
+                <span className="text-brass">
                   Welcome Back
                 </span>
               </h2>
@@ -473,7 +473,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
           {!isSuccess && mode === 'register' && (
             <>
               <h2 className="text-3xl font-cinzel font-bold text-center text-stardust-silver mb-8">
-                <span className="bg-gradient-to-r from-brass to-nebula-pink bg-clip-text text-transparent">
+                <span className="text-brass">
                   Create Your Account
                 </span>
               </h2>

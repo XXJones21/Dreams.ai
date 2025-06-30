@@ -107,7 +107,7 @@ const HeroSection: React.FC = () => {
             {/* Headlines */}
             <div className="space-y-6">
               <h1 className="text-5xl md:text-7xl lg:text-8xl font-cinzel font-bold text-stardust-silver leading-tight">
-                <span className="bg-gradient-to-r from-brass via-stardust-silver to-brass bg-clip-text text-transparent">
+                <span className="text-brass">
                   DREAM
                 </span>
                 <br />
@@ -215,7 +215,7 @@ const HeroSection: React.FC = () => {
                       <>
                         <h2 className="text-2xl font-bold text-brass mb-4">Dream Created!</h2>
                         <p className="text-lg text-black-marble mb-2">Your dream title:</p>
-                        <div className="text-xl font-cinzel text-electric-blue mb-4">{dreamResult.dream_name}</div>
+                        <div className="text-xl font-cinzel text-brass mb-4">{dreamResult.dream_name}</div>
                         <button
                           className="marble-button-large mt-2"
                           onClick={() => setShowPopup(false)}
@@ -240,22 +240,22 @@ const HeroSection: React.FC = () => {
                 <h3 className="text-brass font-cinzel font-semibold text-lg mb-2">Conscious Creation</h3>
                 <p className="text-stardust-silver/70 font-inter text-sm">Take control of your narrative destiny. Every choice you make consciously shapes the story's evolution.</p>
               </div>
-              <div className="glass-card p-6 group hover:border-electric-blue/40 transition-all duration-300">
+              <div className="glass-card p-6 group hover:border-stardust-silver/40 transition-all duration-300">
                 <div className="flex items-center justify-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-electric-blue to-cyan-400 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-stardust-silver to-gray-400 rounded-full flex items-center justify-center">
                     <Sparkles className="w-6 h-6 text-black-marble" />
                   </div>
                 </div>
-                <h3 className="text-electric-blue font-cinzel font-semibold text-lg mb-2">Reality Reimagined</h3>
+                <h3 className="text-stardust-silver font-cinzel font-semibold text-lg mb-2">Reality Reimagined</h3>
                 <p className="text-stardust-silver/70 font-inter text-sm">Transform the impossible into the inevitable. Watch as AI agents reshape reality according to your vision.</p>
               </div>
-              <div className="glass-card p-6 group hover:border-nebula-pink/40 transition-all duration-300">
+              <div className="glass-card p-6 group hover:border-brass/40 transition-all duration-300">
                 <div className="flex items-center justify-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-nebula-pink to-purple-400 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-brass to-yellow-400 rounded-full flex items-center justify-center">
                     <Play className="w-6 h-6 text-black-marble" />
                   </div>
                 </div>
-                <h3 className="text-nebula-pink font-cinzel font-semibold text-lg mb-2">Vision Unleashed</h3>
+                <h3 className="text-brass font-cinzel font-semibold text-lg mb-2">Vision Unleashed</h3>
                 <p className="text-stardust-silver/70 font-inter text-sm">Break free from linear storytelling. Experience narratives that adapt, surprise, and evolve with unlimited potential.</p>
               </div>
             </div>
