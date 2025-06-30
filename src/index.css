@@ -414,12 +414,13 @@ body {
   }
 }
 
-/* Marble Bust */
+/* Marble Bust with Authentic Marble Texture */
 .marble-bust-container {
   position: relative;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
 }
 
+/* Marble Base with Reference-Matched Texture */
 .marble-base {
   position: absolute;
   bottom: 0;
@@ -427,31 +428,62 @@ body {
   transform: translateX(-50%);
   width: 200px;
   height: 60px;
-  background: linear-gradient(135deg, #2a2a2a 0%, var(--black-marble) 50%, #3a3a3a 100%);
+  background: 
+    /* Primary marble base - dark charcoal with warm undertones */
+    linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 25%, #2a2a2a 50%, #1e1e1e 75%, #252525 100%),
+    /* Marble veining layer 1 - major veins */
+    radial-gradient(ellipse 200px 50px at 30% 20%, rgba(180, 160, 140, 0.4) 0%, transparent 40%),
+    radial-gradient(ellipse 150px 30px at 70% 60%, rgba(160, 140, 120, 0.3) 0%, transparent 50%),
+    /* Marble veining layer 2 - secondary veins */
+    linear-gradient(45deg, transparent 30%, rgba(200, 180, 160, 0.2) 35%, rgba(180, 160, 140, 0.3) 40%, transparent 45%),
+    linear-gradient(-30deg, transparent 60%, rgba(160, 140, 120, 0.25) 65%, transparent 70%),
+    /* Marble veining layer 3 - fine detail veins */
+    linear-gradient(120deg, transparent 20%, rgba(220, 200, 180, 0.15) 22%, transparent 24%),
+    linear-gradient(-60deg, transparent 75%, rgba(190, 170, 150, 0.2) 77%, transparent 79%);
   border-radius: 100px 100px 20px 20px;
   border: 3px solid var(--brass);
   z-index: 10;
+  box-shadow: 
+    inset 0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+/* Enhanced Marble Texture with Reference Characteristics */
 .marble-texture {
   position: absolute;
   inset: 0;
   background: 
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 1px, transparent 1px),
-    radial-gradient(circle at 70% 70%, rgba(255,255,255,0.05) 1px, transparent 1px);
-  background-size: 20px 20px, 15px 15px;
+    /* Fine marble grain texture */
+    radial-gradient(circle at 25% 30%, rgba(200, 180, 160, 0.15) 1px, transparent 1px),
+    radial-gradient(circle at 75% 70%, rgba(180, 160, 140, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 50% 20%, rgba(220, 200, 180, 0.08) 1px, transparent 1px),
+    /* Marble crystalline structure */
+    linear-gradient(45deg, transparent 48%, rgba(240, 220, 200, 0.05) 49%, rgba(200, 180, 160, 0.1) 50%, rgba(240, 220, 200, 0.05) 51%, transparent 52%),
+    /* Surface polish reflection */
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 30%, transparent 70%, rgba(255, 255, 255, 0.05) 100%);
+  background-size: 20px 20px, 15px 15px, 25px 25px, 8px 8px, 100% 100%;
+  border-radius: 100px 100px 20px 20px;
+  opacity: 0.8;
 }
 
+/* Brass Trim with Enhanced Detail */
 .brass-trim {
   position: absolute;
   top: 10px;
   left: 20px;
   right: 20px;
   height: 4px;
-  background: linear-gradient(90deg, var(--brass), #e6d06f, var(--brass));
+  background: 
+    linear-gradient(90deg, var(--brass), #e6d06f, var(--brass)),
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
   border-radius: 2px;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+/* Bust Silhouette with Marble Texture */
 .bust-silhouette {
   position: absolute;
   top: 0;
@@ -459,19 +491,42 @@ body {
   transform: translateX(-50%);
   width: 160px;
   height: 200px;
-  background: linear-gradient(135deg, #3a3a3a 0%, var(--black-marble) 30%, #2a2a2a 100%);
+  background: 
+    /* Primary marble surface - matching reference tones */
+    linear-gradient(135deg, #3a3a3a 0%, #2c2c2c 25%, #1a1a1a 50%, #2a2a2a 75%, #353535 100%),
+    /* Major marble veining - diagonal flow */
+    linear-gradient(45deg, transparent 20%, rgba(180, 160, 140, 0.4) 25%, rgba(200, 180, 160, 0.5) 30%, transparent 35%),
+    linear-gradient(-30deg, transparent 60%, rgba(160, 140, 120, 0.3) 65%, rgba(180, 160, 140, 0.4) 70%, transparent 75%),
+    /* Secondary veining - cross patterns */
+    linear-gradient(120deg, transparent 40%, rgba(220, 200, 180, 0.2) 42%, rgba(190, 170, 150, 0.3) 45%, transparent 48%),
+    /* Fine detail veining */
+    radial-gradient(ellipse 80px 40px at 30% 40%, rgba(200, 180, 160, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 60px 30px at 70% 70%, rgba(180, 160, 140, 0.2) 0%, transparent 50%);
   border-radius: 80px 80px 60px 60px;
   overflow: hidden;
   z-index: 5;
+  box-shadow: 
+    inset 2px 2px 8px rgba(0, 0, 0, 0.4),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
+/* Enhanced Marble Bust Texture */
 .marble-bust-texture {
   position: absolute;
   inset: 0;
   background: 
-    linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%),
-    radial-gradient(circle at 40% 60%, rgba(255,255,255,0.1) 2px, transparent 2px);
-  background-size: 30px 30px, 25px 25px;
+    /* Marble surface polish - high contrast like reference */
+    linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.15) 35%, rgba(240, 220, 200, 0.2) 40%, transparent 45%),
+    linear-gradient(-45deg, transparent 55%, rgba(255, 255, 255, 0.1) 60%, transparent 65%),
+    /* Marble crystalline detail */
+    radial-gradient(circle at 40% 60%, rgba(220, 200, 180, 0.2) 2px, transparent 2px),
+    radial-gradient(circle at 60% 30%, rgba(200, 180, 160, 0.15) 1px, transparent 1px),
+    /* Surface depth and translucency */
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.05) 100%);
+  background-size: 30px 30px, 25px 25px, 20px 20px, 15px 15px, 100% 100%;
+  border-radius: 80px 80px 60px 60px;
+  opacity: 0.9;
 }
 
 .cosmic-head {
