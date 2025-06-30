@@ -12,6 +12,7 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const [supportsCanvas, setSupportsCanvas] = useState(true);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const sizeClasses = {
     small: 'w-32 h-32',
@@ -36,7 +37,7 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
-    // Perfectly centered flame-like particle system
+    // Flame-like particle system positioned over the cosmic swirl
     class FlameParticle {
       x: number;
       y: number;
@@ -54,63 +55,54 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
         this.baseX = x;
         this.x = x;
         this.y = y;
-        this.vx = (Math.random() - 0.5) * 0.15;
-        this.vy = -0.5 - Math.random() * 0.6; // Gentler upward movement
+        this.vx = (Math.random() - 0.5) * 0.1;
+        this.vy = -0.3 - Math.random() * 0.4;
         this.life = 0;
-        this.maxLife = 100 + Math.random() * 60; // Shorter life for cleaner effect
-        this.size = 0.8 + Math.random() * 1.2; // Smaller particles
-        this.hue = 220 + Math.random() * 50; // Blue to purple range
+        this.maxLife = 80 + Math.random() * 40;
+        this.size = 0.6 + Math.random() * 1.0;
+        this.hue = 220 + Math.random() * 60; // Blue to purple range
         this.swayOffset = Math.random() * Math.PI * 2;
-        this.swayAmplitude = 0.2 + Math.random() * 0.4; // Subtle sway
+        this.swayAmplitude = 0.15 + Math.random() * 0.3;
       }
 
       update(time: number) {
         // Gentle flame-like swaying motion
-        const swayAmount = Math.sin(time * 1.0 + this.swayOffset) * this.swayAmplitude;
-        this.x = this.baseX + swayAmount + this.vx * this.life * 0.02;
+        const swayAmount = Math.sin(time * 0.8 + this.swayOffset) * this.swayAmplitude;
+        this.x = this.baseX + swayAmount + this.vx * this.life * 0.015;
         this.y += this.vy;
         
-        // Gradual deceleration as particle rises
-        this.vy *= 0.99;
+        // Gradual deceleration
+        this.vy *= 0.995;
         
         this.life++;
         
-        // Smooth fade out as particle ages and rises
-        const alpha = Math.max(0, 1 - (this.life / this.maxLife));
-        return alpha > 0.05 && this.y > -100;
+        return this.life < this.maxLife && this.y > -50;
       }
 
       draw(ctx: CanvasRenderingContext2D) {
         const alpha = Math.max(0, 1 - (this.life / this.maxLife));
         const progress = this.life / this.maxLife;
         
-        // Smooth color transition: blue -> purple -> pink -> transparent
-        let hue = this.hue;
-        let saturation = 65;
-        let lightness = 50;
-        
-        if (progress > 0.4) {
-          // Gradual transition to purple/pink as it rises and vanishes
-          hue = 260 + (progress - 0.4) * 60;
-          saturation = 55 - progress * 10;
-          lightness = 40 + progress * 20;
-        }
+        // Color transition: blue -> purple -> pink -> transparent
+        let hue = this.hue + progress * 40;
+        let saturation = 70 - progress * 20;
+        let lightness = 45 + progress * 25;
         
         ctx.save();
-        ctx.globalAlpha = alpha * 0.5; // Subtle opacity
+        ctx.globalAlpha = alpha * 0.4;
         
-        // Soft flame-like glow effect
+        // Soft glow effect
         const gradient = ctx.createRadialGradient(
           this.x, this.y, 0,
-          this.x, this.y, this.size * 2
+          this.x, this.y, this.size * 2.5
         );
-        gradient.addColorStop(0, `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha * 0.7})`);
-        gradient.addColorStop(0.6, `hsla(${hue}, ${saturation - 10}%, ${lightness - 10}%, ${alpha * 0.3})`);
-        gradient.addColorStop(1, `hsla(${hue}, ${saturation - 20}%, ${lightness - 20}%, 0)`);
+        gradient.addColorStop(0, `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha * 0.8})`);
+        gradient.addColorStop(0.7, `hsla(${hue}, ${saturation - 15}%, ${lightness - 15}%, ${alpha * 0.2})`);
+        gradient.addColorStop(1, `hsla(${hue}, ${saturation - 30}%, ${lightness - 30}%, 0)`);
         
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * (1 + progress * 0.2), 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.size * (1 + progress * 0.3), 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -121,17 +113,16 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
 
     const animate = () => {
       ctx.clearRect(0, 0, rect.width, rect.height);
-      time += 0.012; // Slower time progression
+      time += 0.01;
 
-      // Spawn particles from the exact center of the cosmic swirl area
-      if (Math.random() < 0.2) { // Reduced spawn rate for cleaner effect
-        // Perfect center positioning for the cosmic swirl area
-        const swirlCenterX = rect.width * 0.5; // Exact center
-        const swirlCenterY = rect.height * 0.25; // Top area where the cosmic swirl is
+      // Spawn particles from the cosmic swirl area (top center of the logo)
+      if (Math.random() < 0.15) {
+        // Position particles over the cosmic swirl in the logo
+        const swirlCenterX = rect.width * 0.5;
+        const swirlCenterY = rect.height * 0.2; // Top area where the cosmic swirl is
         
-        // Very tight spawn area for precise centering
-        const spawnX = swirlCenterX + (Math.random() - 0.5) * 20;
-        const spawnY = swirlCenterY + (Math.random() - 0.5) * 10;
+        const spawnX = swirlCenterX + (Math.random() - 0.5) * 25;
+        const spawnY = swirlCenterY + (Math.random() - 0.5) * 15;
         particles.push(new FlameParticle(spawnX, spawnY));
       }
 
@@ -144,9 +135,9 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
         return alive;
       });
 
-      // Limit particle count for performance and cleaner visual
-      if (particles.length > 35) {
-        particles = particles.slice(-35);
+      // Limit particle count
+      if (particles.length > 30) {
+        particles = particles.slice(-30);
       }
 
       animationRef.current = requestAnimationFrame(animate);
@@ -159,7 +150,7 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, []);
+  }, [imageLoaded]);
 
   return (
     <div className={`logo-with-fluid-swirl ${sizeClasses[size]} ${className}`}>
@@ -177,56 +168,53 @@ const LogoWithFluidSwirl: React.FC<LogoWithFluidSwirlProps> = ({
           <div className="frame-border left"></div>
         </div>
 
-        {/* Flame Particles Layer - BEHIND the logo image */}
+        {/* CSS-based flame sway animation layers - behind the logo */}
         <div className="absolute inset-0 z-10">
-          {/* CSS-based flame sway animation layers - perfectly centered */}
           <div className="cosmic-swirl-container" style={{
-            top: '15%',
+            top: '10%',
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '60%',
-            height: '60%'
+            width: '50%',
+            height: '50%'
           }}>
             <div className="cosmic-swirl flame-swirl-1"></div>
             <div className="cosmic-swirl flame-swirl-2"></div>
             <div className="cosmic-swirl flame-swirl-3"></div>
           </div>
-          
-          {/* Canvas Particles for vanishing flame effect - behind logo */}
-          {supportsCanvas && (
-            <canvas
-              ref={canvasRef}
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ 
-                mixBlendMode: 'screen',
-                opacity: 0.6,
-                zIndex: 1
-              }}
-            />
-          )}
         </div>
+
+        {/* Canvas Particles for vanishing flame effect - behind logo */}
+        {supportsCanvas && (
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full pointer-events-none z-15"
+            style={{ 
+              mixBlendMode: 'screen',
+              opacity: 0.7
+            }}
+          />
+        )}
 
         {/* Actual Logo Image - ABOVE the flame particles */}
         <div className="absolute inset-4 flex items-center justify-center z-20">
           <img 
-            src="/image.png" 
+            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
             alt="Dreams.AI Logo - Art Deco Bust with Cosmic Swirl" 
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain opacity-0"
             style={{
               filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 30px rgba(207, 181, 59, 0.4))',
-              zIndex: 10
             }}
-            onError={(e) => {
-              // Fallback to alternative image paths
-              const img = e.target as HTMLImageElement;
-              if (img.src.includes('image.png')) {
-                img.src = '/ChatGPT Image Jun 29, 2025, 09_05_56 PM copy.png';
-              } else if (img.src.includes('copy.png')) {
-                img.src = '/ChatGPT Image Jun 29, 2025, 09_05_56 PM.png';
-              } else if (img.src.includes('ChatGPT')) {
-                img.src = '/image copy.png';
-              }
+            onLoad={() => setImageLoaded(true)}
+          />
+          
+          {/* Fallback: Use the provided image directly */}
+          <div 
+            className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `url('/image copy copy.png')`,
+              filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 30px rgba(207, 181, 59, 0.4))',
             }}
+            onLoad={() => setImageLoaded(true)}
           />
         </div>
       </div>
