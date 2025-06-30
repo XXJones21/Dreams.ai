@@ -582,7 +582,3 @@ export const getUserDreams = async (userId: string) => {
 export const onAuthStateChange = (callback: (event: string, session: any) => void) => {
   return supabase.auth.onAuthStateChange(callback);
 };
-
-// Don't run connection test on module load to avoid blocking initialization
-// Instead, export it for manual testing when needed
-export { testSupabaseConnection };
