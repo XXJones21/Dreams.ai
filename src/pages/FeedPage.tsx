@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { TrendingUp, Users, BookOpen, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useAuthContext } from '../components/auth/AuthProvider';
 import CosmicBackground from '../components/CosmicBackground';
 import Header from '../components/Header';
 import DreamFeed from '../components/feed/DreamFeed';
@@ -12,40 +12,10 @@ type FeedTab = 'discover' | 'trending' | 'following' | 'collections';
 
 const FeedPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FeedTab>('discover');
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>('');
   const location = useLocation();
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        setError('Failed to check authentication status');
-        return;
-      }
-
-      setUser(session?.user ?? null);
-    } catch (error: any) {
-      console.error('Error loading user data:', error);
-      setError('Failed to load user data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRetry = () => {
-    loadUserData();
-  };
+  
+  // Use the auth context instead of managing auth state locally
+  const { user, loading, error, isAuthenticated } = useAuthContext();
 
   // Set initial tab based on URL or default
   useEffect(() => {
@@ -55,17 +25,6 @@ const FeedPage: React.FC = () => {
       setActiveTab(tab);
     }
   }, [location]);
-
-  // Listen for auth changes
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleDreamInteraction = async (dreamId: string, action: 'like' | 'comment' | 'share' | 'bookmark') => {
     if (!user) return;
@@ -110,7 +69,7 @@ const FeedPage: React.FC = () => {
     }
   ];
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black-marble overflow-hidden">
         <CosmicBackground />
@@ -140,12 +99,12 @@ const FeedPage: React.FC = () => {
             </p>
             <div className="space-y-4">
               <button
-                onClick={handleRetry}
+                onClick={() => window.location.reload()}
                 className="marble-button flex items-center space-x-2 w-full justify-center"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span className="relative z-10 text-brass font-inter font-medium">
-                  Try Again
+                  Reload Page
                 </span>
               </button>
               <a href="/" className="glass-button block w-full">
@@ -232,7 +191,7 @@ const FeedPage: React.FC = () => {
         <div className="min-h-[600px]">
           {activeTab === 'discover' && (
             <DreamFeed
-              isAuthenticated={!!user}
+              isAuthenticated={isAuthenticated}
               userId={user?.id}
               feedType={user ? 'personalized' : 'main'}
             />
@@ -241,7 +200,7 @@ const FeedPage: React.FC = () => {
           {activeTab === 'trending' && (
             <WeeklyTrending
               onDreamInteraction={handleDreamInteraction}
-              isAuthenticated={!!user}
+              isAuthenticated={isAuthenticated}
             />
           )}
           
@@ -256,7 +215,7 @@ const FeedPage: React.FC = () => {
           {activeTab === 'collections' && (
             <DreamCollections
               userId={user?.id}
-              isAuthenticated={!!user}
+              isAuthenticated={isAuthenticated}
               viewMode="discover"
             />
           )}
