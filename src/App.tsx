@@ -5,9 +5,6 @@ import HeroSection from './components/HeroSection';
 import CosmicBackground from './components/CosmicBackground';
 import AgentShowcase from './components/AgentShowcase';
 import DreamCarousel from './components/DreamCarousel';
-import RegisterPage from './pages/RegisterPage';
-import LoginPage from './pages/LoginPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ProfilePage from './components/profile/ProfilePage';
 
 function HomePage() {
@@ -27,9 +24,6 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </Router>
