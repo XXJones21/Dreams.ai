@@ -75,10 +75,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
   };
 
   const validatePassword = (password: string): boolean => {
-    const hasMinLength = password.length >= 8;
+    const hasMinLength = password.length >= 6;
     const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    return hasMinLength && hasNumber && hasSpecialChar;
+    return hasMinLength && hasNumber;
   };
 
   const validateAge = (dateOfBirth: string): boolean => {
@@ -200,7 +199,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         if (!value) {
           newErrors.password = 'Password is required';
         } else if (!validatePassword(value)) {
-          newErrors.password = 'Password must be at least 8 characters with numbers and special characters';
+          newErrors.password = 'Password must be at least 6 characters with numbers';
         } else {
           delete newErrors.password;
         }
@@ -648,7 +647,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     </button>
                   </div>
                   <p className="text-xs text-stardust-silver/60 mt-1">
-                    Min 8 chars with numbers & special characters
+                    Min 6 chars with numbers
                   </p>
                   {errors.password && (
                     <p className="text-red-400 text-xs mt-1">{errors.password}</p>

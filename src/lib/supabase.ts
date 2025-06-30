@@ -40,18 +40,6 @@ export const supabase = createClient(
     global: {
       headers: {
         'X-Client-Info': 'dreams-ai-web'
-      },
-      fetch: (url, options = {}) => {
-        // Add timeout and better error handling
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        return fetch(url, {
-          ...options,
-          signal: controller.signal,
-        }).finally(() => {
-          clearTimeout(timeoutId);
-        });
       }
     },
     db: {
@@ -122,12 +110,10 @@ export interface AuthError {
   status?: number;
 }
 
-// Enhanced Connection Test Function with detailed diagnostics
+// Simplified Connection Test Function
 export const testSupabaseConnection = async (): Promise<{ success: boolean; error?: string; details?: any }> => {
   try {
     console.log('🔍 Testing Supabase connection...');
-    console.log('URL:', supabaseUrl);
-    console.log('Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'Missing');
 
     // Check environment variables first
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -142,115 +128,32 @@ export const testSupabaseConnection = async (): Promise<{ success: boolean; erro
       };
     }
 
-    // Validate URL format
-    if (!isValidUrl(supabaseUrl)) {
-      return {
-        success: false,
-        error: 'Invalid Supabase URL format',
-        details: {
-          providedUrl: supabaseUrl,
-          expectedFormat: 'https://your-project-ref.supabase.co'
-        }
+    // Test basic auth functionality
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('❌ Auth session error:', error);
+      return { 
+        success: false, 
+        error: `Auth error: ${error.message}`,
+        details: { authError: error }
       };
     }
-
-    // Test basic connectivity with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      // Test basic connection to Supabase
-      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
-        method: 'HEAD',
-        headers: {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Supabase API returned ${response.status}: ${response.statusText}`,
-          details: {
-            status: response.status,
-            statusText: response.statusText,
-            url: `${supabaseUrl}/rest/v1/`
-          }
-        };
-      }
-
-      // Test database query
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('count')
-        .limit(1);
-      
-      if (error) {
-        console.error('❌ Database query failed:', error);
-        return { 
-          success: false, 
-          error: `Database error: ${error.message}`,
-          details: {
-            code: error.code,
-            hint: error.hint,
-            details: error.details,
-            suggestion: 'Check if your database tables exist and RLS policies are configured correctly'
-          }
-        };
-      }
-      
-      console.log('✅ Supabase connection successful');
-      return { success: true };
-
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      
-      if (fetchError.name === 'AbortError') {
-        return {
-          success: false,
-          error: 'Connection timeout - Supabase is not responding',
-          details: {
-            timeout: '5 seconds',
-            suggestion: 'Check your internet connection and Supabase project status'
-          }
-        };
-      }
-      
-      throw fetchError;
-    }
+    
+    console.log('✅ Supabase connection successful');
+    return { success: true };
     
   } catch (err: any) {
     console.error('❌ Supabase connection test error:', err);
     
-    // Provide more specific error messages
     let errorMessage = 'Failed to connect to Supabase';
     let details: any = {
-      originalError: err.message,
-      stack: err.stack
+      originalError: err.message
     };
     
     if (err.message?.includes('fetch')) {
       errorMessage = 'Network error: Unable to reach Supabase. Check your internet connection and Supabase URL.';
       details.networkIssue = true;
-    } else if (err.message?.includes('Invalid API key')) {
-      errorMessage = 'Invalid Supabase API key. Please check your VITE_SUPABASE_ANON_KEY.';
-      details.authIssue = true;
-    } else if (err.message?.includes('Project not found')) {
-      errorMessage = 'Supabase project not found. Please check your VITE_SUPABASE_URL.';
-      details.projectIssue = true;
-    } else if (err.name === 'TypeError' && err.message?.includes('Failed to fetch')) {
-      errorMessage = 'Network connection failed. This could be due to CORS, firewall, or network issues.';
-      details.corsIssue = true;
-      details.troubleshooting = [
-        'Check if your Supabase project is active',
-        'Verify your internet connection',
-        'Check browser console for CORS errors',
-        'Ensure Supabase URL is correct and accessible'
-      ];
     }
     
     return { 
@@ -269,8 +172,8 @@ export const signUp = async (email: string, password: string) => {
       return { data: null, error: { message: 'Email and password are required' } };
     }
 
-    if (password.length < 8) {
-      return { data: null, error: { message: 'Password must be at least 8 characters long' } };
+    if (password.length < 6) {
+      return { data: null, error: { message: 'Password must be at least 6 characters long' } };
     }
 
     console.log('🔐 Attempting to sign up user:', email);
@@ -279,10 +182,7 @@ export const signUp = async (email: string, password: string) => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: {
-          email_confirm: false // Disable email confirmation for faster onboarding
-        }
+        emailRedirectTo: `${window.location.origin}/auth/callback`
       }
     });
 
@@ -295,15 +195,6 @@ export const signUp = async (email: string, password: string) => {
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ SignUp exception:', err);
-    
-    // Check for network errors
-    if (err.message?.includes('fetch') || err.name === 'TypeError') {
-      return { 
-        data: null, 
-        error: { message: 'Network error: Unable to connect to authentication service. Please check your internet connection.' } 
-      };
-    }
-    
     return { data: null, error: { message: 'Authentication service unavailable' } };
   }
 };
@@ -340,15 +231,6 @@ export const signIn = async (email: string, password: string) => {
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ SignIn exception:', err);
-    
-    // Check for network errors
-    if (err.message?.includes('fetch') || err.name === 'TypeError') {
-      return { 
-        data: null, 
-        error: { message: 'Network error: Unable to connect to authentication service. Please check your internet connection.' } 
-      };
-    }
-    
     return { data: null, error: { message: 'Authentication service unavailable' } };
   }
 };
