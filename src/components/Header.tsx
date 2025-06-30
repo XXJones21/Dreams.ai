@@ -64,11 +64,18 @@ const Header: React.FC = () => {
         { href: '/profile', label: 'Library', icon: Library, requiresAuth: true }
       ];
     } else {
-      return [
-        { href: '#technology', label: 'Technology' },
-        { href: '#agents', label: 'Agents' },
-        { href: '/feed', label: 'Dreams', icon: TrendingUp }
-      ];
+      // For home page - only show Dreams when no user is logged in
+      if (!user) {
+        return [
+          { href: '/feed', label: 'Dreams', icon: TrendingUp }
+        ];
+      } else {
+        // When user is logged in on home page, show more options
+        return [
+          { href: '/feed', label: 'Dreams', icon: TrendingUp },
+          { href: '/profile', label: 'Library', icon: Library }
+        ];
+      }
     }
   };
 
