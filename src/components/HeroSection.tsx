@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MarbleBust from './MarbleBust';
 import ArtDecoColumns from './ArtDecoColumns';
-import { ChevronDown, Play, Sparkles, Zap } from 'lucide-react';
+import { ChevronDown, Play, Sparkles, Zap, User } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const taglines = [
   "Conscious Creation",
@@ -17,6 +18,22 @@ const HeroSection: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check authentication status
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -25,9 +42,26 @@ const HeroSection: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleStartDreaming = () => {
+    if (user) {
+      // User is logged in, proceed with dream creation or go to profile
+      window.location.href = '/profile';
+    } else {
+      // User not logged in, redirect to login
+      window.location.href = '/login';
+    }
+  };
+
   const handleDreamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dreamPrompt.trim()) return;
+    
+    // Check if user is authenticated
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setDreamResult(null);
@@ -89,28 +123,52 @@ const HeroSection: React.FC = () => {
 
           {/* Dream Input */}
           <div className="max-w-2xl mx-auto space-y-6">
-            <form onSubmit={handleDreamSubmit} className="space-y-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={dreamPrompt}
-                  onChange={(e) => setDreamPrompt(e.target.value)}
-                  placeholder="What would you like to dream about? (e.g., rescue a princess from a castle)"
-                  className="w-full px-6 py-4 bg-black-marble/50 border-2 border-brass/30 rounded-lg text-stardust-silver placeholder-stardust-silver/50 font-inter focus:border-brass focus:outline-none backdrop-blur-md"
-                />
-                <Sparkles className="absolute right-4 top-1/2 transform -translate-y-1/2 text-brass w-5 h-5" />
+            {user ? (
+              <form onSubmit={handleDreamSubmit} className="space-y-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={dreamPrompt}
+                    onChange={(e) => setDreamPrompt(e.target.value)}
+                    placeholder="What would you like to dream about? (e.g., rescue a princess from a castle)"
+                    className="w-full px-6 py-4 bg-black-marble/50 border-2 border-brass/30 rounded-lg text-stardust-silver placeholder-stardust-silver/50 font-inter focus:border-brass focus:outline-none backdrop-blur-md"
+                  />
+                  <Sparkles className="absolute right-4 top-1/2 transform -translate-y-1/2 text-brass w-5 h-5" />
+                </div>
+                <button 
+                  type="submit"
+                  className="marble-button-large group w-full"
+                  disabled={!dreamPrompt.trim() || loading}
+                >
+                  <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300 flex items-center justify-center space-x-2">
+                    <Play className="w-5 h-5" />
+                    <span>{loading ? "Generating..." : "Begin Your Dream"}</span>
+                  </span>
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Sign in to start dreaming..."
+                    className="w-full px-6 py-4 bg-black-marble/30 border-2 border-brass/20 rounded-lg text-stardust-silver/50 placeholder-stardust-silver/30 font-inter cursor-not-allowed"
+                    disabled
+                  />
+                  <User className="absolute right-4 top-1/2 transform -translate-y-1/2 text-brass/50 w-5 h-5" />
+                </div>
+                <button 
+                  onClick={handleStartDreaming}
+                  className="marble-button-large group w-full"
+                >
+                  <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300 flex items-center justify-center space-x-2">
+                    <Play className="w-5 h-5" />
+                    <span>Sign In to Start Dreaming</span>
+                  </span>
+                </button>
               </div>
-              <button 
-                type="submit"
-                className="marble-button-large group w-full"
-                disabled={!dreamPrompt.trim() || loading}
-              >
-                <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300 flex items-center justify-center space-x-2">
-                  <Play className="w-5 h-5" />
-                  <span>{loading ? "Generating..." : "Begin Your Dream"}</span>
-                </span>
-              </button>
-            </form>
+            )}
+
             {loading && <div className="text-brass mt-4">Generating your dream...</div>}
             {error && <div className="text-red-500 mt-4">{error}</div>}
             {dreamResult && (
