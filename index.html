@@ -57,25 +57,13 @@
   </head>
   <body>
     <div id="root">
-      <!-- Fallback loading content -->
+      <!-- Fallback loading content - will be removed by React -->
       <div class="loading-fallback">
         <h1>Dreams.AI</h1>
-        <p>Loading your dream experience...</p>
+        <p>Initializing your dream experience...</p>
         <div class="spinner"></div>
       </div>
     </div>
-    
-    <script>
-      // Remove fallback content once React loads
-      window.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
-          const fallback = document.querySelector('.loading-fallback');
-          if (fallback && document.querySelector('[data-reactroot]')) {
-            fallback.remove();
-          }
-        }, 100);
-      });
-    </script>
     
     <script type="module" src="/src/main.tsx"></script>
   </body>
