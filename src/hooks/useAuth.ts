@@ -23,20 +23,20 @@ export const useAuth = () => {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
 
-    // Get initial session with timeout
+    // Get initial session with longer timeout
     const getInitialSession = async () => {
       try {
-        // Set a timeout to prevent infinite loading
+        // Set a longer timeout to prevent premature failures
         timeoutId = setTimeout(() => {
           if (mounted) {
-            console.warn('⚠️ Auth initialization timed out');
+            console.warn('⚠️ Auth initialization timed out after 30 seconds');
             setAuthState(prev => ({ 
               ...prev, 
               loading: false, 
-              error: 'Authentication service is taking too long to respond. Please refresh the page.' 
+              error: 'Authentication service is taking too long to respond. Please check your connection and refresh the page.' 
             }));
           }
-        }, 15000);
+        }, 30000); // Increased from 15 seconds to 30 seconds
 
         const { data: { session }, error } = await supabase.auth.getSession();
         
@@ -51,14 +51,18 @@ export const useAuth = () => {
         }
 
         if (session?.user) {
-          // Load user profile with timeout
+          // Load user profile with longer timeout and better error handling
           try {
             const { data: profile, error: profileError } = await getProfile(session.user.id);
             
             if (!mounted) return;
             
-            if (profileError && profileError.message !== 'Profile not found') {
+            if (profileError) {
               console.error('Error loading profile:', profileError);
+              // Don't treat profile errors as fatal - user might not have a profile yet
+              if (profileError.message !== 'Profile not found') {
+                console.warn('Profile loading failed, but continuing with authentication:', profileError.message);
+              }
             }
 
             setAuthState({
@@ -68,9 +72,10 @@ export const useAuth = () => {
               loading: false,
               error: null
             });
-          } catch (profileErr) {
+          } catch (profileErr: any) {
             console.error('Profile loading exception:', profileErr);
             if (mounted) {
+              // Don't fail authentication if profile loading fails
               setAuthState({
                 user: session.user,
                 session,
@@ -83,18 +88,26 @@ export const useAuth = () => {
         } else {
           setAuthState(prev => ({ ...prev, loading: false }));
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error in getInitialSession:', err);
         if (mounted) {
           clearTimeout(timeoutId);
-          setAuthState(prev => ({ ...prev, loading: false, error: 'Failed to initialize authentication' }));
+          let errorMessage = 'Failed to initialize authentication';
+          
+          if (err.message?.includes('timeout')) {
+            errorMessage = 'Connection timed out. Please check your internet connection and refresh the page.';
+          } else if (err.message?.includes('fetch')) {
+            errorMessage = 'Unable to connect to authentication service. Please check your connection.';
+          }
+          
+          setAuthState(prev => ({ ...prev, loading: false, error: errorMessage }));
         }
       }
     };
 
     getInitialSession();
 
-    // Listen for auth changes
+    // Listen for auth changes with better error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
@@ -102,14 +115,18 @@ export const useAuth = () => {
         console.log('Auth state changed:', event, session?.user?.email);
 
         if (session?.user) {
-          // Load user profile
+          // Load user profile with better error handling
           try {
             const { data: profile, error: profileError } = await getProfile(session.user.id);
             
             if (!mounted) return;
             
-            if (profileError && profileError.message !== 'Profile not found') {
+            if (profileError) {
               console.error('Error loading profile after auth change:', profileError);
+              // Don't treat profile errors as fatal
+              if (profileError.message !== 'Profile not found') {
+                console.warn('Profile loading failed after auth change, but continuing:', profileError.message);
+              }
             }
 
             setAuthState({
@@ -119,9 +136,10 @@ export const useAuth = () => {
               loading: false,
               error: null
             });
-          } catch (profileErr) {
+          } catch (profileErr: any) {
             console.error('Profile loading exception after auth change:', profileErr);
             if (mounted) {
+              // Don't fail authentication if profile loading fails
               setAuthState({
                 user: session.user,
                 session,
@@ -158,12 +176,14 @@ export const useAuth = () => {
       
       if (error) {
         console.error('Error refreshing profile:', error);
+        // Don't throw error, just log it
         return;
       }
 
       setAuthState(prev => ({ ...prev, profile }));
     } catch (err) {
       console.error('Error in refreshProfile:', err);
+      // Don't throw error, just log it
     }
   };
 
