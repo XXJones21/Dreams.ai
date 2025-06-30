@@ -10,6 +10,7 @@ import DreamCarousel from './components/DreamCarousel';
 import ProfilePage from './components/profile/ProfilePage';
 import FeedPage from './pages/FeedPage';
 import AuthTest from './components/auth/AuthTest';
+import DreamDetailPage from "./pages/DreamDetailPage";
 
 function HomePage() {
   return (
@@ -39,6 +40,7 @@ function App() {
           />
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/dreams" element={<FeedPage />} />
+          <Route path="/dreams/:dreamId" element={<DreamDetailPage />} />
           <Route path="/auth/test" element={<AuthTest />} />
           {/* Catch all route */}
           <Route path="*" element={<HomePage />} />

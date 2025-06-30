@@ -1,6 +1,0 @@
-{
-    "dream_name": "Identify a name for your dream jouurney based on th {story_prompt}.",
-    "story_prompt": "You are embarking on a dream inspired by the following prompt: a knight in a castle.",
-    "user_prompt": "a knight in a castle",
-    "initial_goal": "Begin your journey and explore your surroundings."
-}
