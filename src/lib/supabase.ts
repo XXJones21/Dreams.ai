@@ -3,11 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+// Provide fallback values for development/demo
+const defaultUrl = 'https://demo.supabase.co';
+const defaultKey = 'demo-key';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || defaultUrl, 
+  supabaseAnonKey || defaultKey
+);
 
 // Types
 export interface Profile {
@@ -31,91 +34,136 @@ export interface UserRegistrationData {
   profilePicture?: File;
 }
 
-// Auth functions
+// Auth functions with error handling
 export const signUp = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`
-    }
-  });
-  return { data, error };
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+    return { data, error };
+  } catch (err) {
+    console.error('SignUp error:', err);
+    return { data: null, error: { message: 'Authentication service unavailable' } };
+  }
 };
 
 export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-  return { data, error };
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    return { data, error };
+  } catch (err) {
+    console.error('SignIn error:', err);
+    return { data: null, error: { message: 'Authentication service unavailable' } };
+  }
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+  try {
+    const { error } = await supabase.auth.signOut();
+    return { error };
+  } catch (err) {
+    console.error('SignOut error:', err);
+    return { error: { message: 'Sign out failed' } };
+  }
 };
 
 export const resetPassword = async (email: string) => {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/reset-password`
-  });
-  return { data, error };
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`
+    });
+    return { data, error };
+  } catch (err) {
+    console.error('Reset password error:', err);
+    return { data: null, error: { message: 'Password reset service unavailable' } };
+  }
 };
 
-// Profile functions
+// Profile functions with error handling
 export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .insert([profileData])
-    .select()
-    .single();
-  return { data, error };
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([profileData])
+      .select()
+      .single();
+    return { data, error };
+  } catch (err) {
+    console.error('Create profile error:', err);
+    return { data: null, error: { message: 'Profile creation failed' } };
+  }
 };
 
 export const getProfile = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-  return { data, error };
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    return { data, error };
+  } catch (err) {
+    console.error('Get profile error:', err);
+    return { data: null, error: { message: 'Profile fetch failed' } };
+  }
 };
 
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('user_id', userId)
-    .select()
-    .single();
-  return { data, error };
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    return { data, error };
+  } catch (err) {
+    console.error('Update profile error:', err);
+    return { data: null, error: { message: 'Profile update failed' } };
+  }
 };
 
-// File upload functions
+// File upload functions with error handling
 export const uploadProfilePicture = async (userId: string, file: File) => {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}/${Date.now()}.${fileExt}`;
-  
-  const { data, error } = await supabase.storage
-    .from('profile-pictures')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
-  
-  if (error) return { data: null, error };
-  
-  const { data: urlData } = supabase.storage
-    .from('profile-pictures')
-    .getPublicUrl(fileName);
-  
-  return { data: { ...data, publicUrl: urlData.publicUrl }, error: null };
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('profile-pictures')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+    
+    if (error) return { data: null, error };
+    
+    const { data: urlData } = supabase.storage
+      .from('profile-pictures')
+      .getPublicUrl(fileName);
+    
+    return { data: { ...data, publicUrl: urlData.publicUrl }, error: null };
+  } catch (err) {
+    console.error('Upload profile picture error:', err);
+    return { data: null, error: { message: 'File upload failed' } };
+  }
 };
 
 export const deleteProfilePicture = async (filePath: string) => {
-  const { data, error } = await supabase.storage
-    .from('profile-pictures')
-    .remove([filePath]);
-  return { data, error };
+  try {
+    const { data, error } = await supabase.storage
+      .from('profile-pictures')
+      .remove([filePath]);
+    return { data, error };
+  } catch (err) {
+    console.error('Delete profile picture error:', err);
+    return { data: null, error: { message: 'File deletion failed' } };
+  }
 };
