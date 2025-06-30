@@ -26,7 +26,7 @@ if (supabaseUrl && !isValidUrl(supabaseUrl)) {
   console.error('Expected format: https://your-project-ref.supabase.co');
 }
 
-// Create Supabase client with enhanced configuration
+// Create Supabase client with enhanced configuration - REMOVED TIMEOUT CONSTRAINTS
 export const supabase = createClient(
   supabaseUrl || 'https://demo.supabase.co', 
   supabaseAnonKey || 'demo-key',
@@ -110,14 +110,10 @@ export interface AuthError {
   status?: number;
 }
 
-// Helper function to create timeout promise
-const createTimeoutPromise = (ms: number, operation: string) => {
-  return new Promise((_, reject) => 
-    setTimeout(() => reject(new Error(`${operation} timeout after ${ms}ms`)), ms)
-  );
-};
+// REMOVED: Helper function to create timeout promise - this was causing the loops
+// REMOVED: All timeout-related code that was interfering with natural auth flow
 
-// Simplified Connection Test Function with longer timeout
+// Simplified Connection Test Function - NO TIMEOUTS
 export const testSupabaseConnection = async (): Promise<{ success: boolean; error?: string; details?: any }> => {
   try {
     console.log('🔍 Testing Supabase connection...');
@@ -135,11 +131,8 @@ export const testSupabaseConnection = async (): Promise<{ success: boolean; erro
       };
     }
 
-    // Test basic auth functionality with longer timeout
-    const timeoutPromise = createTimeoutPromise(30000, 'Connection test');
-    const authPromise = supabase.auth.getSession();
-    
-    const { data, error } = await Promise.race([authPromise, timeoutPromise]) as any;
+    // Test basic auth functionality - NO TIMEOUT, let it complete naturally
+    const { data, error } = await supabase.auth.getSession();
     
     if (error) {
       console.error('❌ Auth session error:', error);
@@ -161,7 +154,7 @@ export const testSupabaseConnection = async (): Promise<{ success: boolean; erro
       originalError: err.message
     };
     
-    if (err.message?.includes('fetch') || err.message?.includes('timeout')) {
+    if (err.message?.includes('fetch')) {
       errorMessage = 'Network error: Unable to reach Supabase. Check your internet connection and Supabase URL.';
       details.networkIssue = true;
     }
@@ -174,7 +167,7 @@ export const testSupabaseConnection = async (): Promise<{ success: boolean; erro
   }
 };
 
-// Enhanced Auth functions with better error handling and longer timeouts
+// Enhanced Auth functions with NO TIMEOUTS - let operations complete naturally
 export const signUp = async (email: string, password: string) => {
   try {
     // Validate inputs
@@ -188,18 +181,14 @@ export const signUp = async (email: string, password: string) => {
 
     console.log('🔐 Attempting to sign up user:', email);
 
-    // Add timeout to prevent hanging - increased to 30 seconds
-    const timeoutPromise = createTimeoutPromise(30000, 'Sign up');
-
-    const signUpPromise = supabase.auth.signUp({
+    // REMOVED: Timeout promise - let signUp complete naturally
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`
       }
     });
-
-    const { data, error } = await Promise.race([signUpPromise, timeoutPromise]) as any;
 
     if (error) {
       console.error('❌ SignUp error:', error);
@@ -210,10 +199,7 @@ export const signUp = async (email: string, password: string) => {
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ SignUp exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { data: null, error: { message: 'Sign up timed out. Please check your connection and try again.' } };
-    }
-    return { data: null, error: { message: 'Authentication service unavailable' } };
+    return { data: null, error: { message: 'Authentication service error' } };
   }
 };
 
@@ -225,15 +211,11 @@ export const signIn = async (email: string, password: string) => {
 
     console.log('🔐 Attempting to sign in user:', email);
 
-    // Add timeout to prevent hanging - increased to 30 seconds
-    const timeoutPromise = createTimeoutPromise(30000, 'Sign in');
-
-    const signInPromise = supabase.auth.signInWithPassword({
+    // REMOVED: Timeout promise - let signIn complete naturally
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
-
-    const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
 
     if (error) {
       console.error('❌ SignIn error:', error);
@@ -254,10 +236,7 @@ export const signIn = async (email: string, password: string) => {
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ SignIn exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { data: null, error: { message: 'Sign in timed out. Please check your connection and try again.' } };
-    }
-    return { data: null, error: { message: 'Authentication service unavailable' } };
+    return { data: null, error: { message: 'Authentication service error' } };
   }
 };
 
@@ -301,13 +280,11 @@ export const resetPassword = async (email: string) => {
   }
 };
 
-// Session Management with longer timeouts
+// Session Management - NO TIMEOUTS, natural completion
 export const getCurrentUser = async () => {
   try {
-    const timeoutPromise = createTimeoutPromise(20000, 'Get user');
-    const userPromise = supabase.auth.getUser();
-    
-    const { data: { user }, error } = await Promise.race([userPromise, timeoutPromise]) as any;
+    // REMOVED: Timeout promise - let getUser complete naturally
+    const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) {
       console.error('❌ Get current user error:', error);
@@ -317,19 +294,14 @@ export const getCurrentUser = async () => {
     return { user, error: null };
   } catch (err: any) {
     console.error('❌ Get current user exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { user: null, error: { message: 'Request timed out. Please refresh the page.' } };
-    }
     return { user: null, error: { message: 'Failed to get current user' } };
   }
 };
 
 export const getCurrentSession = async () => {
   try {
-    const timeoutPromise = createTimeoutPromise(20000, 'Get session');
-    const sessionPromise = supabase.auth.getSession();
-    
-    const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+    // REMOVED: Timeout promise - let getSession complete naturally
+    const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
       console.error('❌ Get current session error:', error);
@@ -339,14 +311,11 @@ export const getCurrentSession = async () => {
     return { session, error: null };
   } catch (err: any) {
     console.error('❌ Get current session exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { session: null, error: { message: 'Session request timed out. Please refresh the page.' } };
-    }
     return { session: null, error: { message: 'Failed to get current session' } };
   }
 };
 
-// Profile functions with enhanced error handling and longer timeouts
+// Profile functions with NO TIMEOUTS - natural completion
 export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) => {
   try {
     // Validate required fields
@@ -354,15 +323,12 @@ export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_a
       return { data: null, error: { message: 'Missing required profile fields' } };
     }
 
-    const timeoutPromise = createTimeoutPromise(30000, 'Create profile');
-
-    const createPromise = supabase
+    // REMOVED: Timeout promise - let database operation complete naturally
+    const { data, error } = await supabase
       .from('profiles')
       .insert([profileData])
       .select()
       .single();
-
-    const { data, error } = await Promise.race([createPromise, timeoutPromise]) as any;
 
     if (error) {
       console.error('❌ Create profile error:', error);
@@ -378,9 +344,6 @@ export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_a
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ Create profile exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { data: null, error: { message: 'Profile creation timed out. Please check your connection and try again.' } };
-    }
     return { data: null, error: { message: 'Profile creation failed' } };
   }
 };
@@ -391,15 +354,13 @@ export const getProfile = async (userId: string) => {
       return { data: null, error: { message: 'User ID is required' } };
     }
 
-    const timeoutPromise = createTimeoutPromise(60000, 'Get profile');
-
-    const profilePromise = supabase
+    // REMOVED: Timeout promise - let database query complete naturally
+    // This was the main cause of the authentication loops
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .single();
-
-    const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
     if (error) {
       console.error('❌ Get profile error:', error);
@@ -414,9 +375,6 @@ export const getProfile = async (userId: string) => {
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ Get profile exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { data: null, error: { message: 'Profile fetch timed out. Please check your connection and refresh the page.' } };
-    }
     return { data: null, error: { message: 'Profile fetch failed' } };
   }
 };
@@ -430,16 +388,13 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     // Remove fields that shouldn't be updated
     const { id, user_id, created_at, ...allowedUpdates } = updates;
 
-    const timeoutPromise = createTimeoutPromise(30000, 'Update profile');
-
-    const updatePromise = supabase
+    // REMOVED: Timeout promise - let update complete naturally
+    const { data, error } = await supabase
       .from('profiles')
       .update({ ...allowedUpdates, updated_at: new Date().toISOString() })
       .eq('user_id', userId)
       .select()
       .single();
-
-    const { data, error } = await Promise.race([updatePromise, timeoutPromise]) as any;
 
     if (error) {
       console.error('❌ Update profile error:', error);
@@ -450,14 +405,11 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     return { data, error: null };
   } catch (err: any) {
     console.error('❌ Update profile exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { data: null, error: { message: 'Profile update timed out. Please check your connection and try again.' } };
-    }
     return { data: null, error: { message: 'Profile update failed' } };
   }
 };
 
-// File upload functions with enhanced error handling
+// File upload functions with NO TIMEOUTS
 export const uploadProfilePicture = async (userId: string, file: File) => {
   try {
     if (!userId || !file) {
@@ -478,16 +430,13 @@ export const uploadProfilePicture = async (userId: string, file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     
-    const timeoutPromise = createTimeoutPromise(60000, 'Upload file'); // 1 minute for file uploads
-
-    const uploadPromise = supabase.storage
+    // REMOVED: Timeout promise - let file upload complete naturally
+    const { data, error } = await supabase.storage
       .from('profile-pictures')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false
       });
-    
-    const { data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any;
     
     if (error) {
       console.error('❌ Upload profile picture error:', error);
@@ -502,9 +451,6 @@ export const uploadProfilePicture = async (userId: string, file: File) => {
     return { data: { ...data, publicUrl: urlData.publicUrl }, error: null };
   } catch (err: any) {
     console.error('❌ Upload profile picture exception:', err);
-    if (err.message?.includes('timeout')) {
-      return { data: null, error: { message: 'File upload timed out. Please check your connection and try again.' } };
-    }
     return { data: null, error: { message: 'File upload failed' } };
   }
 };

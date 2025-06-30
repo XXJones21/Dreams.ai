@@ -21,44 +21,46 @@ export const useAuth = () => {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
+    let retryCount = 0;
+    const maxRetries = 3;
 
-    // Get initial session with longer timeout
+    // REMOVED: All timeout logic that was causing authentication loops
+    // Get initial session with retry logic but NO timeouts
     const getInitialSession = async () => {
       try {
-        // Set a longer timeout to prevent premature failures
-        timeoutId = setTimeout(() => {
-          if (mounted) {
-            console.warn('⚠️ Auth initialization timed out after 30 seconds');
-            setAuthState(prev => ({ 
-              ...prev, 
-              loading: false, 
-              error: 'Authentication service is taking too long to respond. Please check your connection and refresh the page.' 
-            }));
-          }
-        }, 30000); // Increased from 15 seconds to 30 seconds
-
+        console.log('🔄 Initializing authentication...');
+        
+        // Let getSession complete naturally without timeout constraints
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
-        clearTimeout(timeoutId);
-        
         if (error) {
           console.error('Error getting initial session:', error);
+          
+          // Retry logic for network issues, but no timeout loops
+          if (retryCount < maxRetries && (error.message?.includes('fetch') || error.message?.includes('network'))) {
+            retryCount++;
+            console.log(`🔄 Retrying authentication (${retryCount}/${maxRetries})...`);
+            setTimeout(() => getInitialSession(), 2000 * retryCount); // Exponential backoff
+            return;
+          }
+          
           setAuthState(prev => ({ ...prev, loading: false, error: error.message }));
           return;
         }
 
         if (session?.user) {
-          // Load user profile with longer timeout and better error handling
+          console.log('✅ Session found, loading profile...');
+          
+          // Load user profile with graceful error handling - NO TIMEOUTS
           try {
             const { data: profile, error: profileError } = await getProfile(session.user.id);
             
             if (!mounted) return;
             
             if (profileError) {
-              console.error('Error loading profile:', profileError);
+              console.error('Profile loading failed:', profileError);
               // Don't treat profile errors as fatal - user might not have a profile yet
               if (profileError.message !== 'Profile not found') {
                 console.warn('Profile loading failed, but continuing with authentication:', profileError.message);
@@ -86,17 +88,23 @@ export const useAuth = () => {
             }
           }
         } else {
+          console.log('ℹ️ No active session found');
           setAuthState(prev => ({ ...prev, loading: false }));
         }
       } catch (err: any) {
         console.error('Error in getInitialSession:', err);
         if (mounted) {
-          clearTimeout(timeoutId);
+          // Retry for network errors, but don't create timeout loops
+          if (retryCount < maxRetries && (err.message?.includes('fetch') || err.message?.includes('network'))) {
+            retryCount++;
+            console.log(`🔄 Retrying authentication due to network error (${retryCount}/${maxRetries})...`);
+            setTimeout(() => getInitialSession(), 2000 * retryCount);
+            return;
+          }
+          
           let errorMessage = 'Failed to initialize authentication';
           
-          if (err.message?.includes('timeout')) {
-            errorMessage = 'Connection timed out. Please check your internet connection and refresh the page.';
-          } else if (err.message?.includes('fetch')) {
+          if (err.message?.includes('fetch')) {
             errorMessage = 'Unable to connect to authentication service. Please check your connection.';
           }
           
@@ -107,15 +115,15 @@ export const useAuth = () => {
 
     getInitialSession();
 
-    // Listen for auth changes with better error handling
+    // Listen for auth changes with improved error handling - NO TIMEOUTS
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('🔄 Auth state changed:', event, session?.user?.email);
 
         if (session?.user) {
-          // Load user profile with better error handling
+          // Load user profile with graceful error handling - NO TIMEOUTS
           try {
             const { data: profile, error: profileError } = await getProfile(session.user.id);
             
@@ -163,7 +171,6 @@ export const useAuth = () => {
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
@@ -172,6 +179,7 @@ export const useAuth = () => {
     if (!authState.user) return;
 
     try {
+      // NO TIMEOUT - let profile refresh complete naturally
       const { data: profile, error } = await getProfile(authState.user.id);
       
       if (error) {
