@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { TrendingUp, Users, BookOpen, Sparkles } from 'lucide-react';
+import { TrendingUp, Users, BookOpen, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import CosmicBackground from '../components/CosmicBackground';
 import Header from '../components/Header';
@@ -14,23 +14,51 @@ const FeedPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FeedTab>('discover');
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
   const location = useLocation();
 
   useEffect(() => {
-    // Check authentication status
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    loadUserData();
   }, []);
+
+  const loadUserData = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+
+      // Add timeout for auth check
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Authentication check timed out')), 10000)
+      );
+
+      const sessionPromise = supabase.auth.getSession();
+      
+      const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        setError('Failed to check authentication status');
+        return;
+      }
+
+      setUser(session?.user ?? null);
+    } catch (error: any) {
+      console.error('Error loading user data:', error);
+      if (error.message?.includes('timeout')) {
+        setError('Connection timed out. Please check your internet connection.');
+      } else {
+        setError('Failed to load user data');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    loadUserData();
+  };
 
   // Set initial tab based on URL or default
   useEffect(() => {
@@ -40,6 +68,17 @@ const FeedPage: React.FC = () => {
       setActiveTab(tab);
     }
   }, [location]);
+
+  // Listen for auth changes
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleDreamInteraction = async (dreamId: string, action: 'like' | 'comment' | 'share' | 'bookmark') => {
     if (!user) return;
@@ -92,6 +131,47 @@ const FeedPage: React.FC = () => {
           <div className="text-center">
             <div className="animate-spin w-12 h-12 border-4 border-brass border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-stardust-silver">Loading feed...</p>
+            {retryCount > 0 && (
+              <p className="text-stardust-silver/60 text-sm mt-2">
+                Attempt {retryCount + 1}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black-marble overflow-hidden">
+        <CosmicBackground />
+        <Header />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="glass-card p-8 text-center max-w-md">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-cinzel font-bold text-stardust-silver mb-4">
+              {error.includes('timeout') ? 'Connection Timeout' : 'Loading Error'}
+            </h2>
+            <p className="text-stardust-silver/70 mb-6">
+              {error}
+            </p>
+            <div className="space-y-4">
+              <button
+                onClick={handleRetry}
+                className="marble-button flex items-center space-x-2 w-full justify-center"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="relative z-10 text-brass font-inter font-medium">
+                  Try Again
+                </span>
+              </button>
+              <a href="/" className="glass-button block w-full">
+                <span className="relative z-10 text-stardust-silver font-inter font-medium">
+                  Return Home
+                </span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

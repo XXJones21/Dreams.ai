@@ -20,10 +20,29 @@ export const useAuth = () => {
   });
 
   useEffect(() => {
-    // Get initial session
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    // Get initial session with timeout
     const getInitialSession = async () => {
       try {
+        // Set a timeout to prevent infinite loading
+        timeoutId = setTimeout(() => {
+          if (mounted) {
+            console.warn('⚠️ Auth initialization timed out');
+            setAuthState(prev => ({ 
+              ...prev, 
+              loading: false, 
+              error: 'Authentication service is taking too long to respond. Please refresh the page.' 
+            }));
+          }
+        }, 15000);
+
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        clearTimeout(timeoutId);
         
         if (error) {
           console.error('Error getting initial session:', error);
@@ -32,26 +51,44 @@ export const useAuth = () => {
         }
 
         if (session?.user) {
-          // Load user profile
-          const { data: profile, error: profileError } = await getProfile(session.user.id);
-          
-          if (profileError && profileError.message !== 'Profile not found') {
-            console.error('Error loading profile:', profileError);
-          }
+          // Load user profile with timeout
+          try {
+            const { data: profile, error: profileError } = await getProfile(session.user.id);
+            
+            if (!mounted) return;
+            
+            if (profileError && profileError.message !== 'Profile not found') {
+              console.error('Error loading profile:', profileError);
+            }
 
-          setAuthState({
-            user: session.user,
-            session,
-            profile: profile || null,
-            loading: false,
-            error: null
-          });
+            setAuthState({
+              user: session.user,
+              session,
+              profile: profile || null,
+              loading: false,
+              error: null
+            });
+          } catch (profileErr) {
+            console.error('Profile loading exception:', profileErr);
+            if (mounted) {
+              setAuthState({
+                user: session.user,
+                session,
+                profile: null,
+                loading: false,
+                error: null
+              });
+            }
+          }
         } else {
           setAuthState(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
         console.error('Error in getInitialSession:', err);
-        setAuthState(prev => ({ ...prev, loading: false, error: 'Failed to initialize auth' }));
+        if (mounted) {
+          clearTimeout(timeoutId);
+          setAuthState(prev => ({ ...prev, loading: false, error: 'Failed to initialize authentication' }));
+        }
       }
     };
 
@@ -60,23 +97,40 @@ export const useAuth = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         console.log('Auth state changed:', event, session?.user?.email);
 
         if (session?.user) {
           // Load user profile
-          const { data: profile, error: profileError } = await getProfile(session.user.id);
-          
-          if (profileError && profileError.message !== 'Profile not found') {
-            console.error('Error loading profile after auth change:', profileError);
-          }
+          try {
+            const { data: profile, error: profileError } = await getProfile(session.user.id);
+            
+            if (!mounted) return;
+            
+            if (profileError && profileError.message !== 'Profile not found') {
+              console.error('Error loading profile after auth change:', profileError);
+            }
 
-          setAuthState({
-            user: session.user,
-            session,
-            profile: profile || null,
-            loading: false,
-            error: null
-          });
+            setAuthState({
+              user: session.user,
+              session,
+              profile: profile || null,
+              loading: false,
+              error: null
+            });
+          } catch (profileErr) {
+            console.error('Profile loading exception after auth change:', profileErr);
+            if (mounted) {
+              setAuthState({
+                user: session.user,
+                session,
+                profile: null,
+                loading: false,
+                error: null
+              });
+            }
+          }
         } else {
           setAuthState({
             user: null,
@@ -90,6 +144,8 @@ export const useAuth = () => {
     );
 
     return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
