@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, MessageCircle, Share2, Bookmark, Eye, Clock, MoreHorizontal, Play, Verified } from 'lucide-react';
 
-interface Dream {
+export interface Dream {
   id: string;
   title: string;
   excerpt: string;
