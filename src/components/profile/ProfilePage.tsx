@@ -15,13 +15,17 @@ const ProfilePage: React.FC = () => {
     setError('');
     setTimedOut(false);
     try {
+      console.log('Fetching user...');
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('User:', user);
       if (!user) {
         setError('Not authenticated');
         setIsLoading(false);
         return;
       }
+      console.log('Fetching profile for user id:', user.id);
       const { data: profileData, error: profileError } = await getProfile(user.id);
+      console.log('Profile data:', profileData, 'Profile error:', profileError);
       if (profileError) {
         setError('Failed to load profile: ' + profileError.message);
       } else if (!profileData) {
@@ -32,6 +36,7 @@ const ProfilePage: React.FC = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError('Unexpected error: ' + message);
+      console.error('Unexpected error:', err);
     } finally {
       setIsLoading(false);
     }
