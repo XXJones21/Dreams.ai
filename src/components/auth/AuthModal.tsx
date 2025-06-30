@@ -60,11 +60,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
   const testConnection = async () => {
     setConnectionStatus('testing');
-    const result = await testSupabaseConnection();
-    setConnectionStatus(result.success ? 'connected' : 'failed');
-    
-    if (!result.success) {
-      setError(result.error || 'Connection failed');
+    try {
+      const result = await testSupabaseConnection();
+      setConnectionStatus(result.success ? 'connected' : 'failed');
+      
+      if (!result.success) {
+        setError(result.error || 'Connection failed');
+      }
+    } catch (err) {
+      console.error('Connection test failed:', err);
+      setConnectionStatus('failed');
+      setError('Unable to connect to authentication service');
     }
   };
 
@@ -83,11 +89,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
   const validateAge = (dateOfBirth: string): boolean => {
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
-    const age = today.getFullYear() - birthDate.getFullYear();
+    let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      return age - 1 >= 13;
+      age--;
     }
     return age >= 13;
   };
@@ -117,6 +123,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
     setErrors({});
     setIsSuccess(false);
     setShowPassword(false);
+    setIsLoading(false); // Reset loading state
   };
 
   const handleClose = () => {
@@ -129,6 +136,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
     setError('');
     setErrors({});
     setIsSuccess(false);
+    setIsLoading(false); // Reset loading state when changing modes
   };
 
   // Login handlers
@@ -140,31 +148,45 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginData.email.trim() || !loginData.password.trim()) return;
+    
+    // Basic validation
+    if (!loginData.email.trim() || !loginData.password.trim()) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (!validateEmail(loginData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
     
     setIsLoading(true);
     setError('');
 
     try {
+      console.log('Attempting login with:', loginData.email);
+      
       const { data, error: signInError } = await signIn(loginData.email, loginData.password);
       
       if (signInError) {
-        setError(signInError.message);
-        setIsLoading(false);
+        console.error('Sign in error:', signInError);
+        setError(signInError.message || 'Login failed');
         return;
       }
 
       if (data.user) {
+        console.log('Login successful:', data.user.email);
         setIsSuccess(true);
         onSuccess?.();
         setTimeout(() => {
           handleClose();
-          // Redirect to main page after successful login
           window.location.href = '/';
         }, 1000);
+      } else {
+        setError('Login failed - no user data returned');
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      console.error('Login exception:', error);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -266,7 +288,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
       if (Object.keys(validationErrors).length > 0) {
         setErrors(validationErrors);
-        setIsLoading(false);
         return;
       }
 
@@ -275,13 +296,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
       
       if (authError) {
         setError(authError.message);
-        setIsLoading(false);
         return;
       }
 
       if (!authData.user) {
         setError('Registration failed. Please try again.');
-        setIsLoading(false);
         return;
       }
 
@@ -312,7 +331,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
       if (profileError) {
         setError('Profile creation failed. Please try again.');
-        setIsLoading(false);
         return;
       }
 
@@ -321,7 +339,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
       
       setTimeout(() => {
         handleClose();
-        // Redirect to main page after successful registration
         window.location.href = '/';
       }, 2000);
 
@@ -450,6 +467,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                       className="w-full pl-12 pr-4 py-3 bg-black-marble/50 border-2 border-brass/30 rounded-lg text-stardust-silver placeholder-stardust-silver/50 font-inter focus:border-brass focus:outline-none transition-colors"
                       placeholder="Enter your email"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -468,11 +486,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                       className="w-full pl-12 pr-12 py-3 bg-black-marble/50 border-2 border-brass/30 rounded-lg text-stardust-silver placeholder-stardust-silver/50 font-inter focus:border-brass focus:outline-none transition-colors"
                       placeholder="Enter your password"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brass hover:text-stardust-silver transition-colors"
+                      disabled={isLoading}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -484,6 +504,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     type="button"
                     onClick={() => handleModeChange('forgot-password')}
                     className="text-brass hover:text-stardust-silver transition-colors text-sm"
+                    disabled={isLoading}
                   >
                     Forgot your password?
                   </button>
@@ -505,6 +526,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     type="button"
                     onClick={() => handleModeChange('register')}
                     className="text-brass hover:text-stardust-silver transition-colors"
+                    disabled={isLoading}
                   >
                     Create one here
                   </button>
@@ -543,6 +565,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                           type="button"
                           onClick={removeProfilePicture}
                           className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                          disabled={isLoading}
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -560,6 +583,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                         accept=".jpg,.jpeg,.png"
                         onChange={handleFileChange}
                         className="hidden"
+                        disabled={isLoading}
                       />
                       <span className="relative z-10 text-brass font-inter font-medium flex items-center space-x-1">
                         <Upload className="w-3 h-3" />
@@ -589,6 +613,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                       }`}
                       placeholder="Enter your full name"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   {errors.fullName && (
@@ -613,6 +638,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                       }`}
                       placeholder="Enter your email"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   {errors.email && (
@@ -637,11 +663,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                       }`}
                       placeholder="Create a secure password"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brass hover:text-stardust-silver transition-colors"
+                      disabled={isLoading}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -670,6 +698,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                         errors.dateOfBirth ? 'border-red-500' : 'border-brass/30 focus:border-brass'
                       }`}
                       required
+                      disabled={isLoading}
                     />
                   </div>
                   {errors.dateOfBirth && (
@@ -694,6 +723,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                         errors.bio ? 'border-red-500' : 'border-brass/30 focus:border-brass'
                       }`}
                       placeholder="Tell us about yourself..."
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="flex justify-between items-center mt-1">
@@ -722,6 +752,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     type="button"
                     onClick={() => handleModeChange('login')}
                     className="text-brass hover:text-stardust-silver transition-colors"
+                    disabled={isLoading}
                   >
                     Sign in here
                   </button>
@@ -761,6 +792,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                       className="w-full pl-12 pr-4 py-3 bg-black-marble/50 border-2 border-brass/30 rounded-lg text-stardust-silver placeholder-stardust-silver/50 font-inter focus:border-brass focus:outline-none transition-colors"
                       placeholder="Enter your email"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -781,6 +813,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     type="button"
                     onClick={() => handleModeChange('login')}
                     className="text-brass hover:text-stardust-silver transition-colors"
+                    disabled={isLoading}
                   >
                     Sign in here
                   </button>
