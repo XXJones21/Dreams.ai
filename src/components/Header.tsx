@@ -8,29 +8,41 @@ import AuthModal from './auth/AuthModal';
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
   
   // Use the global auth context instead of managing local state
   const { user, loading, isAuthenticated } = useAuthContext();
 
   const handleSignOut = async () => {
+    if (isSigningOut) return; // Prevent double-clicks
+    
     try {
+      setIsSigningOut(true);
       console.log('🔐 Signing out user...');
+      
       const { error } = await signOut();
       
       if (error) {
         console.error('❌ Sign out error:', error);
-        // Still redirect even if there's an error
+        // Show error but still redirect as fallback
+        alert('Sign out failed, but redirecting anyway');
       } else {
         console.log('✅ Sign out successful');
       }
       
-      // Force a page reload to clear all state
+      // Clear any cached data and redirect
+      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = '/';
     } catch (err) {
       console.error('❌ Sign out exception:', err);
-      // Force redirect anyway
+      // Force redirect anyway as fallback
+      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = '/';
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -139,10 +151,13 @@ const Header: React.FC = () => {
                   )}
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                    disabled={isSigningOut}
+                    className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors disabled:opacity-50"
                   >
                     <LogOut className="w-5 h-5" />
-                    <span className="font-inter font-medium">Sign Out</span>
+                    <span className="font-inter font-medium">
+                      {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+                    </span>
                   </button>
                 </div>
               ) : (
@@ -217,10 +232,13 @@ const Header: React.FC = () => {
                         handleSignOut();
                         setIsMenuOpen(false);
                       }}
-                      className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors"
+                      disabled={isSigningOut}
+                      className="flex items-center space-x-2 text-stardust-silver hover:text-brass transition-colors disabled:opacity-50"
                     >
                       <LogOut className="w-5 h-5" />
-                      <span className="font-inter font-medium">Sign Out</span>
+                      <span className="font-inter font-medium">
+                        {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+                      </span>
                     </button>
                   </div>
                 ) : (

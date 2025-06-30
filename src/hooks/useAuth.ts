@@ -22,7 +22,7 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Simple initialization
+    // Simplified initialization - no race conditions
     const initializeAuth = async () => {
       try {
         console.log('🔄 Initializing authentication...');
@@ -46,32 +46,31 @@ export const useAuth = () => {
         if (session?.user) {
           console.log('✅ Session found for user:', session.user.email);
           
-          // Set authenticated state immediately
-          setAuthState({
-            user: session.user,
-            session,
-            profile: null,
-            loading: false,
-            error: null
-          });
-
-          // Ensure profile exists and load it
+          // Handle profile loading - keep loading true until complete
           try {
             const { data: profile, error: profileError } = await ensureProfile(session.user);
             
             if (mounted) {
-              if (profileError) {
-                console.warn('⚠️ Profile creation/loading failed:', profileError);
-                // Don't set error state, user is still authenticated
-              } else {
-                setAuthState(prev => ({
-                  ...prev,
-                  profile
-                }));
-              }
+              setAuthState({
+                user: session.user,
+                session,
+                profile: profile || null,
+                loading: false,
+                error: profileError ? `Profile issue: ${profileError.message}` : null
+              });
             }
-          } catch (profileErr) {
-            console.warn('⚠️ Profile handling failed, but user is authenticated:', profileErr);
+          } catch (profileErr: any) {
+            console.warn('⚠️ Profile handling failed:', profileErr);
+            if (mounted) {
+              // User is authenticated even if profile has issues
+              setAuthState({
+                user: session.user,
+                session,
+                profile: null,
+                loading: false,
+                error: `Profile loading failed: ${profileErr.message}`
+              });
+            }
           }
         } else {
           console.log('ℹ️ No active session found');
@@ -99,7 +98,7 @@ export const useAuth = () => {
 
     initializeAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes with proper state management
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         if (!mounted) return;
@@ -109,31 +108,39 @@ export const useAuth = () => {
         if (session?.user) {
           console.log('✅ User authenticated via state change:', session.user.email);
           
-          // Set authenticated state immediately
-          setAuthState({
+          // Set loading state while handling profile
+          setAuthState(prev => ({
+            ...prev,
             user: session.user,
             session,
-            profile: null,
-            loading: false,
+            loading: true,
             error: null
-          });
+          }));
 
-          // Ensure profile exists and load it
+          // Handle profile loading
           try {
             const { data: profile, error: profileError } = await ensureProfile(session.user);
             
             if (mounted) {
-              if (profileError) {
-                console.warn('⚠️ Profile creation/loading failed after auth change:', profileError);
-              } else {
-                setAuthState(prev => ({
-                  ...prev,
-                  profile
-                }));
-              }
+              setAuthState({
+                user: session.user,
+                session,
+                profile: profile || null,
+                loading: false,
+                error: profileError ? `Profile issue: ${profileError.message}` : null
+              });
             }
-          } catch (profileErr) {
+          } catch (profileErr: any) {
             console.warn('⚠️ Profile handling failed after auth change:', profileErr);
+            if (mounted) {
+              setAuthState({
+                user: session.user,
+                session,
+                profile: null,
+                loading: false,
+                error: `Profile loading failed: ${profileErr.message}`
+              });
+            }
           }
         } else {
           console.log('ℹ️ User signed out');
@@ -155,19 +162,43 @@ export const useAuth = () => {
   }, []);
 
   const refreshProfile = async () => {
-    if (!authState.user) return;
+    if (!authState.user) {
+      console.warn('Cannot refresh profile: no authenticated user');
+      return;
+    }
 
     try {
+      console.log('🔄 Refreshing profile for user:', authState.user.email);
+      
+      // Set loading state for profile refresh
+      setAuthState(prev => ({ ...prev, loading: true, error: null }));
+      
       const { data: profile, error } = await getProfile(authState.user.id);
       
       if (error) {
-        console.error('Error refreshing profile:', error);
+        console.error('❌ Error refreshing profile:', error);
+        setAuthState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: `Profile refresh failed: ${error.message}` 
+        }));
         return;
       }
 
-      setAuthState(prev => ({ ...prev, profile }));
-    } catch (err) {
-      console.error('Error in refreshProfile:', err);
+      console.log('✅ Profile refreshed successfully');
+      setAuthState(prev => ({ 
+        ...prev, 
+        profile, 
+        loading: false, 
+        error: null 
+      }));
+    } catch (err: any) {
+      console.error('❌ Error in refreshProfile:', err);
+      setAuthState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: `Profile refresh failed: ${err.message}` 
+      }));
     }
   };
 
