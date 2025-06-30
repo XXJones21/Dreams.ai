@@ -26,7 +26,7 @@ if (supabaseUrl && !isValidUrl(supabaseUrl)) {
   console.error('Expected format: https://your-project-ref.supabase.co');
 }
 
-// Create Supabase client with enhanced configuration - REMOVED TIMEOUT CONSTRAINTS
+// Create Supabase client with simplified configuration
 export const supabase = createClient(
   supabaseUrl || 'https://demo.supabase.co', 
   supabaseAnonKey || 'demo-key',
@@ -110,10 +110,7 @@ export interface AuthError {
   status?: number;
 }
 
-// REMOVED: Helper function to create timeout promise - this was causing the loops
-// REMOVED: All timeout-related code that was interfering with natural auth flow
-
-// Simplified Connection Test Function - NO TIMEOUTS
+// Simplified Connection Test Function
 export const testSupabaseConnection = async (): Promise<{ success: boolean; error?: string; details?: any }> => {
   try {
     console.log('🔍 Testing Supabase connection...');
@@ -131,7 +128,7 @@ export const testSupabaseConnection = async (): Promise<{ success: boolean; erro
       };
     }
 
-    // Test basic auth functionality - NO TIMEOUT, let it complete naturally
+    // Test basic auth functionality
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -167,7 +164,7 @@ export const testSupabaseConnection = async (): Promise<{ success: boolean; erro
   }
 };
 
-// Enhanced Auth functions with NO TIMEOUTS - let operations complete naturally
+// Simplified Auth functions
 export const signUp = async (email: string, password: string) => {
   try {
     // Validate inputs
@@ -181,7 +178,6 @@ export const signUp = async (email: string, password: string) => {
 
     console.log('🔐 Attempting to sign up user:', email);
 
-    // REMOVED: Timeout promise - let signUp complete naturally
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -211,7 +207,6 @@ export const signIn = async (email: string, password: string) => {
 
     console.log('🔐 Attempting to sign in user:', email);
 
-    // REMOVED: Timeout promise - let signIn complete naturally
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -280,10 +275,9 @@ export const resetPassword = async (email: string) => {
   }
 };
 
-// Session Management - NO TIMEOUTS, natural completion
+// Session Management
 export const getCurrentUser = async () => {
   try {
-    // REMOVED: Timeout promise - let getUser complete naturally
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) {
@@ -300,7 +294,6 @@ export const getCurrentUser = async () => {
 
 export const getCurrentSession = async () => {
   try {
-    // REMOVED: Timeout promise - let getSession complete naturally
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -315,7 +308,7 @@ export const getCurrentSession = async () => {
   }
 };
 
-// Profile functions with NO TIMEOUTS - natural completion
+// Profile functions
 export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) => {
   try {
     // Validate required fields
@@ -323,7 +316,6 @@ export const createProfile = async (profileData: Omit<Profile, 'id' | 'created_a
       return { data: null, error: { message: 'Missing required profile fields' } };
     }
 
-    // REMOVED: Timeout promise - let database operation complete naturally
     const { data, error } = await supabase
       .from('profiles')
       .insert([profileData])
@@ -354,8 +346,6 @@ export const getProfile = async (userId: string) => {
       return { data: null, error: { message: 'User ID is required' } };
     }
 
-    // REMOVED: Timeout promise - let database query complete naturally
-    // This was the main cause of the authentication loops
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -388,7 +378,6 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     // Remove fields that shouldn't be updated
     const { id, user_id, created_at, ...allowedUpdates } = updates;
 
-    // REMOVED: Timeout promise - let update complete naturally
     const { data, error } = await supabase
       .from('profiles')
       .update({ ...allowedUpdates, updated_at: new Date().toISOString() })
@@ -409,7 +398,7 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
   }
 };
 
-// File upload functions with NO TIMEOUTS
+// File upload functions
 export const uploadProfilePicture = async (userId: string, file: File) => {
   try {
     if (!userId || !file) {
@@ -430,7 +419,6 @@ export const uploadProfilePicture = async (userId: string, file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     
-    // REMOVED: Timeout promise - let file upload complete naturally
     const { data, error } = await supabase.storage
       .from('profile-pictures')
       .upload(fileName, file, {
