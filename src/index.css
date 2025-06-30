@@ -117,23 +117,23 @@ body {
   left: 0;
 }
 
-/* Enhanced Liquid Glass Buttons */
+/* Enhanced Liquid Glass Buttons with 20% Opacity */
 .marble-button, .marble-button-large {
   position: relative;
   padding: 12px 24px;
   background: 
-    /* Primary liquid glass surface */
+    /* Primary liquid glass surface - 20% opacity for cosmic visibility */
     linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.15) 0%,
-      rgba(255, 255, 255, 0.08) 25%,
-      rgba(26, 26, 26, 0.7) 50%,
-      rgba(255, 255, 255, 0.05) 75%,
-      rgba(255, 255, 255, 0.12) 100%
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(26, 26, 26, 0.2) 50%,
+      rgba(255, 255, 255, 0.03) 75%,
+      rgba(255, 255, 255, 0.06) 100%
     ),
-    /* Secondary depth layer */
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.2) 0%, transparent 50%);
+    /* Subtle depth layer for glass effect */
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.1) 0%, transparent 50%);
   border: 2px solid var(--brass);
   border-radius: 8px;
   cursor: pointer;
@@ -141,17 +141,17 @@ body {
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   text-decoration: none;
   display: inline-block;
-  backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(8px) saturate(150%);
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 .marble-button-large {
   padding: 16px 32px;
   font-size: 1.1rem;
-  backdrop-filter: blur(15px) saturate(200%);
+  backdrop-filter: blur(10px) saturate(160%);
 }
 
 /* Liquid Glass Surface Flow Effect */
@@ -166,9 +166,9 @@ body {
     linear-gradient(
       90deg, 
       transparent, 
-      rgba(255, 255, 255, 0.4) 30%,
-      rgba(207, 181, 59, 0.3) 50%,
-      rgba(255, 255, 255, 0.4) 70%,
+      rgba(255, 255, 255, 0.2) 30%,
+      rgba(207, 181, 59, 0.15) 50%,
+      rgba(255, 255, 255, 0.2) 70%,
       transparent
     );
   transition: left 0.6s ease;
@@ -186,11 +186,11 @@ body {
   bottom: -2px;
   background: linear-gradient(
     45deg,
-    rgba(255, 255, 255, 0.4) 0%,
-    rgba(207, 181, 59, 0.3) 25%,
-    rgba(255, 255, 255, 0.2) 50%,
-    rgba(0, 102, 204, 0.2) 75%,
-    rgba(255, 255, 255, 0.4) 100%
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(207, 181, 59, 0.15) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(0, 102, 204, 0.1) 75%,
+    rgba(255, 255, 255, 0.2) 100%
   );
   border-radius: 10px;
   z-index: -1;
@@ -210,22 +210,22 @@ body {
 .marble-button:hover, .marble-button-large:hover {
   transform: translateY(-4px) scale(1.02);
   box-shadow: 
-    0 16px 48px rgba(0, 0, 0, 0.4),
-    0 8px 32px rgba(207, 181, 59, 0.3),
-    inset 0 2px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+    0 16px 48px rgba(0, 0, 0, 0.25),
+    0 8px 32px rgba(207, 181, 59, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
   border-color: rgba(207, 181, 59, 0.8);
   background: 
     linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.2) 0%,
-      rgba(255, 255, 255, 0.12) 25%,
-      rgba(26, 26, 26, 0.6) 50%,
-      rgba(255, 255, 255, 0.08) 75%,
-      rgba(255, 255, 255, 0.18) 100%
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.06) 25%,
+      rgba(26, 26, 26, 0.15) 50%,
+      rgba(255, 255, 255, 0.04) 75%,
+      rgba(255, 255, 255, 0.1) 100%
     ),
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 60%),
-    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.3) 0%, transparent 60%);
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.15) 0%, transparent 60%);
 }
 
 .marble-button:disabled, .marble-button-large:disabled {
@@ -234,31 +234,31 @@ body {
   transform: none;
 }
 
-/* Enhanced Glass Button */
+/* Enhanced Glass Button with 20% Opacity */
 .glass-button {
   position: relative;
   padding: 16px 32px;
   background: 
     linear-gradient(
       135deg,
-      rgba(192, 192, 192, 0.15) 0%,
-      rgba(192, 192, 192, 0.08) 25%,
-      rgba(26, 26, 26, 0.7) 50%,
-      rgba(192, 192, 192, 0.05) 75%,
-      rgba(192, 192, 192, 0.12) 100%
+      rgba(192, 192, 192, 0.08) 0%,
+      rgba(192, 192, 192, 0.04) 25%,
+      rgba(26, 26, 26, 0.2) 50%,
+      rgba(192, 192, 192, 0.03) 75%,
+      rgba(192, 192, 192, 0.06) 100%
     );
   border: 1px solid rgba(192, 192, 192, 0.3);
   border-radius: 8px;
-  backdrop-filter: blur(15px) saturate(180%);
+  backdrop-filter: blur(8px) saturate(150%);
   cursor: pointer;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   text-decoration: none;
   display: inline-block;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 .glass-button::before {
@@ -269,13 +269,13 @@ body {
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
     linear-gradient(
       120deg,
-      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.08) 0%,
       transparent 40%,
       transparent 60%,
-      rgba(255, 255, 255, 0.1) 100%
+      rgba(255, 255, 255, 0.05) 100%
     );
   pointer-events: none;
   z-index: 1;
@@ -288,18 +288,18 @@ body {
   background: 
     linear-gradient(
       135deg,
-      rgba(192, 192, 192, 0.2) 0%,
-      rgba(192, 192, 192, 0.12) 25%,
-      rgba(26, 26, 26, 0.6) 50%,
-      rgba(192, 192, 192, 0.08) 75%,
-      rgba(192, 192, 192, 0.18) 100%
+      rgba(192, 192, 192, 0.12) 0%,
+      rgba(192, 192, 192, 0.06) 25%,
+      rgba(26, 26, 26, 0.15) 50%,
+      rgba(192, 192, 192, 0.04) 75%,
+      rgba(192, 192, 192, 0.1) 100%
     );
   border-color: var(--brass);
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.3),
-    0 8px 32px rgba(192, 192, 192, 0.1),
-    inset 0 2px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+    0 12px 40px rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(192, 192, 192, 0.08),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08);
   transform: translateY(-3px) scale(1.01);
 }
 
@@ -308,26 +308,26 @@ body {
   animation-duration: 4s;
 }
 
-/* Liquid Glass Card */
+/* Liquid Glass Card with 20% Opacity for Cosmic Visibility */
 .glass-card {
   position: relative;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 25%,
-    rgba(26, 26, 26, 0.8) 50%,
-    rgba(255, 255, 255, 0.03) 75%,
-    rgba(255, 255, 255, 0.08) 100%
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(26, 26, 26, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 75%,
+    rgba(255, 255, 255, 0.04) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 24px;
-  backdrop-filter: blur(25px) saturate(200%);
+  backdrop-filter: blur(12px) saturate(180%);
   transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   overflow: hidden;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 /* Liquid Glass Surface Effect */
@@ -339,19 +339,19 @@ body {
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(207, 181, 59, 0.1) 0%, transparent 50%),
     linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.08) 0%,
       transparent 30%,
       transparent 70%,
-      rgba(255, 255, 255, 0.1) 100%
+      rgba(255, 255, 255, 0.05) 100%
     );
   pointer-events: none;
   z-index: 1;
   border-radius: 24px;
-  opacity: 0.8;
+  opacity: 0.6;
   animation: liquid-flow 8s ease-in-out infinite;
 }
 
@@ -365,11 +365,11 @@ body {
   bottom: -2px;
   background: linear-gradient(
     45deg,
-    rgba(255, 255, 255, 0.4) 0%,
-    rgba(207, 181, 59, 0.3) 25%,
-    rgba(255, 255, 255, 0.2) 50%,
-    rgba(0, 102, 204, 0.2) 75%,
-    rgba(255, 255, 255, 0.4) 100%
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(207, 181, 59, 0.15) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(0, 102, 204, 0.1) 75%,
+    rgba(255, 255, 255, 0.2) 100%
   );
   border-radius: 26px;
   z-index: -1;
@@ -382,15 +382,15 @@ body {
 .glass-card:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 8px 32px rgba(207, 181, 59, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+    0 20px 60px rgba(0, 0, 0, 0.25),
+    0 8px 32px rgba(207, 181, 59, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .glass-card:hover::before {
-  opacity: 1;
+  opacity: 0.8;
   animation-duration: 4s;
 }
 
@@ -404,26 +404,26 @@ body {
   z-index: 2;
 }
 
-/* Enhanced Agent Card with Liquid Glass */
+/* Enhanced Agent Card with Liquid Glass and 20% Opacity */
 .agent-card {
   position: relative;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.06) 25%,
-    rgba(26, 26, 26, 0.85) 50%,
-    rgba(255, 255, 255, 0.04) 75%,
-    rgba(255, 255, 255, 0.1) 100%
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(26, 26, 26, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 75%,
+    rgba(255, 255, 255, 0.05) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 28px;
-  backdrop-filter: blur(30px) saturate(220%);
+  backdrop-filter: blur(15px) saturate(200%);
   transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
   overflow: hidden;
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    inset 0 2px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+    0 12px 40px rgba(0, 0, 0, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08);
 }
 
 /* Agent Card Liquid Surface */
@@ -435,19 +435,19 @@ body {
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.4) 0%, transparent 60%),
-    radial-gradient(circle at 75% 75%, rgba(207, 181, 59, 0.25) 0%, transparent 60%),
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 75% 75%, rgba(207, 181, 59, 0.12) 0%, transparent 60%),
     linear-gradient(
       120deg,
-      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.1) 0%,
       transparent 40%,
       transparent 60%,
-      rgba(255, 255, 255, 0.15) 100%
+      rgba(255, 255, 255, 0.08) 100%
     );
   pointer-events: none;
   z-index: 1;
   border-radius: 28px;
-  opacity: 0.7;
+  opacity: 0.5;
   animation: liquid-swirl 12s ease-in-out infinite;
 }
 
@@ -461,12 +461,12 @@ body {
   bottom: -3px;
   background: linear-gradient(
     60deg,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(207, 181, 59, 0.4) 20%,
-    rgba(0, 102, 204, 0.3) 40%,
-    rgba(255, 105, 180, 0.3) 60%,
-    rgba(207, 181, 59, 0.4) 80%,
-    rgba(255, 255, 255, 0.5) 100%
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(207, 181, 59, 0.2) 20%,
+    rgba(0, 102, 204, 0.15) 40%,
+    rgba(255, 105, 180, 0.15) 60%,
+    rgba(207, 181, 59, 0.2) 80%,
+    rgba(255, 255, 255, 0.25) 100%
   );
   border-radius: 31px;
   z-index: -1;
@@ -478,15 +478,15 @@ body {
 .agent-card:hover {
   transform: translateY(-12px) scale(1.03);
   box-shadow: 
-    0 25px 80px rgba(0, 0, 0, 0.5),
-    0 12px 40px rgba(207, 181, 59, 0.3),
-    inset 0 2px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.25);
-  border-color: rgba(255, 255, 255, 0.5);
+    0 25px 80px rgba(0, 0, 0, 0.3),
+    0 12px 40px rgba(207, 181, 59, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .agent-card:hover::before {
-  opacity: 1;
+  opacity: 0.8;
   animation-duration: 6s;
 }
 
@@ -524,17 +524,17 @@ body {
   0%, 100% {
     background-position: 0% 0%, 100% 100%, 0% 0%;
     transform: rotate(0deg) scale(1);
-    opacity: 0.7;
+    opacity: 0.5;
   }
   33% {
     background-position: 50% 0%, 50% 100%, 33% 33%;
     transform: rotate(2deg) scale(1.02);
-    opacity: 0.9;
+    opacity: 0.7;
   }
   66% {
     background-position: 100% 50%, 0% 50%, 66% 66%;
     transform: rotate(-1deg) scale(1.01);
-    opacity: 0.8;
+    opacity: 0.6;
   }
 }
 
