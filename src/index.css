@@ -39,6 +39,147 @@ body {
   }
 }
 
+/* Enhanced 3D Brass Text Treatment */
+.brass-3d-text {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  color: #CFB53B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+  display: inline-block;
+  
+  /* Primary brass gradient with metallic finish */
+  background: linear-gradient(
+    135deg,
+    #E6D06F 0%,     /* Bright brass highlight */
+    #CFB53B 15%,    /* Main brass */
+    #B8A034 35%,    /* Mid brass */
+    #A0892D 50%,    /* Deep brass */
+    #CFB53B 65%,    /* Main brass return */
+    #E6D06F 85%,    /* Bright highlight */
+    #F4E87C 100%    /* Peak highlight */
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  /* Enhanced 3D text shadow for depth and dimension */
+  text-shadow: 
+    /* Primary depth shadows - creating 3D extrusion */
+    1px 1px 0 #B8A034,
+    2px 2px 0 #A0892D,
+    3px 3px 0 #8B7728,
+    4px 4px 0 #766523,
+    5px 5px 0 #61541E,
+    6px 6px 0 #4C4219,
+    
+    /* Crisp drop shadow for separation */
+    8px 8px 12px rgba(0, 0, 0, 0.6),
+    12px 12px 20px rgba(0, 0, 0, 0.4),
+    
+    /* Subtle glow for edge lighting */
+    0 0 20px rgba(207, 181, 59, 0.3),
+    0 0 40px rgba(207, 181, 59, 0.15),
+    
+    /* Reflective highlights */
+    -1px -1px 0 rgba(244, 232, 124, 0.4),
+    -2px -2px 0 rgba(230, 208, 111, 0.2);
+  
+  /* Subtle transform for 3D perspective */
+  transform: perspective(1000px) rotateX(5deg) rotateY(-2deg);
+  transform-style: preserve-3d;
+  
+  /* Enhanced filter effects for metallic finish */
+  filter: 
+    drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 10px rgba(207, 181, 59, 0.2));
+}
+
+/* Hover effect for interactive elements */
+.brass-3d-text:hover {
+  transform: perspective(1000px) rotateX(3deg) rotateY(-1deg) scale(1.02);
+  
+  /* Enhanced glow on hover */
+  text-shadow: 
+    1px 1px 0 #B8A034,
+    2px 2px 0 #A0892D,
+    3px 3px 0 #8B7728,
+    4px 4px 0 #766523,
+    5px 5px 0 #61541E,
+    6px 6px 0 #4C4219,
+    8px 8px 12px rgba(0, 0, 0, 0.7),
+    12px 12px 20px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(207, 181, 59, 0.5),
+    0 0 60px rgba(207, 181, 59, 0.25),
+    -1px -1px 0 rgba(244, 232, 124, 0.6),
+    -2px -2px 0 rgba(230, 208, 111, 0.3);
+  
+  filter: 
+    drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.4))
+    drop-shadow(0 0 15px rgba(207, 181, 59, 0.3));
+  
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Size variants for different use cases */
+.brass-3d-text-large {
+  font-size: clamp(3rem, 8vw, 8rem);
+  line-height: 0.9;
+}
+
+.brass-3d-text-medium {
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.brass-3d-text-small {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1.1;
+}
+
+/* Alternative silver text treatment for contrast */
+.silver-3d-text {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  color: #C0C0C0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  position: relative;
+  display: inline-block;
+  
+  /* Silver metallic gradient */
+  background: linear-gradient(
+    135deg,
+    #F0F0F0 0%,
+    #C0C0C0 20%,
+    #A0A0A0 40%,
+    #808080 60%,
+    #C0C0C0 80%,
+    #E0E0E0 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  /* Silver 3D shadows */
+  text-shadow: 
+    1px 1px 0 #A0A0A0,
+    2px 2px 0 #808080,
+    3px 3px 0 #606060,
+    4px 4px 0 #404040,
+    6px 6px 10px rgba(0, 0, 0, 0.5),
+    10px 10px 16px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(192, 192, 192, 0.2),
+    -1px -1px 0 rgba(240, 240, 240, 0.3);
+  
+  transform: perspective(1000px) rotateX(3deg) rotateY(1deg);
+  
+  filter: 
+    drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 8px rgba(192, 192, 192, 0.15));
+}
+
 /* Cosmic Background */
 .nebula-background {
   background: radial-gradient(circle at 20% 30%, var(--deep-purple) 0%, transparent 50%),
@@ -744,6 +885,21 @@ body {
     top: 15px;
     bottom: 15px;
   }
+  
+  /* Adjust 3D text for mobile */
+  .brass-3d-text {
+    transform: perspective(800px) rotateX(3deg) rotateY(-1deg);
+    
+    text-shadow: 
+      1px 1px 0 #B8A034,
+      2px 2px 0 #A0892D,
+      3px 3px 0 #8B7728,
+      4px 4px 8px rgba(0, 0, 0, 0.6),
+      8px 8px 16px rgba(0, 0, 0, 0.4),
+      0 0 15px rgba(207, 181, 59, 0.3),
+      0 0 30px rgba(207, 181, 59, 0.15),
+      -1px -1px 0 rgba(244, 232, 124, 0.4);
+  }
 }
 
 /* Fallback for reduced motion */
@@ -756,6 +912,11 @@ body {
   .flame-swirl-2,
   .flame-swirl-3 {
     animation: gentle-pulse 8s ease-in-out infinite;
+  }
+  
+  .brass-3d-text:hover {
+    transform: perspective(1000px) rotateX(5deg) rotateY(-2deg);
+    transition: none;
   }
 }
 
