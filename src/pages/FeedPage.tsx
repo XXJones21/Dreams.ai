@@ -15,7 +15,6 @@ const FeedPage: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [retryCount, setRetryCount] = useState(0);
   const location = useLocation();
 
   useEffect(() => {
@@ -23,23 +22,11 @@ const FeedPage: React.FC = () => {
   }, []);
 
   const loadUserData = async () => {
-    console.count('loadUserData called');
     try {
       setIsLoading(true);
       setError('');
-      console.log('Starting getSession...');
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => {
-          console.log('Timeout reached');
-          reject(new Error('Authentication check timed out'));
-        }, 10000)
-      );
-      const sessionPromise = supabase.auth.getSession().then((result) => {
-        console.log('getSession result:', result);
-        return result;
-      });
-      const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-      console.log('Session:', session, 'Session error:', sessionError);
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError) {
         console.error('Session error:', sessionError);
@@ -50,18 +37,13 @@ const FeedPage: React.FC = () => {
       setUser(session?.user ?? null);
     } catch (error: any) {
       console.error('Error loading user data:', error);
-      if (error.message?.includes('timeout')) {
-        setError('Connection timed out. Please check your internet connection.');
-      } else {
-        setError('Failed to load user data');
-      }
+      setError('Failed to load user data');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
     loadUserData();
   };
 
@@ -136,11 +118,6 @@ const FeedPage: React.FC = () => {
           <div className="text-center">
             <div className="animate-spin w-12 h-12 border-4 border-brass border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-stardust-silver">Loading feed...</p>
-            {retryCount > 0 && (
-              <p className="text-stardust-silver/60 text-sm mt-2">
-                Attempt {retryCount + 1}
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -156,7 +133,7 @@ const FeedPage: React.FC = () => {
           <div className="glass-card p-8 text-center max-w-md">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-2xl font-cinzel font-bold text-stardust-silver mb-4">
-              {error.includes('timeout') ? 'Connection Timeout' : 'Loading Error'}
+              Loading Error
             </h2>
             <p className="text-stardust-silver/70 mb-6">
               {error}
