@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Calendar, MessageSquare, Edit, Camera, LogOut, Home, Library, Sparkles, Brain } from 'lucide-react';
+import { User, Mail, Calendar, MessageSquare, Edit, Camera, LogOut, Home, Library, Sparkles, Brain, AlertCircle } from 'lucide-react';
 import { supabase, getProfile, signOut, Profile } from '../../lib/supabase';
 import CosmicBackground from '../CosmicBackground';
 
@@ -7,6 +7,7 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     loadProfile();
@@ -14,27 +15,60 @@ const ProfilePage: React.FC = () => {
 
   const loadProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoading(true);
+      setError('');
+
+      // Add timeout for profile loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile loading timed out')), 10000)
+      );
+
+      const userPromise = supabase.auth.getUser();
       
+      const { data: { user }, error: userError } = await Promise.race([userPromise, timeoutPromise]) as any;
+      
+      if (userError) {
+        setError('Failed to get user information');
+        console.error('User error:', userError);
+        return;
+      }
+
       if (!user) {
-        window.location.href = '/';
+        // Redirect to home if no user
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
         return;
       }
 
       const { data: profileData, error: profileError } = await getProfile(user.id);
       
       if (profileError) {
-        setError('Failed to load profile');
+        if (profileError.message === 'Profile not found') {
+          setError('Profile not found. Please complete your registration.');
+        } else {
+          setError('Failed to load profile');
+        }
         console.error('Profile error:', profileError);
       } else {
         setProfile(profileData);
+        setError('');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading profile:', error);
-      setError('An unexpected error occurred');
+      if (error.message?.includes('timeout')) {
+        setError('Profile loading timed out. Please try again.');
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    loadProfile();
   };
 
   const handleSignOut = async () => {
@@ -73,6 +107,11 @@ const ProfilePage: React.FC = () => {
           <div className="text-center">
             <div className="animate-spin w-12 h-12 border-4 border-brass border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-stardust-silver">Loading profile...</p>
+            {retryCount > 0 && (
+              <p className="text-stardust-silver/60 text-sm mt-2">
+                Attempt {retryCount + 1}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -85,15 +124,26 @@ const ProfilePage: React.FC = () => {
         <CosmicBackground />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="glass-card p-8 text-center max-w-md">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-2xl font-cinzel font-bold text-stardust-silver mb-4">
-              Profile Not Found
+              {error.includes('timeout') ? 'Connection Timeout' : 'Profile Not Found'}
             </h2>
             <p className="text-stardust-silver/70 mb-6">
               {error || 'Unable to load your profile.'}
             </p>
             <div className="space-y-4">
-              <a href="/" className="marble-button block">
-                <span className="relative z-10 text-brass font-inter font-medium">
+              {error.includes('timeout') || error.includes('Failed to load') ? (
+                <button
+                  onClick={handleRetry}
+                  className="marble-button block w-full"
+                >
+                  <span className="relative z-10 text-brass font-inter font-medium">
+                    Try Again
+                  </span>
+                </button>
+              ) : null}
+              <a href="/" className="glass-button block w-full">
+                <span className="relative z-10 text-stardust-silver font-inter font-medium">
                   Return Home
                 </span>
               </a>
