@@ -83,7 +83,7 @@ const Header: React.FC = () => {
             <div className="logo-container flex items-center space-x-3">
               <div className="relative">
                 <Brain className="text-brass w-8 h-8" />
-                <Sparkles className="absolute -top-1 -right-1 text-nebula-pink w-4 h-4" />
+                <Sparkles className="absolute -top-1 -right-1 text-brass w-4 h-4" />
               </div>
               <div>
                 <a href="/" className="text-brass text-2xl font-cinzel font-bold tracking-wider">
