@@ -1,3 +1,5 @@
+![Dreams.ai Logo](public/logo.png)
+
 # Dreams.ai
 
 ## Project Overview
@@ -111,6 +113,33 @@ Example (`Backend/Scoping/schema.imn`):
   "scene_transitions": ["fade in", "wipe", "dissolve"],
   "created_by": "User"
 }
+```
+
+---
+
+## Branding & Logo
+A project logo is available at:
+
+```
+public/logo.png
+```
+
+You can use this logo for:
+- Deployment splash screens
+- Social media or marketing materials
+- Favicon or web app manifest
+- README or documentation branding
+
+To display the logo in Markdown:
+
+```markdown
+![Dreams.ai Logo](public/logo.png)
+```
+
+Or in HTML:
+
+```html
+<img src="public/logo.png" alt="Dreams.ai Logo" width="200" />
 ```
 
 ---
