@@ -16,7 +16,7 @@ const agents = [
     title: "The Dynamic Storyteller",
     description: "Dynamically adapts narratives based on your choices, improvises scenes, and manages story flow. Narnion brings your dreams to life through intelligent storytelling.",
     icon: Pen,
-    color: "from-electric-blue to-cyan-400",
+    color: "from-stardust-silver to-gray-400",
     features: ["Dynamic Adaptation", "Player Checks", "Scene Improvisation", "Choice Integration"],
     tagline: "Reality Reimagined"
   },
@@ -25,7 +25,7 @@ const agents = [
     title: "The Cinematographer",
     description: "Transforms narrative elements into stunning visual experiences. Cenedril ensures every scene is cinematically crafted and visually consistent.",
     icon: Camera,
-    color: "from-nebula-pink to-purple-400",
+    color: "from-brass to-yellow-400",
     features: ["Visual Generation", "Cinematic Style", "Scene Composition", "Visual Consistency"],
     tagline: "Vision Unleashed"
   }
@@ -59,7 +59,7 @@ const AgentShowcase: React.FC = () => {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-cinzel font-bold text-stardust-silver mb-6">
-            <span className="bg-gradient-to-r from-brass via-electric-blue to-nebula-pink bg-clip-text text-transparent">
+            <span className="text-brass">
               Meet Your AI Dream Team
             </span>
           </h2>
@@ -151,13 +151,13 @@ const AgentShowcase: React.FC = () => {
             ].map((step, index) => (
               <React.Fragment key={index}>
                 <div className="text-center">
-                  <div className="w-12 h-12 mx-auto mb-2 bg-gradient-to-r from-brass to-electric-blue rounded-full flex items-center justify-center text-black-marble font-bold">
+                  <div className="w-12 h-12 mx-auto mb-2 bg-gradient-to-r from-brass to-yellow-400 rounded-full flex items-center justify-center text-black-marble font-bold">
                     {index + 1}
                   </div>
                   <p className="text-sm text-stardust-silver/70 font-inter">{step}</p>
                 </div>
                 {index < 5 && (
-                  <div className="hidden md:block w-full h-0.5 bg-gradient-to-r from-brass/30 to-electric-blue/30"></div>
+                  <div className="hidden md:block w-full h-0.5 bg-gradient-to-r from-brass/30 to-yellow-400/30"></div>
                 )}
               </React.Fragment>
             ))}
