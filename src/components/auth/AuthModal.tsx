@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, Eye, EyeOff, User, Calendar, FileImage, MessageSquare, Upload } from 'lucide-react';
-import { signIn, signUp, createProfile, uploadProfilePicture, resetPassword } from '../../lib/supabase';
+import { X, Mail, Lock, Eye, EyeOff, User, Calendar, FileImage, MessageSquare, Upload, AlertTriangle } from 'lucide-react';
+import { signIn, signUp, createProfile, uploadProfilePicture, resetPassword, testSupabaseConnection } from '../../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -27,6 +27,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'testing' | 'connected' | 'failed'>('unknown');
 
   // Login form data
   const [loginData, setLoginData] = useState({
@@ -49,6 +50,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
   // Profile picture
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string>('');
+
+  // Test connection when modal opens
+  React.useEffect(() => {
+    if (isOpen && connectionStatus === 'unknown') {
+      testConnection();
+    }
+  }, [isOpen]);
+
+  const testConnection = async () => {
+    setConnectionStatus('testing');
+    const result = await testSupabaseConnection();
+    setConnectionStatus(result.success ? 'connected' : 'failed');
+    
+    if (!result.success) {
+      setError(result.error || 'Connection failed');
+    }
+  };
 
   // Validation functions
   const validateEmail = (email: string): boolean => {
@@ -123,6 +141,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!loginData.email.trim() || !loginData.password.trim()) return;
+    
     setIsLoading(true);
     setError('');
 
@@ -357,6 +377,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
             <X className="w-6 h-6" />
           </button>
 
+          {/* Connection Status */}
+          {connectionStatus !== 'connected' && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <div>
+                  <div className="text-red-300 font-medium">
+                    {connectionStatus === 'testing' ? 'Testing connection...' : 'Connection Failed'}
+                  </div>
+                  {connectionStatus === 'failed' && (
+                    <div className="text-red-400 text-sm mt-1">
+                      Unable to connect to Supabase. Please check your configuration.
+                      <button
+                        onClick={testConnection}
+                        className="ml-2 text-brass hover:text-stardust-silver underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Success State */}
           {isSuccess && (
             <div className="text-center">
@@ -447,7 +492,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || connectionStatus !== 'connected'}
                   className="w-full marble-button-large group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300">
@@ -664,7 +709,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
                 <button
                   type="submit"
-                  disabled={isLoading || Object.keys(errors).length > 0}
+                  disabled={isLoading || Object.keys(errors).length > 0 || connectionStatus !== 'connected'}
                   className="w-full marble-button-large group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300">
@@ -723,7 +768,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || connectionStatus !== 'connected'}
                   className="w-full marble-button-large group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="relative z-10 text-brass font-inter font-semibold tracking-wide group-hover:text-black-marble transition-colors duration-300">
