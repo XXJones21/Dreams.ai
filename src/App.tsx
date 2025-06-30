@@ -28,6 +28,8 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/feed" element={<FeedPage />} />
         <Route path="/dreams" element={<FeedPage />} />
+        {/* Catch all route */}
+        <Route path="*" element={<HomePage />} />
       </Routes>
     </Router>
   );

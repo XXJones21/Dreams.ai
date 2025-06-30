@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import MarbleBust from './MarbleBust';
+import LogoWithFluidSwirl from './LogoWithFluidSwirl';
 import ArtDecoColumns from './ArtDecoColumns';
 import { ChevronDown, Play, Sparkles, Zap, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -99,9 +99,9 @@ const HeroSection: React.FC = () => {
           
           {/* Main Content */}
           <div className="text-center space-y-8 max-w-5xl mx-auto">
-            {/* Marble Bust */}
+            {/* Logo with Fluid Swirl - Replacing Marble Bust */}
             <div className="relative mb-16">
-              <MarbleBust />
+              <LogoWithFluidSwirl size="large" className="mx-auto" />
             </div>
 
             {/* Headlines */}
