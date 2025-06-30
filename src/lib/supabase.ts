@@ -391,7 +391,7 @@ export const getProfile = async (userId: string) => {
       return { data: null, error: { message: 'User ID is required' } };
     }
 
-    const timeoutPromise = createTimeoutPromise(20000, 'Get profile');
+    const timeoutPromise = createTimeoutPromise(30000, 'Get profile');
 
     const profilePromise = supabase
       .from('profiles')
