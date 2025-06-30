@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Crown, Fire, Star, Calendar } from 'lucide-react';
+import { TrendingUp, Crown, Siren as Fire, Star, Calendar } from 'lucide-react';
 import DreamCard from './DreamCard';
 
 interface TrendingDream {
