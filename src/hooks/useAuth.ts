@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase, Profile, getProfile } from '../lib/supabase';
 
 interface AuthState {
@@ -117,12 +117,19 @@ export const useAuth = () => {
 
     // Listen for auth changes with improved error handling - NO TIMEOUTS
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         if (!mounted) return;
         
         console.log('🔄 Auth state changed:', event, session?.user?.email);
 
         if (session?.user) {
+          // Force a getUser call after auth state change for debugging
+          try {
+            const userResult = await supabase.auth.getUser();
+            console.log('🔍 Forced getUser result after auth state change:', userResult);
+          } catch (err) {
+            console.error('❌ Error in forced getUser after auth state change:', err);
+          }
           // Load user profile with graceful error handling - NO TIMEOUTS
           try {
             const { data: profile, error: profileError } = await getProfile(session.user.id);
