@@ -38,7 +38,9 @@ def write_imn(data: dict, directory: str):
     Write the IMN structure to a file in the specified directory.
     """
     os.makedirs(directory, exist_ok=True)
-    filename = os.path.join(directory, f"{data['id']}.imn")
+    # Get the id from the new schema location
+    dream_id = data.get("pre_production", {}).get("id", "unknown_id")
+    filename = os.path.join(directory, f"{dream_id}.imn")
     try:
         with open(filename, "w") as f:
             json.dump(data, f, indent=4)
@@ -63,13 +65,17 @@ def convert_prompt_to_imn(state: State):
     created_at = datetime.utcnow().isoformat() + "Z"
 
     imn_data = {
-        "id": dream_id,
-        "user_id": user_id,
-        "dream_name": dream_name or "untitled_dream",
-        "story_prompt": story_prompt,
-        "initial_goal": initial_goal,
-        "pitch": pitch,
-        "created_at": created_at
+        "pre_production": {
+             "id": dream_id,
+             "user_id": user_id,
+             "dream_name": dream_name or "untitled_dream",
+             "story_prompt": story_prompt,
+             "initial_goal": initial_goal,
+             "pitch": pitch,
+             "created_at": created_at
+        },
+        "in_production":[],
+        "post_production": {}
     }
 
     directory = os.path.join("Backend", "Dreams")
@@ -145,6 +151,56 @@ def Carthir(state: State):
             "messages": [{"role": "assistant", "content": reply.content}]
         })
         return state
+
+def Narnion(state: State):
+    """
+    The Script Writer
+    This agent is responsible for writing the script for the dream.
+    It takes the pitch and the imn file and writes the script.
+    It returns the script in the state.
+    """
+
+    ## Get the imn data
+    filename = state.get("imn_filename")
+    if not filename:
+        print("No .imn filename found in state.")
+        return state
+    imn_data = read_imn(filename)
+
+    ## Store the imn data as variables
+    story_prompt = imn_data.get("story_prompt")
+    pitch = imn_data.get("pitch")
+    initial_goal = imn_data.get("initial_goal")
+
+    ## Create the message
+    message = (
+        f"Story Prompt: {story_prompt}\n"
+        f"Pitch: {pitch}\n"
+        f"Initial Goal: {initial_goal}\n"
+        f"Write a ten second scene with no dialogue and suggest 2-3 actions to the user"
+    )
+
+    ## Create the story outline
+    story_outline = [
+        {
+            "role": "system",
+            "content": (
+                """
+                You are Narnion, a mastercraft's man on creating vivid and imaginitve worlds from a few simple words. 
+                You are given a story_prompt a pitch and an initial goal and then craft a interactive narrative to achieve that goal.
+                You specialize in creating narratives told from the first person perspective and you will write a ten second scene with no dialogue
+                """
+            )
+        },
+        {
+            "role": "user",
+            "content": (message)
+        }
+    ]
+    reply = llm.invoke(story_outline)
+
+    ## Update the imn file with the story outline
+
 
 
 def read_imn(filename: str):
