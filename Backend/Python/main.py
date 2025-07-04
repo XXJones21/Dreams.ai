@@ -9,6 +9,7 @@ from typing import Annotated, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
+from langgraph.channels import last_value
 
 
 load_dotenv()
@@ -18,13 +19,10 @@ llm = ChatOpenAI(model="gemma3:12b", base_url="http://10.1.95.9:11434/v1")
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
-    dream_name: str | None
-    story_prompt: str | None
-    initial_goal: str | None
-    pitch: str | None
-    imn_filename: str | None
-    id: str | None
+    imn_filename: Annotated[str | None, last_value]
+    id: Annotated[str | None, last_value]
     user_id: str | None
+    carthir_memory: dict | None
 
 
 class convert_prompt_to_imn(TypedDict):
@@ -54,13 +52,23 @@ def convert_prompt_to_imn(state: State):
     Creates the .imn file using Carthir's output in the state.
     """
     print(f"\n[DEBUG] State at start of convert_prompt_to_imn:\n{json.dumps(state, indent=2, default=str)}\n")
-    dream_name = state.get("dream_name")
-    story_prompt = state.get("story_prompt")
-    initial_goal = state.get("initial_goal")
-    pitch = state.get("pitch")
+    carthir_mem = state.get("carthir_memory", {})
+    dream_name = carthir_mem.get("dream_name")
+    story_prompt = carthir_mem.get("story_prompt")
+    initial_goal = carthir_mem.get("initial_goal")
+    pitch = carthir_mem.get("pitch")
     user_id = state.get("user_id", "user-uuid-placeholder")  # Replace with real user_id logic
 
-    dream_id = str(uuid.uuid4())
+    # Only generate a new dream_id if not already present
+    if not state.get("id"):
+        dream_id = str(uuid.uuid4())
+        state["id"] = dream_id
+    else:
+        dream_id = state["id"]
+
+    directory = os.path.join("Backend", "Dreams")
+    filename = os.path.join(directory, f"{dream_id}.imn")
+
     created_at = datetime.utcnow().isoformat() + "Z"
 
     imn_data = {
@@ -77,17 +85,7 @@ def convert_prompt_to_imn(state: State):
         "post_production": {}
     }
 
-    directory = os.path.join("Backend", "Dreams")
     write_imn(imn_data, directory)
-
-    # Pass along the state, adding the filename and IDs
-    state["imn_filename"] = os.path.join(directory, f"{dream_id}.imn")
-    state["id"] = dream_id
-    state["user_id"] = user_id
-
-    # Remove top-level keys that cause merge conflicts in parallel steps
-    for k in ["dream_name", "story_prompt", "initial_goal", "pitch"]:
-        state.pop(k, None)
     return state
 
 
@@ -139,14 +137,6 @@ def Carthir(state: State):
         if codeblock_match:
             content = codeblock_match.group(1).strip()
         result = _json.loads(content)
-        # Update and return the state with new fields
-        state.update({
-            "dream_name": result.get("dream_name"),
-            "story_prompt": result.get("story_prompt"),
-            "initial_goal": result.get("initial_goal"),
-            "pitch": result.get("pitch"),
-            "messages": [{"role": "assistant", "content": result.get("pitch", "")}]
-        })
         # Store Carthir's memory
         state["carthir_memory"] = {
             "dream_name": result.get("dream_name"),
@@ -154,17 +144,14 @@ def Carthir(state: State):
             "initial_goal": result.get("initial_goal"),
             "pitch": result.get("pitch")
         }
+        # Add a message for downstream agents
+        state["messages"] = [{"role": "assistant", "content": result.get("pitch", "")}] 
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
     except Exception as e:
         print(f"Error parsing Carthir's response as JSON: {e}\nRaw reply: {reply.content}")
-        state.update({
-            "dream_name": None,
-            "story_prompt": None,
-            "initial_goal": None,
-            "pitch": reply.content,
-            "messages": [{"role": "assistant", "content": reply.content}]
-        })
+        state["carthir_memory"] = None
+        state["messages"] = [{"role": "assistant", "content": reply.content}]
         return state
 
 
@@ -175,7 +162,8 @@ def CarthirReview(state: State):
     """
     print("\n[CarthirReview] --- AGENT REVIEW STEP ---")
     carthir_mem = state.get("carthir_memory")
-    filename = state.get("imn_filename")
+    directory = os.path.join("Backend", "Dreams")
+    filename = os.path.join(directory, f"{state['id']}.imn")
     if not filename:
         print("No .imn filename found in state.")
         return state
@@ -208,7 +196,8 @@ def Narnion(state: State):
     """
     Narnion writes the next scene and suggested actions, appending to in_production.
     """
-    filename = state.get("imn_filename")
+    directory = os.path.join("Backend", "Dreams")
+    filename = os.path.join(directory, f"{state['id']}.imn")
     if not filename:
         print("No .imn filename found in state.")
         return state
@@ -260,7 +249,7 @@ def Narnion(state: State):
             "actions": actions
         }
         imn_data["in_production"].append(new_scene)
-        write_imn(imn_data, os.path.dirname(filename))
+        write_imn(imn_data, directory)
         print(f"[Narnion] Added new scene to in_production.")
     except Exception as e:
         print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
@@ -271,7 +260,8 @@ def Cenedril(state: State):
     """
     Cenedril writes the initial frame image prompt (first person) for the dream.
     """
-    filename = state.get("imn_filename")
+    directory = os.path.join("Backend", "Dreams")
+    filename = os.path.join(directory, f"{state['id']}.imn")
     if not filename:
         print("No .imn filename found in state.")
         return state
@@ -297,7 +287,7 @@ def Cenedril(state: State):
     # Save the result in the .imn file
     first_frame_prompt = reply.content.strip()
     imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
-    write_imn(imn_data, os.path.dirname(filename))
+    write_imn(imn_data, directory)
     print(f"[Cenedril] Saved first frame prompt to .imn file.")
 
     return state
@@ -318,7 +308,8 @@ def print_imn_agent(state: State):
     """
     Reads and prints the .imn file using the filename from the state.
     """
-    filename = state.get("imn_filename")
+    directory = os.path.join("Backend", "Dreams")
+    filename = os.path.join(directory, f"{state['id']}.imn")
     if not filename:
         print("No .imn filename found in state.")
         return state
@@ -353,7 +344,7 @@ graph = graph_builder.compile()
 
 
 def run_chatbot():
-    state = {"messages": [], "imn_filename": None, "id": None, "user_id": None}
+    state = {"messages": []}
 
     while True:
         user_input = input("You: ")
