@@ -34,10 +34,9 @@ def write_imn(data: dict, directory: str):
     """
     Write the IMN structure to a file in the specified directory.
     """
+    
     os.makedirs(directory, exist_ok=True)
-    # Get the id from the new schema location
-    dream_id = data.get("pre_production", {}).get("id", "unknown_id")
-    filename = os.path.join(directory, f"{dream_id}.imn")
+    filename = os.path.join(directory, f"{data.get('pre_production', {}).get('id', 'unknown_id')}.imn")
     try:
         with open(filename, "w") as f:
             json.dump(data, f, indent=4)
@@ -162,12 +161,18 @@ def CarthirReview(state: State):
     """
     print("\n[CarthirReview] --- AGENT REVIEW STEP ---")
     carthir_mem = state.get("carthir_memory")
-    directory = os.path.join("Backend", "Dreams")
-    filename = os.path.join(directory, f"{state['id']}.imn")
-    if not filename:
-        print("No .imn filename found in state.")
+
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
         return state
-    imn_data = read_imn(filename)
+    imn_file_path = os.path.join("Backend", "Dreams", f"{dream_id}.imn")
+
+    imn_data = read_imn(imn_file_path)
+    if  imn_data is None:
+        print ("Error reading .imn file")
+        return state
+
     narnion_result = None
     cenedril_result = None
     # Get Narnion's latest scene (if any)
@@ -196,12 +201,16 @@ def Narnion(state: State):
     """
     Narnion writes the next scene and suggested actions, appending to in_production.
     """
-    directory = os.path.join("Backend", "Dreams")
-    filename = os.path.join(directory, f"{state['id']}.imn")
-    if not filename:
-        print("No .imn filename found in state.")
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
         return state
-    imn_data = read_imn(filename)
+    imn_file_path = os.path.join("Backend", "Dreams", f"{dream_id}.imn")
+
+    imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        print("Error reading .imn file")
+        return state
     pre = imn_data["pre_production"]
 
     # Get the last pitch from Carthir
@@ -249,6 +258,7 @@ def Narnion(state: State):
             "actions": actions
         }
         imn_data["in_production"].append(new_scene)
+        directory = os.path.join("Backend", "Dreams")
         write_imn(imn_data, directory)
         print(f"[Narnion] Added new scene to in_production.")
     except Exception as e:
@@ -256,16 +266,21 @@ def Narnion(state: State):
 
     return state
 
+
 def Cenedril(state: State):
     """
     Cenedril writes the initial frame image prompt (first person) for the dream.
     """
-    directory = os.path.join("Backend", "Dreams")
-    filename = os.path.join(directory, f"{state['id']}.imn")
-    if not filename:
-        print("No .imn filename found in state.")
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
         return state
-    imn_data = read_imn(filename)
+    imn_file_path = os.path.join("Backend", "Dreams", f"{dream_id}.imn")
+
+    imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        print("Error reading .imn file")
+        return state
     pre = imn_data["pre_production"]
 
     # Get the last pitch from Carthir
@@ -282,15 +297,28 @@ def Cenedril(state: State):
         {"role": "system", "content": "You are Cenedril, a master of visual storytelling."},
         {"role": "user", "content": prompt}
     ]
-    reply = llm.invoke(image_prompt)
 
-    # Save the result in the .imn file
-    first_frame_prompt = reply.content.strip()
-    imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
-    write_imn(imn_data, directory)
-    print(f"[Cenedril] Saved first frame prompt to .imn file.")
+    try:
+        reply = llm.invoke(image_prompt)
+
+        # Save the result in the .imn file
+        first_frame_prompt = reply.content.strip()
+        imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
+        directory = os.path.join("Backend", "Dreams")
+        write_imn(imn_data, directory)
+        print(f"[Cenedril] Saved first frame prompt to .imn file.")
+
+    except Exception as e:
+        print(f"Error in Cenedril during image generation or file writing: {e}")
+        # Handle the error gracefully.  For example:
+        imn_data["pre_production"]["first_frame_prompt"] = "ERROR GENERATING PROMPT" # Set a placeholder
+        directory = os.path.join("Backend", "Dreams")
+        write_imn(imn_data, directory) # Still write something to avoid breaking downstream processes
+        state["messages"] = [{"role": "assistant", "content": f"Sorry, there was an error generating the initial frame prompt."}]  # Inform user
+        return state
 
     return state
+
 
 def read_imn(filename: str):
     """
@@ -299,23 +327,29 @@ def read_imn(filename: str):
     try:
         with open(filename, "r") as f:
             return json.load(f)
+    except FileNotFoundError:
+        print(f'Error: .imn file not found at {filename}')
     except Exception as e:
         print(f"Error reading .imn file: {e}")
         return None
 
-# Placeholder downstream agent for demonstration
+
 def print_imn_agent(state: State):
     """
     Reads and prints the .imn file using the filename from the state.
     """
-    directory = os.path.join("Backend", "Dreams")
-    filename = os.path.join(directory, f"{state['id']}.imn")
-    if not filename:
-        print("No .imn filename found in state.")
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
         return state
-    imn_data = read_imn(filename)
-    print(f"\n[print_imn_agent] .imn file contents for '{filename}':\n{json.dumps(imn_data, indent=2)}\n")
+    imn_file_path = os.path.join("Backend", "Dreams", f"{dream_id}.imn")
+    imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        print("Error reading .imn file")
+        return state
+    print(f"\n[print_imn_agent] .imn file contents for '{imn_file_path}':\n{json.dumps(imn_data, indent=2)}\n")
     return state
+
 
 # Build the state graph
 graph_builder = StateGraph(State)
