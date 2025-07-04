@@ -1,0 +1,28 @@
+{
+    "pre_production": {
+        "id": "0313e48f-7f91-4895-965f-6a8394ed8003",
+        "user_id": null,
+        "dream_name": "Paw & Order",
+        "story_prompt": "A relentlessly optimistic corgi with a law degree attempts to establish a legal practice in San Francisco, a city overwhelmingly dominated by sophisticated, judgemental cats.",
+        "initial_goal": "To win a single, meaningful legal case, proving his worth despite the city's feline prejudice.",
+        "pitch": "Imagine San Francisco, but everything is tailored for cats \u2013 the architecture, the businesses, the very air itself. Now, picture a plucky corgi, Reginald, fresh out of law school, trying to navigate this purr-fectly feline world. Reginald, armed with oversized glasses and an unwavering belief in justice, opens a tiny legal practice, 'Paw & Order,' only to be met with disdain and patronizing meows from the city's elite cat lawyers. The visual style will be a vibrant, almost Wes Anderson-esque aesthetic, emphasizing the absurdity of Reginald\u2019s situation. We hear classical music juxtaposed with playful corgi barks and frustrated sighs. The audio should evoke a blend of charming naivete and simmering frustration.  The film follows Reginald's hilarious attempts to secure clients \u2013 think disastrous depositions, awkward networking events, and constant reminders that he's 'just a dog.'  It\u2019s a comedic fish-out-of-water story with heart, exploring themes of prejudice, perseverance, and finding your place, even when the world isn\u2019t built for you.  Will Reginald ever win a case and earn the respect of his feline peers? Or will he be forever relegated to fetching legal briefs instead of arguing them?",
+        "created_at": "2025-07-04T01:38:19.337513Z"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "Reginald, in his miniature bespoke suit and oversized glasses, struggles to maneuver his tiny, custom-built car through a traffic jam on 'Meowser Street.' The cars are all shaped like elaborate cat toys (giant balls of yarn, scratching posts on wheels, etc.). He\u2019s meticulously following the traffic signals, flashing paw symbols, but a massive, fluffy Persian cat driving a luxury catnip mobile completely ignores him, nearly clipping Reginald\u2019s car. Reginald\u2019s ears droop, and he lets out a muffled, frustrated sigh visible through his glasses. A single, perfectly framed drop of rain drips from the catmobile\u2019s antenna onto Reginald's windshield.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Examine Reginald\u2019s face more closely to see the depth of his frustration.",
+                "Focus on the elaborate catmobile and its driver to emphasize the absurdity of the situation.",
+                "Rewind the scene and pay attention to the traffic signals \u2013 are there any clues Reginald is missing?"
+            ]
+        }
+    ],
+    "post_production": {}
+}

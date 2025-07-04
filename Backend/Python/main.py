@@ -18,7 +18,6 @@ llm = ChatOpenAI(model="gemma3:12b", base_url="http://10.1.95.9:11434/v1")
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
-    message_type: str | None
     dream_name: str | None
     story_prompt: str | None
     initial_goal: str | None
@@ -85,13 +84,22 @@ def convert_prompt_to_imn(state: State):
     state["imn_filename"] = os.path.join(directory, f"{dream_id}.imn")
     state["id"] = dream_id
     state["user_id"] = user_id
+
+    # Remove top-level keys that cause merge conflicts in parallel steps
+    for k in ["dream_name", "story_prompt", "initial_goal", "pitch"]:
+        state.pop(k, None)
     return state
 
 
 def Carthir(state: State):
     """
     Generates a film pitch based on the user's prompt and returns structured data.
+    Stores its output in state['carthir_memory'] for persistent memory.
     """
+    # If memory exists, skip re-generation (could be used for review step)
+    if state.get("carthir_memory"):
+        print("[Carthir] Using existing memory.")
+        return state
 
     last_message = state["messages"][-1]
 
@@ -137,8 +145,15 @@ def Carthir(state: State):
             "story_prompt": result.get("story_prompt"),
             "initial_goal": result.get("initial_goal"),
             "pitch": result.get("pitch"),
-            "messages": [{"role": "assistant", "content": result.get("pitch", "")}]  # for display
+            "messages": [{"role": "assistant", "content": result.get("pitch", "")}]
         })
+        # Store Carthir's memory
+        state["carthir_memory"] = {
+            "dream_name": result.get("dream_name"),
+            "story_prompt": result.get("story_prompt"),
+            "initial_goal": result.get("initial_goal"),
+            "pitch": result.get("pitch")
+        }
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
     except Exception as e:
@@ -151,6 +166,43 @@ def Carthir(state: State):
             "messages": [{"role": "assistant", "content": reply.content}]
         })
         return state
+
+
+def CarthirReview(state: State):
+    """
+    Carthir reviews the outputs from Narnion and Cenedril using its persistent memory.
+    Outputs a verification/critique of each agent's result for testing.
+    """
+    print("\n[CarthirReview] --- AGENT REVIEW STEP ---")
+    carthir_mem = state.get("carthir_memory")
+    filename = state.get("imn_filename")
+    if not filename:
+        print("No .imn filename found in state.")
+        return state
+    imn_data = read_imn(filename)
+    narnion_result = None
+    cenedril_result = None
+    # Get Narnion's latest scene (if any)
+    if imn_data["in_production"]:
+        narnion_result = imn_data["in_production"][-1]
+    # Get Cenedril's first frame prompt
+    cenedril_result = imn_data["pre_production"].get("first_frame_prompt")
+
+    print("\n[CarthirReview] Carthir's Memory:")
+    print(json.dumps(carthir_mem, indent=2, default=str))
+    print("\n[CarthirReview] Narnion's Latest Scene:")
+    print(json.dumps(narnion_result, indent=2, default=str))
+    print("\n[CarthirReview] Cenedril's First Frame Prompt:")
+    print(json.dumps(cenedril_result, indent=2, default=str))
+
+    # Simple verification/critique logic (could be expanded)
+    print("\n[CarthirReview] VERIFICATION TEST:")
+    if carthir_mem and narnion_result and cenedril_result:
+        print("All agent outputs present. Review successful!")
+    else:
+        print("Missing output from one or more agents.")
+    return state
+
 
 def Narnion(state: State):
     """
@@ -165,14 +217,11 @@ def Narnion(state: State):
 
     # Get the last pitch from Carthir
     last_message = state["messages"][-1]
-    pitch = last_message["content"]
+    narnion_prompt = last_message.content
 
     # Build the prompt
     prompt = (
-        f"Dream Name: {pre.get('dream_name')}\n"
-        f"Story Prompt: {pre.get('story_prompt')}\n"
-        f"Initial Goal: {pre.get('initial_goal')}\n"
-        f"Pitch: {pitch}\n\n"
+        f"Pitch: {narnion_prompt}\n\n"
         "Write a ten-second scene (no dialogue) for the next moment in the story, and suggest 2-3 actions the user could take next. "
         "Respond in JSON with:\n"
         "{\n"
@@ -192,7 +241,7 @@ def Narnion(state: State):
         import json as _json
         content = reply.content.strip()
         # Extract JSON block if present
-        match = re.search(r"```(?:json)?\\s*([\\s\\S]+?)\\s*```", content)
+        match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if match:
             content = match.group(1).strip()
         result = _json.loads(content)
@@ -215,6 +264,41 @@ def Narnion(state: State):
         print(f"[Narnion] Added new scene to in_production.")
     except Exception as e:
         print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
+
+    return state
+
+def Cenedril(state: State):
+    """
+    Cenedril writes the initial frame image prompt (first person) for the dream.
+    """
+    filename = state.get("imn_filename")
+    if not filename:
+        print("No .imn filename found in state.")
+        return state
+    imn_data = read_imn(filename)
+    pre = imn_data["pre_production"]
+
+    # Get the last pitch from Carthir
+    last_message = state["messages"][-1]
+    cenedril_prompt = last_message.content
+
+    # Build the prompt
+    prompt = (
+        f"Pitch: {cenedril_prompt}\n\n"
+        "Write a vivid, first-person visual prompt for an AI image generator to create the very first frame of the dream. "
+        "Describe what the dreamer sees as if they are experiencing it themselves, using 'I' perspective."
+    )
+    image_prompt = [
+        {"role": "system", "content": "You are Cenedril, a master of visual storytelling."},
+        {"role": "user", "content": prompt}
+    ]
+    reply = llm.invoke(image_prompt)
+
+    # Save the result in the .imn file
+    first_frame_prompt = reply.content.strip()
+    imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
+    write_imn(imn_data, os.path.dirname(filename))
+    print(f"[Cenedril] Saved first frame prompt to .imn file.")
 
     return state
 
@@ -245,22 +329,31 @@ def print_imn_agent(state: State):
 # Build the state graph
 graph_builder = StateGraph(State)
 
+# Add the agents
 graph_builder.add_node("carthir", Carthir)
+graph_builder.add_node("narnion", Narnion)
+graph_builder.add_node("cenedril", Cenedril)
+
 graph_builder.add_node("convert_prompt", convert_prompt_to_imn)
 # Add the print_imn_agent as the final node for demonstration
 graph_builder.add_node("print_imn", print_imn_agent)
 
+graph_builder.add_node("carthir_review", CarthirReview)
+
 graph_builder.add_edge(START, "carthir")
 graph_builder.add_edge("carthir", "convert_prompt")
-graph_builder.add_edge("convert_prompt", "print_imn")
-graph_builder.add_edge("print_imn", END)
+graph_builder.add_edge("convert_prompt", "narnion")
+graph_builder.add_edge("convert_prompt", "cenedril")
+graph_builder.add_edge("narnion", "carthir_review")
+graph_builder.add_edge("cenedril", "carthir_review")
+graph_builder.add_edge("carthir_review", END)
 
 ### Compile the graph to finalize its structure
 graph = graph_builder.compile()
 
 
 def run_chatbot():
-    state = {"messages": [], "message_type": None, "dream_name": None, "story_prompt": None, "initial_goal": None, "pitch": None, "imn_filename": None, "id": None, "user_id": None}
+    state = {"messages": [], "imn_filename": None, "id": None, "user_id": None}
 
     while True:
         user_input = input("You: ")

@@ -1,0 +1,28 @@
+{
+    "pre_production": {
+        "id": "ef065564-69e9-4081-8cd7-f5958f5b52bd",
+        "user_id": null,
+        "dream_name": "Golden Gate Pawprints",
+        "story_prompt": "A charming corgi, uprooted from his quiet Midwest life, finds himself lost and bewildered in the bustling, unfamiliar streets of San Francisco, desperately searching for a place to belong.",
+        "initial_goal": "To find a kind person or family who will offer him a loving home and a sense of belonging.",
+        "pitch": "Imagine a film bathed in golden afternoon light, opening on a picture-postcard view of a sleepy Midwestern town. We meet Barnaby, a ridiculously adorable corgi, clearly the heart of his little community. But a misunderstanding, a lost delivery truck, and suddenly Barnaby is in San Francisco - the land of cable cars, sourdough, and towering skyscrapers. It\u2019s overwhelming. The film follows Barnaby\u2019s journey through the Bay Area \u2013 dodging scooters, sniffing unfamiliar scents, encountering quirky characters \u2013 a street artist, a retired opera singer, a group of skateboarders \u2013 each interaction a comedic and heartwarming vignette. We'll use a low camera angle to emphasize his small size and vulnerability amidst the grandeur of the city, and a whimsical, playful score will underscore his adorably frantic search. It\u2019s a story about finding your place, about the kindness of strangers, and about the universal desire for connection, told through the eyes \u2013 and paws \u2013 of the most charming corgi you\u2019ll ever see. The film builds to a poignant moment of connection with a lonely artisan baker, both finding solace and a shared sense of purpose in each other\u2019s company, culminating in Barnaby finally finding a home \u2013 and a delicious supply of freshly baked treats.",
+        "created_at": "2025-07-04T01:41:04.951533Z"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "Barnaby, disoriented and trembling, finds himself cornered in a bustling Fisherman's Wharf, surrounded by the scent of saltwater taffy and the cacophony of tourist chatter. A massive, brightly colored carousel dominates the scene, its horses looming over him like gentle giants. He tries to dart past, but a rogue seagull, emboldened by dropped french fries, swoops down and pecks playfully at his ear, causing him to yelp and scramble for cover behind a stack of crab buckets. The camera focuses tightly on Barnaby\u2019s worried, expressive face.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Follow Barnaby as he attempts to navigate through the crowded Wharf, avoiding tourists and scavenging for a familiar scent.",
+                "Zoom in on a nearby street performer trying to entertain the crowd \u2013 what could Barnaby\u2019s reaction be?",
+                "Pan up from Barnaby\u2019s huddled position to reveal the full panoramic view of San Francisco Bay, emphasizing his isolation."
+            ]
+        }
+    ],
+    "post_production": {}
+}

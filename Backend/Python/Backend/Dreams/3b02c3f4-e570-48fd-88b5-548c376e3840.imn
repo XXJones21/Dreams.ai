@@ -1,0 +1,28 @@
+{
+    "pre_production": {
+        "id": "3b02c3f4-e570-48fd-88b5-548c376e3840",
+        "user_id": null,
+        "dream_name": "Golden Paws, Bay Dreams",
+        "story_prompt": "A small-town corgi, utterly bewildered by the chaos of the San Francisco Bay Area, embarks on a heartwarming quest to find a family and a place to belong.",
+        "initial_goal": "To secure a loving home and a patch of sunshine for a nap.",
+        "pitch": "Imagine a minute bathed in the warm, honeyed tones of the Midwest colliding with the vibrant, almost overwhelming technicolor of San Francisco. Our film follows Winston, a sweet, slightly clumsy corgi who's been accidentally transported across the country. He\u2019s a creature of cornfields and porch swings, utterly unprepared for the cable cars, bustling sidewalks, and insistent fog horns of the Bay Area. The visuals are crucial \u2013 we\u2019ll contrast Winston\u2019s wide-eyed wonder at the Golden Gate Bridge with the panic of dodging scooters on Lombard Street. The soundtrack will blend familiar, folksy tunes with the quirky soundscape of the city. Winston\u2019s journey isn't about grand gestures, but about quiet moments of connection: a shared glance with a street artist, a fleeting warmth from a friendly hand offering a treat, the simple comfort of finding a sunny spot to rest.  It\u2019s a film about displacement, resilience, and the universal yearning for belonging, told through the charming perspective of a very, very good boy. We'll end with a hopeful, lingering shot of Winston finally curled up in a loving home, a tiny, corgi-shaped beacon of joy in the heart of the city.",
+        "created_at": "2025-07-04T01:45:41.092471Z"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "Winston, utterly bewildered, sits squarely in the middle of a vibrant mural depicting fantastical sea creatures. The mural is on a building wall in North Beach. People bustle past, largely ignoring him, focused on their destinations. He\u2019s tilted his head, his ears perked, observing a street performer playing a jaunty accordion tune just a few feet away. A single dandelion seed drifts down and lands gently on his nose. He twitches, trying to shake it off, but only succeeds in looking even more adorably confused.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Follow Winston's gaze to the accordion player - zoom in to see the musician's expression and the notes they are playing.",
+                "Examine the mural \u2013 pan the camera out to reveal the entirety of the artwork and its surrounding neighborhood.",
+                "Observe Winston's body language - replay the scene focusing solely on his ear twitches and head tilts to uncover a subtle cue about his emotional state."
+            ]
+        }
+    ],
+    "post_production": {}
+}
