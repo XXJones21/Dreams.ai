@@ -154,54 +154,69 @@ def Carthir(state: State):
 
 def Narnion(state: State):
     """
-    The Script Writer
-    This agent is responsible for writing the script for the dream.
-    It takes the pitch and the imn file and writes the script.
-    It returns the script in the state.
+    Narnion writes the next scene and suggested actions, appending to in_production.
     """
-
-    ## Get the imn data
     filename = state.get("imn_filename")
     if not filename:
         print("No .imn filename found in state.")
         return state
     imn_data = read_imn(filename)
+    pre = imn_data["pre_production"]
 
-    ## Store the imn data as variables
-    story_prompt = imn_data.get("story_prompt")
-    pitch = imn_data.get("pitch")
-    initial_goal = imn_data.get("initial_goal")
+    # Get the last pitch from Carthir
+    last_message = state["messages"][-1]
+    pitch = last_message["content"]
 
-    ## Create the message
-    message = (
-        f"Story Prompt: {story_prompt}\n"
-        f"Pitch: {pitch}\n"
-        f"Initial Goal: {initial_goal}\n"
-        f"Write a ten second scene with no dialogue and suggest 2-3 actions to the user"
+    # Build the prompt
+    prompt = (
+        f"Dream Name: {pre.get('dream_name')}\n"
+        f"Story Prompt: {pre.get('story_prompt')}\n"
+        f"Initial Goal: {pre.get('initial_goal')}\n"
+        f"Pitch: {pitch}\n\n"
+        "Write a ten-second scene (no dialogue) for the next moment in the story, and suggest 2-3 actions the user could take next. "
+        "Respond in JSON with:\n"
+        "{\n"
+        "  \"scene_context\": \"...\",\n"
+        "  \"actions\": [\"...\", \"...\", \"...\"]\n"
+        "}"
     )
 
-    ## Create the story outline
     story_outline = [
-        {
-            "role": "system",
-            "content": (
-                """
-                You are Narnion, a mastercraft's man on creating vivid and imaginitve worlds from a few simple words. 
-                You are given a story_prompt a pitch and an initial goal and then craft a interactive narrative to achieve that goal.
-                You specialize in creating narratives told from the first person perspective and you will write a ten second scene with no dialogue
-                """
-            )
-        },
-        {
-            "role": "user",
-            "content": (message)
-        }
+        {"role": "system", "content": "You are Narnion, a master of interactive narrative."},
+        {"role": "user", "content": prompt}
     ]
     reply = llm.invoke(story_outline)
 
-    ## Update the imn file with the story outline
+    # Parse the LLM's JSON output
+    try:
+        import json as _json
+        content = reply.content.strip()
+        # Extract JSON block if present
+        match = re.search(r"```(?:json)?\\s*([\\s\\S]+?)\\s*```", content)
+        if match:
+            content = match.group(1).strip()
+        result = _json.loads(content)
+        scene_context = result.get("scene_context")
+        actions = result.get("actions", [])
 
+        # Build the new in_production entry
+        new_scene = {
+            "scene_id": len(imn_data["in_production"]) + 1,
+            "frame_image": None,  # To be filled in later
+            "timestamp": None,    # To be filled in later
+            "scene_context": scene_context,
+            "user_action": None,  # To be filled in after user acts
+            "tap_location": None, # To be filled in after user acts
+            "object_tapped": None,# To be filled in after user acts
+            "actions": actions
+        }
+        imn_data["in_production"].append(new_scene)
+        write_imn(imn_data, os.path.dirname(filename))
+        print(f"[Narnion] Added new scene to in_production.")
+    except Exception as e:
+        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
 
+    return state
 
 def read_imn(filename: str):
     """
