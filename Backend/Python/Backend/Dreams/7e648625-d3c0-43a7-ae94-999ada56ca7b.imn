@@ -1,0 +1,28 @@
+{
+    "pre_production": {
+        "id": "7e648625-d3c0-43a7-ae94-999ada56ca7b",
+        "user_id": null,
+        "dream_name": "Paw & Order",
+        "story_prompt": "A relentlessly optimistic corgi, desperate to prove his worth, attempts to establish himself as a lawyer in a San Francisco overrun by sophisticated, feline legal professionals.",
+        "initial_goal": "To win a single case and earn the respect of the city\u2019s discerning cat lawyers.",
+        "pitch": "Imagine San Francisco, but replace the tech bros with impeccably dressed, Persian and Siamese lawyers. Our protagonist, Winston, is a relentlessly cheerful corgi with a law degree and an unshakeable belief in justice. He\u2019s arrived in the city, full of optimism, only to find himself facing overwhelming competition: a cutthroat legal community dominated by cats with centuries of experience manipulating the system. The visuals will be a vibrant clash of San Francisco\u2019s iconic locations \u2013 Lombard Street, the Ferry Building \u2013 juxtaposed with the absurdity of a corgi trying to navigate a world built for graceful felines. The soundtrack will bounce between upbeat, jazzy tunes and moments of dramatic tension, mirroring Winston\u2019s fluctuating confidence.  We\u2019ll see him fumble through courtroom presentations, outsmarted by sly feline tactics, and continually knocked down, but always getting back up with a wagging tail and a determined bark. This isn\u2019t just about a corgi trying to be a lawyer; it\u2019s about perseverance, finding your place in a world that isn\u2019t designed for you, and the surprising power of unwavering optimism \u2013 even if you\u2019re a short-legged, fluffy underdog.",
+        "created_at": "2025-07-04T01:52:20.972089Z"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "Winston, still damp from a rogue sprinkler (courtesy of a snide Siamese partner), attempts to scale the steps of the prestigious 'Claws & Paws' law firm. He\u2019s clearly struggling; his short legs churning furiously, the briefcases he\u2019s carrying threatening to topple him. The firm\u2019s imposing glass facade reflects his image \u2013 a tiny, fluffy, and utterly determined corgi against a backdrop of sleek feline power. A single, perfectly groomed Persian steps out of the building, pauses, glances down at Winston with an almost pitying expression, and then smoothly enters a waiting limousine, the door closing with a decisive click. Rain drips from Winston\u2019s fur.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Attempt to continue scaling the steps, ignoring the Persian's disdain (Risk: Increased exhaustion, potential tumble).",
+                "Try to catch the Persian's attention, hoping for a word of advice or encouragement (Risk: Possible ridicule, but perhaps unexpected assistance).",
+                "Assess the situation from below, looking for an alternative entrance or a sign indicating an accessibility ramp (Risk: Delays progress, but potentially reveals a more strategic approach)."
+            ]
+        }
+    ],
+    "post_production": {}
+}
