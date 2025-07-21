@@ -477,3 +477,12 @@ This architecture offers a solid foundation for your interactive dream experienc
 
 
 Let’s start with Phase 1. Which area of Phase 1 seems most approachable to start with: Carthir’s prompt generation or Narnion’s narrative expansion?
+
+
+Let's break down the next two steps in the pipeline to be implemented. Review the file and the following planned agent LangGraph workflow to create a step by step implementation plan.
+
+1. .imn to Narnion agent:. The 2nd agent kicks off by reading the imn file and generates out the story beats and actions that the user will take. It will then save that information to the .imn for Carthir to review.
+
+2. .imn to Cenedril agent: At the same time, the 3rd agent kicks off by reading the imn file and generate out a single image based upon the start scene. The image is then presented to Carthir for review. 
+
+These two steps highlight the major breakthrough on how dreams.ai approaches content creation. By running these agents in parallel and having to have their content "Peer reviewed" without an agent bias allows for a more personalized response

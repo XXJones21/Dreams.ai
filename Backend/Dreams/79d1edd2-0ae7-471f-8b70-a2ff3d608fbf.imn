@@ -1,0 +1,13 @@
+{
+    "pre_production": {
+        "id": "79d1edd2-0ae7-471f-8b70-a2ff3d608fbf",
+        "user_id": "test-user-456",
+        "dream_name": "untitled_dream",
+        "story_prompt": null,
+        "initial_goal": null,
+        "pitch": null,
+        "created_at": "2025-07-20T23:54:04.537203+00:00"
+    },
+    "in_production": [],
+    "post_production": {}
+}

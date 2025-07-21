@@ -2,13 +2,14 @@ import json
 import re
 import uuid
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
+from langgraph.channels import last_value
 
 
 load_dotenv()
@@ -18,14 +19,10 @@ llm = ChatOpenAI(model="gemma3:12b", base_url="http://10.1.95.9:11434/v1")
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
-    message_type: str | None
-    dream_name: str | None
-    story_prompt: str | None
-    initial_goal: str | None
-    pitch: str | None
-    imn_filename: str | None
-    id: str | None
+    imn_filename: Annotated[str | None, last_value]
+    id: Annotated[str | None, last_value]
     user_id: str | None
+    carthir_memory: dict | None
 
 
 class convert_prompt_to_imn(TypedDict):
@@ -33,18 +30,7 @@ class convert_prompt_to_imn(TypedDict):
     message_type: Literal["story_prompt", "dream_name", "initial_goal", "pitch"]
 
 
-def write_imn(data: dict, directory: str):
-    """
-    Write the IMN structure to a file in the specified directory.
-    """
-    os.makedirs(directory, exist_ok=True)
-    filename = os.path.join(directory, f"{data['id']}.imn")
-    try:
-        with open(filename, "w") as f:
-            json.dump(data, f, indent=4)
-        print(f"Successfully wrote .imn file: {filename}")
-    except Exception as e:
-        print(f"Error writing to .imn file: {e}")
+from core.imn_utils import write_imn, read_imn, create_imn_structure, validate_imn_structure
 
 
 ### Converts a user's inital prompt into a basic .imn file stucture
@@ -53,39 +39,45 @@ def convert_prompt_to_imn(state: State):
     Creates the .imn file using Carthir's output in the state.
     """
     print(f"\n[DEBUG] State at start of convert_prompt_to_imn:\n{json.dumps(state, indent=2, default=str)}\n")
-    dream_name = state.get("dream_name")
-    story_prompt = state.get("story_prompt")
-    initial_goal = state.get("initial_goal")
-    pitch = state.get("pitch")
+    carthir_mem = state.get("carthir_memory", {})
+    dream_name = carthir_mem.get("dream_name")
+    story_prompt = carthir_mem.get("story_prompt")
+    initial_goal = carthir_mem.get("initial_goal")
+    pitch = carthir_mem.get("pitch")
     user_id = state.get("user_id", "user-uuid-placeholder")  # Replace with real user_id logic
 
-    dream_id = str(uuid.uuid4())
-    created_at = datetime.utcnow().isoformat() + "Z"
+    # Only generate a new dream_id if not already present
+    if not state.get("id"):
+        dream_id = str(uuid.uuid4())
+        state["id"] = dream_id
+    else:
+        dream_id = state["id"]
 
-    imn_data = {
-        "id": dream_id,
-        "user_id": user_id,
-        "dream_name": dream_name or "untitled_dream",
-        "story_prompt": story_prompt,
-        "initial_goal": initial_goal,
-        "pitch": pitch,
-        "created_at": created_at
-    }
+    directory = os.path.join("..", "Dreams")
+    filename = os.path.join(directory, f"{dream_id}.imn")
 
-    directory = os.path.join("Backend", "Dreams")
+    imn_data = create_imn_structure(
+        dream_id=dream_id,
+        user_id=user_id,
+        dream_name=dream_name,
+        story_prompt=story_prompt,
+        initial_goal=initial_goal,
+        pitch=pitch
+    )
+
     write_imn(imn_data, directory)
-
-    # Pass along the state, adding the filename and IDs
-    state["imn_filename"] = os.path.join(directory, f"{dream_id}.imn")
-    state["id"] = dream_id
-    state["user_id"] = user_id
     return state
 
 
 def Carthir(state: State):
     """
     Generates a film pitch based on the user's prompt and returns structured data.
+    Stores its output in state['carthir_memory'] for persistent memory.
     """
+    # If memory exists, skip re-generation (could be used for review step)
+    if state.get("carthir_memory"):
+        print("[Carthir] Using existing memory.")
+        return state
 
     last_message = state["messages"][-1]
 
@@ -125,71 +117,342 @@ def Carthir(state: State):
         if codeblock_match:
             content = codeblock_match.group(1).strip()
         result = _json.loads(content)
-        # Update and return the state with new fields
-        state.update({
+        # Store Carthir's memory
+        state["carthir_memory"] = {
             "dream_name": result.get("dream_name"),
             "story_prompt": result.get("story_prompt"),
             "initial_goal": result.get("initial_goal"),
-            "pitch": result.get("pitch"),
-            "messages": [{"role": "assistant", "content": result.get("pitch", "")}]  # for display
-        })
+            "pitch": result.get("pitch")
+        }
+        # Add a message for downstream agents
+        state["messages"] = [{"role": "assistant", "content": result.get("pitch", "")}] 
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
     except Exception as e:
         print(f"Error parsing Carthir's response as JSON: {e}\nRaw reply: {reply.content}")
-        state.update({
-            "dream_name": None,
-            "story_prompt": None,
-            "initial_goal": None,
-            "pitch": reply.content,
-            "messages": [{"role": "assistant", "content": reply.content}]
-        })
+        state["carthir_memory"] = None
+        state["messages"] = [{"role": "assistant", "content": reply.content}]
         return state
 
 
-def read_imn(filename: str):
+def CarthirReview(state: State):
     """
-    Read the IMN structure from a file and return as a dictionary.
+    Enhanced Carthir review that generates director's vision for image generation.
+    Uses persistent memory to ensure the visual matches the original creative vision.
     """
-    try:
-        with open(filename, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Error reading .imn file: {e}")
-        return None
+    print("\n[CarthirReview] --- DIRECTOR'S VISION REVIEW ---")
+    carthir_mem = state.get("carthir_memory")
 
-# Placeholder downstream agent for demonstration
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
+        return state
+    imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+
+    imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        print("Error reading .imn file")
+        return state
+
+    narnion_result = None
+    if imn_data["in_production"]:
+        narnion_result = imn_data["in_production"][-1]
+
+    print(f"\n[CarthirReview] Carthir's Memory:")
+    print(json.dumps(carthir_mem, indent=2, default=str))
+    print(f"\n[CarthirReview] Narnion's Latest Scene:")
+    print(json.dumps(narnion_result, indent=2, default=str))
+
+    # Director's vision prompt generation
+    director_prompt = (
+        f"Original Vision: {carthir_mem.get('pitch', '')}\n\n"
+        f"Story Context: {narnion_result.get('scene_context', '') if narnion_result else 'No scene yet'}\n\n"
+        f"As the Director, create a detailed visual prompt for the first frame that captures:\n"
+        f"1. The mood and atmosphere from your original vision\n"
+        f"2. The specific scene context from Narnion\n"
+        f"3. Visual style and composition that matches your creative direction\n"
+        f"4. First-person perspective that immerses the viewer\n\n"
+        f"Respond with a JSON object:\n"
+        f"{{\n"
+        f"  \"director_vision\": \"Your creative vision for this frame\",\n"
+        f"  \"image_prompt\": \"Detailed prompt for AI image generation\",\n"
+        f"  \"visual_notes\": \"Specific style, lighting, composition notes\",\n"
+        f"  \"approval_criteria\": \"What you're looking for in the final image\"\n"
+        f"}}"
+    )
+
+    director_vision_prompt = [
+        {
+            "role": "system", 
+            "content": "You are Carthir, the Director. You have a clear creative vision and ensure all visual elements align with your original concept."
+        },
+        {
+            "role": "user", 
+            "content": director_prompt
+        }
+    ]
+
+    try:
+        reply = llm.invoke(director_vision_prompt)
+        
+        # Parse the director's vision with improved error handling
+        content = reply.content.strip()
+        
+        # Extract JSON from code blocks if present
+        codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
+        if codeblock_match:
+            content = codeblock_match.group(1).strip()
+        
+        # Clean the content to remove control characters and invalid JSON
+        # Remove control characters except newlines and tabs
+        content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
+        
+        # Try to find JSON object boundaries
+        json_start = content.find('{')
+        json_end = content.rfind('}')
+        
+        if json_start != -1 and json_end != -1 and json_end > json_start:
+            content = content[json_start:json_end + 1]
+        
+        director_vision = json.loads(content)
+        
+        # Validate required fields
+        required_fields = ["director_vision", "image_prompt", "visual_notes", "approval_criteria"]
+        for field in required_fields:
+            if field not in director_vision:
+                director_vision[field] = f"Default {field.replace('_', ' ')}"
+        
+        # Store director's vision in .imn file
+        imn_data["pre_production"]["director_vision"] = director_vision
+        directory = os.path.join("..", "Dreams")
+        write_imn(imn_data, directory)
+        
+        # Add director's vision to messages for Cenedril
+        state["messages"] = [{"role": "assistant", "content": json.dumps(director_vision)}]
+        
+        print(f"[CarthirReview] Director's vision generated and stored.")
+        print(f"Image Prompt: {director_vision.get('image_prompt', 'No prompt generated')}")
+        
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error in CarthirReview: {e}")
+        print(f"Attempted to parse: {content[:200]}...")
+        # Create fallback director vision
+        fallback_vision = {
+            "director_vision": f"Create a compelling first-person view of the scene",
+            "image_prompt": f"First-person perspective of {narnion_result.get('scene_context', 'the dream world') if narnion_result else 'the scene'}",
+            "visual_notes": "Use warm lighting and immersive composition",
+            "approval_criteria": "Image should feel immersive and match the story context"
+        }
+        
+        # Store fallback vision
+        imn_data["pre_production"]["director_vision"] = fallback_vision
+        directory = os.path.join("..", "Dreams")
+        write_imn(imn_data, directory)
+        
+        state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
+        print(f"[CarthirReview] Using fallback director vision due to parsing error.")
+        
+    except Exception as e:
+        print(f"Unexpected error in CarthirReview: {e}")
+        print(f"Raw reply: {reply.content if 'reply' in locals() else 'No reply'}")
+        # Fallback to basic prompt
+        fallback_prompt = f"First-person view of {narnion_result.get('scene_context', 'the scene') if narnion_result else 'the dream world'}"
+        state["messages"] = [{"role": "assistant", "content": fallback_prompt}]
+
+    return state
+
+
+def Narnion(state: State):
+    """
+    Narnion writes the next scene and suggested actions, appending to in_production.
+    """
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
+        return state
+    imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+
+    imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        print("Error reading .imn file")
+        return state
+    pre = imn_data["pre_production"]
+
+    # Get the last pitch from Carthir
+    last_message = state["messages"][-1]
+    narnion_prompt = last_message.content
+
+    # Build the prompt
+    prompt = (
+        f"Pitch: {narnion_prompt}\n\n"
+        "Write a ten-second scene (no dialogue) for the next moment in the story, and suggest 2-3 actions the user could take next. "
+        "Respond in JSON with:\n"
+        "{\n"
+        "  \"scene_context\": \"...\",\n"
+        "  \"actions\": [\"...\", \"...\", \"...\"]\n"
+        "}"
+    )
+
+    story_outline = [
+        {"role": "system", "content": "You are Narnion, a master of interactive narrative."},
+        {"role": "user", "content": prompt}
+    ]
+    reply = llm.invoke(story_outline)
+
+    # Parse the LLM's JSON output
+    try:
+        import json as _json
+        content = reply.content.strip()
+        # Extract JSON block if present
+        match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
+        if match:
+            content = match.group(1).strip()
+        result = _json.loads(content)
+        scene_context = result.get("scene_context")
+        actions = result.get("actions", [])
+
+        # Build the new in_production entry
+        new_scene = {
+            "scene_id": len(imn_data["in_production"]) + 1,
+            "frame_image": None,  # To be filled in later
+            "timestamp": None,    # To be filled in later
+            "scene_context": scene_context,
+            "user_action": None,  # To be filled in after user acts
+            "tap_location": None, # To be filled in after user acts
+            "object_tapped": None,# To be filled in after user acts
+            "actions": actions
+        }
+        imn_data["in_production"].append(new_scene)
+        directory = os.path.join("..", "Dreams")
+        write_imn(imn_data, directory)
+        print(f"[Narnion] Added new scene to in_production.")
+    except Exception as e:
+        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
+
+    return state
+
+
+def Cenedril(state: State):
+    """
+    Cenedril uses the director's vision to create the first frame image prompt.
+    """
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
+        return state
+    imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+
+    imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        print("Error reading .imn file")
+        return state
+
+    # Get director's vision from CarthirReview
+    director_vision = imn_data["pre_production"].get("director_vision")
+    
+    if director_vision:
+        # Use the director's image prompt
+        image_prompt = director_vision.get("image_prompt", "")
+        visual_notes = director_vision.get("visual_notes", "")
+        
+        print(f"[Cenedril] Using director's vision for image generation.")
+        print(f"Image Prompt: {image_prompt}")
+        print(f"Visual Notes: {visual_notes}")
+        
+        # Store the director's prompt as the first frame prompt
+        imn_data["pre_production"]["first_frame_prompt"] = image_prompt
+        imn_data["pre_production"]["visual_notes"] = visual_notes
+        directory = os.path.join("..", "Dreams")
+        write_imn(imn_data, directory)
+        
+        print(f"[Cenedril] Director's image prompt saved to .imn file.")
+        
+    else:
+        # Fallback to original behavior if no director vision
+        print(f"[Cenedril] No director vision found, using fallback prompt generation.")
+        
+        # Get the last pitch from Carthir
+        last_message = state["messages"][-1]
+        cenedril_prompt = last_message.content
+
+        # Build the prompt
+        prompt = (
+            f"Pitch: {cenedril_prompt}\n\n"
+            "Write a vivid, first-person visual prompt for an AI image generator to create the very first frame of the dream. "
+            "Describe what the dreamer sees as if they are experiencing it themselves, using 'I' perspective."
+        )
+        image_prompt = [
+            {"role": "system", "content": "You are Cenedril, a master of visual storytelling."},
+            {"role": "user", "content": prompt}
+        ]
+
+        try:
+            reply = llm.invoke(image_prompt)
+
+            # Save the result in the .imn file
+            first_frame_prompt = reply.content.strip()
+            imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
+            directory = os.path.join("..", "Dreams")
+            write_imn(imn_data, directory)
+            print(f"[Cenedril] Fallback prompt generated and saved to .imn file.")
+
+        except Exception as e:
+            print(f"Error in Cenedril during fallback prompt generation: {e}")
+            # Handle the error gracefully
+            imn_data["pre_production"]["first_frame_prompt"] = "ERROR GENERATING PROMPT"
+            directory = os.path.join("..", "Dreams")
+            write_imn(imn_data, directory)
+            state["messages"] = [{"role": "assistant", "content": f"Sorry, there was an error generating the initial frame prompt."}]
+            return state
+
+    return state
+
+
+
+
+
 def print_imn_agent(state: State):
     """
     Reads and prints the .imn file using the filename from the state.
     """
-    filename = state.get("imn_filename")
-    if not filename:
-        print("No .imn filename found in state.")
+    dream_id = state.get("id")
+    if not dream_id:
+        print("No dream ID found in state.")
         return state
-    imn_data = read_imn(filename)
-    print(f"\n[print_imn_agent] .imn file contents for '{filename}':\n{json.dumps(imn_data, indent=2)}\n")
+    imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+    imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        print("Error reading .imn file")
+        return state
+    print(f"\n[print_imn_agent] .imn file contents for '{imn_file_path}':\n{json.dumps(imn_data, indent=2)}\n")
     return state
+
 
 # Build the state graph
 graph_builder = StateGraph(State)
 
+# Add the agents
 graph_builder.add_node("carthir", Carthir)
+graph_builder.add_node("narnion", Narnion)
+graph_builder.add_node("cenedril", Cenedril)
 graph_builder.add_node("convert_prompt", convert_prompt_to_imn)
-# Add the print_imn_agent as the final node for demonstration
 graph_builder.add_node("print_imn", print_imn_agent)
+graph_builder.add_node("carthir_review", CarthirReview)
 
+# Updated workflow: Cenedril now runs after CarthirReview
 graph_builder.add_edge(START, "carthir")
 graph_builder.add_edge("carthir", "convert_prompt")
-graph_builder.add_edge("convert_prompt", "print_imn")
-graph_builder.add_edge("print_imn", END)
+graph_builder.add_edge("convert_prompt", "narnion")
+graph_builder.add_edge("narnion", "carthir_review")
+graph_builder.add_edge("carthir_review", "cenedril")
+graph_builder.add_edge("cenedril", END)
 
 ### Compile the graph to finalize its structure
 graph = graph_builder.compile()
 
 
 def run_chatbot():
-    state = {"messages": [], "message_type": None, "dream_name": None, "story_prompt": None, "initial_goal": None, "pitch": None, "imn_filename": None, "id": None, "user_id": None}
+    state = {"messages": []}
 
     while True:
         user_input = input("You: ")

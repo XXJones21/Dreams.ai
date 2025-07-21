@@ -1,6 +1,6 @@
 ![Dreams.ai Logo](public/logo.png)
 
-# Dreams.ai
+# Dreams.ai - post hackathon
 
 ## Project Overview
 Dreams.ai is a platform for generating dynamic, interactive narrative experiences. Users provide a prompt, and a network of AI agents (Carthir, Narnion, and others) collaboratively generate a personalized story, stored as a `.imn` imagination file. The frontend offers a visually rich, immersive experience, while the backend orchestrates narrative generation and user management.
