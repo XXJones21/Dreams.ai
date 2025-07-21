@@ -1,0 +1,14 @@
+{
+    "pre_production": {
+        "id": "e6937fe5-f8aa-4d42-b670-b684269b0c6f",
+        "user_id": "user-uuid-placeholder",
+        "dream_name": "Velvet Slumber",
+        "story_prompt": "A pampered corgi drifts into a fantastical dreamscape while napping on a luxuriously soft bed.",
+        "initial_goal": "To return to the peaceful comfort of the bed, having experienced a brief journey of wonder.",
+        "pitch": "Imagine this: a delightfully fluffy corgi, Winston, is fast asleep on a cloud-like bed. As he slumbers, the bed itself transforms! The blankets become rolling hills of delicious-smelling sausages, the pillows morph into giant, bouncing marshmallows, and his favourite squeaky toy becomes a playful, floating guide. I want to create a whimsical, dreamlike film, utilizing a warm, saturated color palette and playful stop-motion animation techniques to bring Winston\u2019s delightful adventure to life. Think 'Paddington' meets a pastel-hued fever dream. The audio will be equally playful \u2013 gentle, whimsical music punctuated by exaggerated cartoon sounds as Winston navigates this edible landscape, eventually realizing there\u2019s no place like home and sinking back into a contented sleep, surrounded by his familiar, cozy bed. It's a short, sweet, and utterly charming exploration of simple joy and the boundless imagination of a sleeping corgi.",
+        "created_at": "2025-07-04T03:20:26.860738Z",
+        "first_frame_prompt": "ERROR GENERATING PROMPT"
+    },
+    "in_production": [],
+    "post_production": {}
+}
