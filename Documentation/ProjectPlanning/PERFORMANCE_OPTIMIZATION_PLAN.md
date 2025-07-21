@@ -128,10 +128,45 @@ def run_agents_in_parallel(prompt, user_id, imn_path):
 
 **Next Steps:** Begin with Step 1: Design and implement the `PipelineInstance` class.
 
-### Phase 2: Parallel Execution Framework
-- [ ] Refactor agent orchestration to use a thread/process pool
-- [ ] Implement file locking for safe IMN file updates
-- [ ] Ensure agents can operate independently and in parallel
+### Phase 2: Parallel Execution Framework (Step-by-Step Implementation Plan)
+
+**Goal:** Run all agents in parallel for each dream, minimizing total pipeline time and enabling true concurrent processing.
+
+#### Step 1: Design Parallel Agent Orchestration
+- Refactor the pipeline so that Carthir, Narnion, and Cenedril (and any other agents) are started simultaneously using a thread or process pool (e.g., Python's `concurrent.futures.ThreadPoolExecutor`).
+- Each agent should receive the same initial state and work independently, updating only its section of the IMN file.
+
+#### Step 2: Implement File Locking for IMN Updates
+- Add file locking (e.g., using `threading.Lock`, `filelock`, or platform-specific mechanisms) to ensure that concurrent agent writes to the IMN file are safe and atomic.
+- Document the locking strategy and ensure no race conditions or file corruption can occur.
+
+#### Step 3: Refactor PipelineInstance to Support Parallelism
+- Update the `PipelineInstance` class to manage and coordinate parallel agent execution.
+- Ensure that the pipeline waits for all agents to complete (or times out) before finalizing the dream.
+- Add error handling for agent failures or timeouts.
+
+#### Step 4: Test Parallel Execution
+- Run full pipeline tests with multiple agents in parallel.
+- Measure and log the total execution time and per-agent completion times.
+- Validate that the IMN file is correctly updated and no data is lost or corrupted.
+
+#### Step 5: Review and Optimize
+- Review thread/process pool size and adjust for optimal performance and resource usage.
+- Profile and optimize agent startup and execution times.
+- Document any bottlenecks or issues for future optimization.
+
+---
+
+**Review Checklist for Each Step:**
+- [ ] Step 1: Parallel agent orchestration designed and implemented
+- [ ] Step 2: File locking implemented and validated
+- [ ] Step 3: PipelineInstance refactored for parallelism
+- [ ] Step 4: Parallel execution tested and results validated
+- [ ] Step 5: Performance reviewed and optimized
+
+---
+
+**Next Steps:** Begin with Step 1: Design and implement parallel agent orchestration in the pipeline.
 
 ### Phase 3: Progressive Streaming
 - [ ] Add backend support for streaming updates (WebSockets/SSE)
