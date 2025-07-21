@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreams.ai Test Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .dream-card {
+            transition: all 0.3s ease;
+        }
+        .dream-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .status-running {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Dreams.ai Test Suite</h1>
+            <p class="text-gray-600">Test the complete AI agent pipeline with visual feedback</p>
+        </div>
+
+        <!-- Test Controls -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Pipeline Test</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Test Prompt</label>
+                    <input type="text" id="testPrompt" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="A corgi taking a nap on a sunny beach"
+                           value="A corgi taking a nap on a sunny beach">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">User ID</label>
+                    <input type="text" id="userId" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="test-user-123"
+                           value="test-user-123">
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <button id="runTest" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Run Test
+                </button>
+                <button id="clearTests" 
+                        class="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                    Clear All Tests
+                </button>
+            </div>
+            
+            <!-- Test Status -->
+            <div id="testStatus" class="mt-4 hidden">
+                <div class="flex items-center gap-2">
+                    <div id="statusIndicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                    <span id="statusText" class="text-sm font-medium">Ready</span>
+                </div>
+                <div id="testProgress" class="mt-2 hidden">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6" id="dreamCards">
+            <!-- Dream cards will be inserted here -->
+        </div>
+
+        <!-- No Tests Message -->
+        <div id="noTests" class="text-center py-12">
+            <div class="text-gray-400">
+                <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No tests run yet</h3>
+                <p class="text-gray-500">Run a pipeline test to see dream cards here</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dream Card Template -->
+    <template id="dreamCardTemplate">
+        <div class="dream-card bg-white rounded-lg shadow-md overflow-hidden">
+            <!-- Card Header -->
+            <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2" data-field="title">Dream Title</h3>
+                        <p class="text-gray-600 text-sm mb-2" data-field="excerpt">Dream excerpt...</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full" data-field="status-badge">Pending</span>
+                    </div>
+                </div>
+                
+                <!-- Generated Image -->
+                <div class="mb-4" data-field="image-container" style="display: none;">
+                    <img data-field="dream-image" class="w-full h-48 object-cover rounded-md" alt="Generated dream image">
+                </div>
+                
+                <!-- Test Info -->
+                <div class="bg-gray-50 rounded-md p-3 mb-4">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Duration:</span>
+                            <span class="font-medium" data-field="duration">0.0s</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Scenes:</span>
+                            <span class="font-medium" data-field="scene-count">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Creator Info -->
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-medium text-gray-600" data-field="creator-initial">T</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900" data-field="creator-name">Test User</p>
+                        <p class="text-xs text-gray-500" data-field="created-at">Just now</p>
+                    </div>
+                </div>
+                
+                <!-- Engagement -->
+                <div class="flex items-center gap-4 text-sm text-gray-500">
+                    <span data-field="likes">0 likes</span>
+                    <span data-field="comments">0 comments</span>
+                    <span data-field="shares">0 shares</span>
+                </div>
+            </div>
+            
+            <!-- Card Footer -->
+            <div class="border-t border-gray-200 p-4">
+                <button class="text-blue-600 text-sm font-medium hover:text-blue-700" data-field="view-details">
+                    View Details
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Dream Details Modal -->
+    <div id="dreamModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-semibold" data-field="modal-title">Dream Details</h2>
+                        <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Dream Info -->
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3">Dream Information</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Title</label>
+                                    <p class="text-gray-900" data-field="modal-title-text"></p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Story Prompt</label>
+                                    <p class="text-gray-900" data-field="modal-story-prompt"></p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Initial Goal</label>
+                                    <p class="text-gray-900" data-field="modal-initial-goal"></p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Pitch</label>
+                                    <p class="text-gray-900" data-field="modal-pitch"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Technical Details -->
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3">Technical Details</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Dream ID</label>
+                                    <p class="text-gray-900 font-mono text-sm" data-field="modal-dream-id"></p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Test Duration</label>
+                                    <p class="text-gray-900" data-field="modal-duration"></p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Scenes Generated</label>
+                                    <p class="text-gray-900" data-field="modal-scene-count"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                                         <!-- Generated Image -->
+                     <div class="mt-6">
+                         <h3 class="text-lg font-semibold mb-3">Generated Image</h3>
+                         <div class="bg-gray-50 rounded-md p-4">
+                             <img data-field="modal-dream-image" class="w-full max-w-md mx-auto rounded-md" alt="Generated dream image" style="display: none;">
+                             <p class="text-gray-500 text-center" data-field="modal-no-image">No image generated</p>
+                         </div>
+                     </div>
+                     
+                     <!-- Image Prompt -->
+                     <div class="mt-6">
+                         <h3 class="text-lg font-semibold mb-3">Image Generation Prompt</h3>
+                         <div class="bg-gray-50 rounded-md p-4">
+                             <p class="text-gray-900 font-mono text-sm" data-field="modal-image-prompt"></p>
+                         </div>
+                     </div>
+                    
+                    <!-- Scenes -->
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold mb-3">Generated Scenes</h3>
+                        <div id="modal-scenes" class="space-y-4">
+                            <!-- Scenes will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentTestId = null;
+        let statusInterval = null;
+
+        // DOM elements
+        const runTestBtn = document.getElementById('runTest');
+        const clearTestsBtn = document.getElementById('clearTests');
+        const testPromptInput = document.getElementById('testPrompt');
+        const userIdInput = document.getElementById('userId');
+        const testStatus = document.getElementById('testStatus');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const testProgress = document.getElementById('testProgress');
+        const progressBar = document.getElementById('progressBar');
+        const dreamCards = document.getElementById('dreamCards');
+        const noTests = document.getElementById('noTests');
+        const dreamModal = document.getElementById('dreamModal');
+        const closeModal = document.getElementById('closeModal');
+
+        // Event listeners
+        runTestBtn.addEventListener('click', runTest);
+        clearTestsBtn.addEventListener('click', clearTests);
+        closeModal.addEventListener('click', () => dreamModal.classList.add('hidden'));
+
+        // Run test function
+        async function runTest() {
+            const prompt = testPromptInput.value.trim();
+            const userId = userIdInput.value.trim();
+            
+            if (!prompt) {
+                alert('Please enter a test prompt');
+                return;
+            }
+            
+            // Update UI
+            runTestBtn.disabled = true;
+            runTestBtn.textContent = 'Running...';
+            showTestStatus('running');
+            
+            try {
+                const response = await fetch('/api/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt, user_id: userId })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'started') {
+                    // Start polling for status
+                    startStatusPolling();
+                }
+            } catch (error) {
+                console.error('Error running test:', error);
+                showTestStatus('error', 'Failed to start test');
+                resetTestButton();
+            }
+        }
+
+        // Clear tests function
+        async function clearTests() {
+            try {
+                await fetch('/api/clear', { method: 'POST' });
+                dreamCards.innerHTML = '';
+                noTests.classList.remove('hidden');
+                showTestStatus('ready');
+            } catch (error) {
+                console.error('Error clearing tests:', error);
+            }
+        }
+
+        // Show test status
+        function showTestStatus(status, message = '') {
+            testStatus.classList.remove('hidden');
+            
+            switch (status) {
+                case 'running':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-blue-500 status-running';
+                    statusText.textContent = 'Running test...';
+                    testProgress.classList.remove('hidden');
+                    break;
+                case 'completed':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
+                    statusText.textContent = 'Test completed';
+                    testProgress.classList.add('hidden');
+                    break;
+                case 'error':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
+                    statusText.textContent = message || 'Test failed';
+                    testProgress.classList.add('hidden');
+                    break;
+                case 'ready':
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-gray-400';
+                    statusText.textContent = 'Ready';
+                    testProgress.classList.add('hidden');
+                    break;
+            }
+        }
+
+        // Start status polling
+        function startStatusPolling() {
+            if (statusInterval) clearInterval(statusInterval);
+            
+            statusInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/status');
+                    const status = await response.json();
+                    
+                    if (status.current_test && status.current_test.status === 'completed') {
+                        clearInterval(statusInterval);
+                        showTestStatus('completed');
+                        resetTestButton();
+                        loadDreamCards();
+                    } else if (status.current_test && status.current_test.status === 'error') {
+                        clearInterval(statusInterval);
+                        showTestStatus('error', status.current_test.error);
+                        resetTestButton();
+                    }
+                } catch (error) {
+                    console.error('Error polling status:', error);
+                }
+            }, 1000);
+        }
+
+        // Reset test button
+        function resetTestButton() {
+            runTestBtn.disabled = false;
+            runTestBtn.textContent = 'Run Test';
+        }
+
+        // Load dream cards
+        async function loadDreamCards() {
+            try {
+                const response = await fetch('/api/dreams');
+                const dreams = await response.json();
+                
+                if (dreams.length > 0) {
+                    noTests.classList.add('hidden');
+                    dreamCards.innerHTML = '';
+                    
+                    dreams.forEach(dream => {
+                        const card = createDreamCard(dream);
+                        dreamCards.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading dream cards:', error);
+            }
+        }
+
+        // Create dream card element
+        function createDreamCard(dream) {
+            const template = document.getElementById('dreamCardTemplate');
+            const card = template.content.cloneNode(true);
+            
+            // Fill in the data
+            card.querySelector('[data-field="title"]').textContent = dream.title;
+            card.querySelector('[data-field="excerpt"]').textContent = dream.excerpt;
+            card.querySelector('[data-field="duration"]').textContent = `${dream.test_duration.toFixed(2)}s`;
+            card.querySelector('[data-field="scene-count"]').textContent = dream.scenes.length;
+            card.querySelector('[data-field="creator-name"]').textContent = dream.creator.name;
+            card.querySelector('[data-field="creator-initial"]').textContent = dream.creator.name.charAt(0);
+            card.querySelector('[data-field="created-at"]').textContent = formatDate(dream.created_at);
+            card.querySelector('[data-field="likes"]').textContent = `${dream.engagement.likes} likes`;
+            card.querySelector('[data-field="comments"]').textContent = `${dream.engagement.comments} comments`;
+                         card.querySelector('[data-field="shares"]').textContent = `${dream.engagement.shares} shares`;
+             
+             // Status badge
+             const statusBadge = card.querySelector('[data-field="status-badge"]');
+             statusBadge.textContent = dream.test_status;
+             statusBadge.className = `px-2 py-1 text-xs font-medium rounded-full ${
+                 dream.test_status === 'completed' ? 'bg-green-100 text-green-800' :
+                 dream.test_status === 'error' ? 'bg-red-100 text-red-800' :
+                 'bg-yellow-100 text-yellow-800'
+             }`;
+             
+             // Display generated image if available
+             if (dream.generated_image) {
+                 const imageContainer = card.querySelector('[data-field="image-container"]');
+                 const imageElement = card.querySelector('[data-field="dream-image"]');
+                 imageContainer.style.display = 'block';
+                 imageElement.src = `data:image/png;base64,${dream.generated_image.image_data}`;
+             }
+             
+             // View details button
+             card.querySelector('[data-field="view-details"]').addEventListener('click', () => {
+                 showDreamDetails(dream);
+             });
+            
+            return card;
+        }
+
+        // Show dream details modal
+        function showDreamDetails(dream) {
+            // Fill modal with dream data
+            document.querySelector('[data-field="modal-title"]').textContent = dream.title;
+            document.querySelector('[data-field="modal-title-text"]').textContent = dream.title;
+            document.querySelector('[data-field="modal-story-prompt"]').textContent = dream.excerpt;
+            document.querySelector('[data-field="modal-initial-goal"]').textContent = dream.content.substring(0, 100) + '...';
+            document.querySelector('[data-field="modal-pitch"]').textContent = dream.content;
+            document.querySelector('[data-field="modal-dream-id"]').textContent = dream.id;
+                         document.querySelector('[data-field="modal-duration"]').textContent = `${dream.test_duration.toFixed(2)}s`;
+             document.querySelector('[data-field="modal-scene-count"]').textContent = dream.scenes.length;
+             document.querySelector('[data-field="modal-image-prompt"]').textContent = dream.image_prompt || 'No image prompt generated';
+             
+             // Display generated image in modal if available
+             const modalImage = document.querySelector('[data-field="modal-dream-image"]');
+             const modalNoImage = document.querySelector('[data-field="modal-no-image"]');
+             
+             if (dream.generated_image) {
+                 modalImage.style.display = 'block';
+                 modalNoImage.style.display = 'none';
+                 modalImage.src = `data:image/png;base64,${dream.generated_image.image_data}`;
+             } else {
+                 modalImage.style.display = 'none';
+                 modalNoImage.style.display = 'block';
+             }
+            
+            // Load scenes
+            const scenesContainer = document.getElementById('modal-scenes');
+            scenesContainer.innerHTML = '';
+            
+            dream.scenes.forEach((scene, index) => {
+                const sceneElement = document.createElement('div');
+                sceneElement.className = 'bg-gray-50 rounded-md p-4';
+                sceneElement.innerHTML = `
+                    <h4 class="font-semibold mb-2">Scene ${scene.scene_id}</h4>
+                    <p class="text-gray-700 mb-3">${scene.scene_context}</p>
+                    <div class="space-y-2">
+                        <h5 class="text-sm font-medium text-gray-600">Available Actions:</h5>
+                        <ul class="list-disc list-inside text-sm text-gray-700">
+                            ${scene.actions.map(action => `<li>${action}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                scenesContainer.appendChild(sceneElement);
+            });
+            
+            dreamModal.classList.remove('hidden');
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Initial load
+        loadDreamCards();
+    </script>
+</body>
+</html> 
