@@ -17,7 +17,7 @@ def test_agent_pipeline():
     """
     Test the complete agent pipeline with a sample prompt
     """
-    print("🧪 Testing Dreams.ai Agent Pipeline")
+    print("Testing Dreams.ai Agent Pipeline")
     print("=" * 50)
     
     # Test prompt
@@ -33,7 +33,7 @@ def test_agent_pipeline():
     
     try:
         # Run the pipeline
-        print("🚀 Running agent pipeline...")
+        print("Running agent pipeline...")
         result = graph.invoke(state)
         
         # Check if we got a dream ID
@@ -168,7 +168,7 @@ def main():
     """
     Run all tests
     """
-    print("🧪 Dreams.ai Pipeline Test Suite")
+    print("Dreams.ai Pipeline Test Suite")
     print("=" * 50)
     print(f"Started at: {datetime.now()}")
     print()
