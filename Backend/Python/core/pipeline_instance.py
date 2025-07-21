@@ -9,6 +9,8 @@ import threading
 from typing import Any, Dict
 from langgraph.graph import StateGraph, START, END
 from core.agents import State, Carthir, Narnion, CarthirReview, Cenedril, convert_prompt_to_imn, print_imn_agent
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 class PipelineInstance:
     """
@@ -62,6 +64,41 @@ class PipelineInstance:
             self.result = self.graph.invoke(self.state)
             self.completed = True
             return self.result
+
+    def run_parallel_agents(self, timeout=15):
+        """
+        Run Carthir, Narnion, and Cenedril in parallel using ThreadPoolExecutor.
+        Each agent receives a copy of the state and works independently.
+        Logs start/end times for each agent and returns a dict of results.
+        """
+        agents = [
+            ("carthir", Carthir),
+            ("narnion", Narnion),
+            ("cenedril", Cenedril)
+        ]
+        results = {}
+        timings = {}
+        with ThreadPoolExecutor(max_workers=len(agents)) as executor:
+            future_to_agent = {}
+            for name, agent_fn in agents:
+                agent_state = self.state.copy()
+                start_time = time.time()
+                future = executor.submit(agent_fn, agent_state)
+                future_to_agent[future] = (name, start_time)
+            for future in as_completed(future_to_agent):
+                name, start_time = future_to_agent[future]
+                try:
+                    result = future.result(timeout=timeout)
+                    end_time = time.time()
+                    results[name] = result
+                    timings[name] = end_time - start_time
+                    print(f"[Parallel] Agent '{name}' completed in {timings[name]:.2f}s")
+                except Exception as e:
+                    results[name] = f"Error: {e}"
+                    timings[name] = None
+                    print(f"[Parallel] Agent '{name}' failed: {e}")
+        print(f"[Parallel] All agents completed. Timings: {timings}")
+        return results
 
     def is_complete(self) -> bool:
         """

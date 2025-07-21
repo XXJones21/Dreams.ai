@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.channels import last_value
-from core.imn_utils import write_imn, read_imn, create_imn_structure, validate_imn_structure
+from core.imn_utils import write_imn, read_imn, create_imn_structure, validate_imn_structure, get_imn_filelock
 from langchain_openai import ChatOpenAI
 
 # Load environment and initialize LLM (if needed)
@@ -62,7 +62,10 @@ def convert_prompt_to_imn(state: State):
         pitch=pitch
     )
 
-    write_imn(imn_data, directory)
+    imn_file_path = os.path.join(directory, f"{dream_id}.imn")
+    # Use file lock for writing
+    with get_imn_filelock(imn_file_path):
+        write_imn(imn_data, directory)
     return state
 
 
@@ -139,7 +142,9 @@ def CarthirReview(state: State):
         return state
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
 
-    imn_data = read_imn(imn_file_path)
+    # Use file lock for reading
+    with get_imn_filelock(imn_file_path):
+        imn_data = read_imn(imn_file_path)
     if imn_data is None:
         print("Error reading .imn file")
         return state
@@ -199,7 +204,9 @@ def CarthirReview(state: State):
                 director_vision[field] = f"Default {field.replace('_', ' ')}"
         imn_data["pre_production"]["director_vision"] = director_vision
         directory = os.path.join("..", "Dreams")
-        write_imn(imn_data, directory)
+        # Use file lock for writing
+        with get_imn_filelock(imn_file_path):
+            write_imn(imn_data, directory)
         state["messages"] = [{"role": "assistant", "content": json.dumps(director_vision)}]
         print(f"[CarthirReview] Director's vision generated and stored.")
         print(f"Image Prompt: {director_vision.get('image_prompt', 'No prompt generated')}")
@@ -214,7 +221,9 @@ def CarthirReview(state: State):
         }
         imn_data["pre_production"]["director_vision"] = fallback_vision
         directory = os.path.join("..", "Dreams")
-        write_imn(imn_data, directory)
+        # Use file lock for writing
+        with get_imn_filelock(imn_file_path):
+            write_imn(imn_data, directory)
         state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
         print(f"[CarthirReview] Using fallback director vision due to parsing error.")
     except Exception as e:
@@ -234,7 +243,9 @@ def Narnion(state: State):
         print("No dream ID found in state.")
         return state
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
-    imn_data = read_imn(imn_file_path)
+    # Use file lock for reading
+    with get_imn_filelock(imn_file_path):
+        imn_data = read_imn(imn_file_path)
     if imn_data is None:
         print("Error reading .imn file")
         return state
@@ -276,7 +287,9 @@ def Narnion(state: State):
         }
         imn_data["in_production"].append(new_scene)
         directory = os.path.join("..", "Dreams")
-        write_imn(imn_data, directory)
+        # Use file lock for writing
+        with get_imn_filelock(imn_file_path):
+            write_imn(imn_data, directory)
         print(f"[Narnion] Added new scene to in_production.")
     except Exception as e:
         print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
@@ -292,7 +305,9 @@ def Cenedril(state: State):
         print("No dream ID found in state.")
         return state
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
-    imn_data = read_imn(imn_file_path)
+    # Use file lock for reading
+    with get_imn_filelock(imn_file_path):
+        imn_data = read_imn(imn_file_path)
     if imn_data is None:
         print("Error reading .imn file")
         return state
@@ -306,7 +321,9 @@ def Cenedril(state: State):
         imn_data["pre_production"]["first_frame_prompt"] = image_prompt
         imn_data["pre_production"]["visual_notes"] = visual_notes
         directory = os.path.join("..", "Dreams")
-        write_imn(imn_data, directory)
+        # Use file lock for writing
+        with get_imn_filelock(imn_file_path):
+            write_imn(imn_data, directory)
         print(f"[Cenedril] Director's image prompt saved to .imn file.")
     else:
         print(f"[Cenedril] No director vision found, using fallback prompt generation.")
@@ -326,13 +343,17 @@ def Cenedril(state: State):
             first_frame_prompt = reply.content.strip()
             imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
             directory = os.path.join("..", "Dreams")
-            write_imn(imn_data, directory)
+            # Use file lock for writing
+            with get_imn_filelock(imn_file_path):
+                write_imn(imn_data, directory)
             print(f"[Cenedril] Fallback prompt generated and saved to .imn file.")
         except Exception as e:
             print(f"Error in Cenedril during fallback prompt generation: {e}")
             imn_data["pre_production"]["first_frame_prompt"] = "ERROR GENERATING PROMPT"
             directory = os.path.join("..", "Dreams")
-            write_imn(imn_data, directory)
+            # Use file lock for writing
+            with get_imn_filelock(imn_file_path):
+                write_imn(imn_data, directory)
             state["messages"] = [{"role": "assistant", "content": f"Sorry, there was an error generating the initial frame prompt."}]
             return state
     return state
@@ -347,7 +368,9 @@ def print_imn_agent(state: State):
         print("No dream ID found in state.")
         return state
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
-    imn_data = read_imn(imn_file_path)
+    # Use file lock for reading
+    with get_imn_filelock(imn_file_path):
+        imn_data = read_imn(imn_file_path)
     if imn_data is None:
         print("Error reading .imn file")
         return state
