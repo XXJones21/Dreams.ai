@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "12130548-b11c-4763-b089-869ec7f101a9",
+        "user_id": "test-user-123",
+        "dream_name": "Lumiflora",
+        "story_prompt": "Lost and alone in a breathtaking forest illuminated by bioluminescent mushrooms, you must discover the source of the light and uncover the forest's hidden history.",
+        "initial_goal": "To reach the heart of the luminescent grove and understand its significance.",
+        "pitch": "Imagine stepping into a world bathed in ethereal light. Lumiflora is a short film experience that immerses the viewer in a vibrant, magical forest, where gigantic, glowing mushrooms pulsate with an otherworldly beauty. You play as a solitary traveler, lost and drawn deeper into the woods by an irresistible glow. The film would lean heavily on visual storytelling – think Avatar meets Studio Ghibli – with detailed environments brought to life through stunning practical effects seamlessly blended with subtle CGI. The audio will be key too: a haunting, ambient score punctuated by the soft hum of the mushrooms and the rustling of unseen creatures, creating a deeply atmospheric and mysterious journey. As you progress, glimmers of a lost civilization begin to appear, hinting at a symbiotic relationship between the forest and a forgotten people. The challenge is to figure out what happened, and why the light persists. It’s a story about connection, loss, and the enduring power of nature—a journey of wonder and quiet revelation.",
+        "created_at": "2025-07-21T01:41:40.642402+00:00",
+        "director_vision": {
+            "director_vision": "Create a compelling first-person view of the scene",
+            "image_prompt": "First-person perspective of The traveler emerges from a cluster of colossal, violet Lumiflora. The path ahead is obscured by a shimmering, almost liquid mist clinging to the forest floor. Directly in front, barely visible through the haze, is the crumbling stone archway of what appears to be a long-abandoned bridge. Bioluminescent moss crawls across the decaying stone, mirroring the light of the mushrooms. A faint, melodic tone, subtly different from the usual mushroom hum, drifts from beyond the archway. Dust motes dance in the emanating light, creating a sense of age and mystery.",
+            "visual_notes": "Use warm lighting and immersive composition",
+            "approval_criteria": "Image should feel immersive and match the story context"
+        },
+        "first_frame_prompt": "First-person perspective of The traveler emerges from a cluster of colossal, violet Lumiflora. The path ahead is obscured by a shimmering, almost liquid mist clinging to the forest floor. Directly in front, barely visible through the haze, is the crumbling stone archway of what appears to be a long-abandoned bridge. Bioluminescent moss crawls across the decaying stone, mirroring the light of the mushrooms. A faint, melodic tone, subtly different from the usual mushroom hum, drifts from beyond the archway. Dust motes dance in the emanating light, creating a sense of age and mystery.",
+        "visual_notes": "Use warm lighting and immersive composition"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "The traveler emerges from a cluster of colossal, violet Lumiflora. The path ahead is obscured by a shimmering, almost liquid mist clinging to the forest floor. Directly in front, barely visible through the haze, is the crumbling stone archway of what appears to be a long-abandoned bridge. Bioluminescent moss crawls across the decaying stone, mirroring the light of the mushrooms. A faint, melodic tone, subtly different from the usual mushroom hum, drifts from beyond the archway. Dust motes dance in the emanating light, creating a sense of age and mystery.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Examine the moss covering the archway more closely – focus on its patterns and colour.",
+                "Carefully step forward, attempting to cross the crumbling archway.",
+                "Listen intently, trying to discern the source and nature of the new melodic tone."
+            ]
+        }
+    ],
+    "post_production": {}
+}
