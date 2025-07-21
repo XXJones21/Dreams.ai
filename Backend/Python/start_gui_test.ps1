@@ -86,6 +86,7 @@ if ($serverRunning) {
     
     # Start the GUI server
     try {
+        Write-Host "Starting Python server with debug output..." -ForegroundColor Green
         python test_gui.py
     } catch {
         Write-Host "Server stopped." -ForegroundColor Yellow

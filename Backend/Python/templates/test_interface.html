@@ -60,6 +60,10 @@
                         class="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
                     Clear All Tests
                 </button>
+                <button id="toggleDebug" 
+                        class="bg-yellow-600 text-white px-6 py-2 rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                    Toggle Debug
+                </button>
             </div>
             
             <!-- Test Status -->
@@ -71,6 +75,51 @@
                 <div id="testProgress" class="mt-2 hidden">
                     <div class="w-full bg-gray-200 rounded-full h-2">
                         <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Debug Panel -->
+            <div id="debugPanel" class="mt-4 hidden">
+                <h3 class="text-lg font-semibold mb-2">Debug Information</h3>
+                
+                <!-- Current Agent Status -->
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold mb-2">Current Agent Status</h4>
+                    <div id="currentAgentStatus" class="bg-gray-100 rounded-md p-3 text-sm font-mono">
+                        <p class="text-gray-600">No agent currently running</p>
+                    </div>
+                </div>
+                
+                <!-- Memory Usage -->
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold mb-2">Memory Usage</h4>
+                    <div id="memoryUsage" class="bg-gray-100 rounded-md p-3 text-sm font-mono">
+                        <p class="text-gray-600">No memory data available</p>
+                    </div>
+                </div>
+                
+                <!-- Timing Breakdown -->
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold mb-2">Timing Breakdown</h4>
+                    <div id="timingBreakdown" class="bg-gray-100 rounded-md p-3 text-sm font-mono">
+                        <p class="text-gray-600">No timing data available</p>
+                    </div>
+                </div>
+                
+                <!-- Recent Agent Execution -->
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold mb-2">Recent Agent Execution</h4>
+                    <div id="recentExecution" class="bg-gray-100 rounded-md p-3 text-sm font-mono max-h-32 overflow-y-auto">
+                        <p class="text-gray-600">No execution data available</p>
+                    </div>
+                </div>
+                
+                <!-- Pipeline Steps -->
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold mb-2">Pipeline Steps</h4>
+                    <div id="pipelineSteps" class="bg-gray-100 rounded-md p-3 text-sm font-mono max-h-32 overflow-y-auto">
+                        <p class="text-gray-600">No pipeline data available</p>
                     </div>
                 </div>
             </div>
@@ -250,6 +299,7 @@
         // DOM elements
         const runTestBtn = document.getElementById('runTest');
         const clearTestsBtn = document.getElementById('clearTests');
+        const toggleDebugBtn = document.getElementById('toggleDebug');
         const testPromptInput = document.getElementById('testPrompt');
         const userIdInput = document.getElementById('userId');
         const testStatus = document.getElementById('testStatus');
@@ -261,10 +311,13 @@
         const noTests = document.getElementById('noTests');
         const dreamModal = document.getElementById('dreamModal');
         const closeModal = document.getElementById('closeModal');
+        const debugPanel = document.getElementById('debugPanel');
+        const debugInfo = document.getElementById('debugInfo');
 
         // Event listeners
         runTestBtn.addEventListener('click', runTest);
         clearTestsBtn.addEventListener('click', clearTests);
+        toggleDebugBtn.addEventListener('click', toggleDebug);
         closeModal.addEventListener('click', () => dreamModal.classList.add('hidden'));
 
         // Run test function
@@ -353,6 +406,8 @@
                     const response = await fetch('/api/status');
                     const status = await response.json();
                     
+                    console.log('Status update:', status);
+                    
                     if (status.current_test && status.current_test.status === 'completed') {
                         clearInterval(statusInterval);
                         showTestStatus('completed');
@@ -362,11 +417,33 @@
                         clearInterval(statusInterval);
                         showTestStatus('error', status.current_test.error);
                         resetTestButton();
+                    } else if (status.current_test && status.current_test.status === 'running') {
+                        // Update progress if available
+                        if (status.current_test.progress !== undefined) {
+                            updateProgress(status.current_test.progress);
+                        }
+                    }
+                    
+                    // Always update dream cards if there are new ones
+                    if (status.test_count > 0) {
+                        loadDreamCards();
+                    }
+                    
+                    // Update debug info if panel is visible
+                    if (!debugPanel.classList.contains('hidden')) {
+                        updateDebugInfo();
                     }
                 } catch (error) {
                     console.error('Error polling status:', error);
                 }
-            }, 1000);
+            }, 500); // Poll more frequently
+        }
+        
+        // Update progress bar
+        function updateProgress(progress) {
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
+            }
         }
 
         // Reset test button
@@ -381,6 +458,8 @@
                 const response = await fetch('/api/dreams');
                 const dreams = await response.json();
                 
+                console.log('Loading dream cards:', dreams.length, 'dreams');
+                
                 if (dreams.length > 0) {
                     noTests.classList.add('hidden');
                     dreamCards.innerHTML = '';
@@ -389,6 +468,9 @@
                         const card = createDreamCard(dream);
                         dreamCards.appendChild(card);
                     });
+                } else {
+                    noTests.classList.remove('hidden');
+                    dreamCards.innerHTML = '';
                 }
             } catch (error) {
                 console.error('Error loading dream cards:', error);
@@ -404,35 +486,31 @@
             card.querySelector('[data-field="title"]').textContent = dream.title;
             card.querySelector('[data-field="excerpt"]').textContent = dream.excerpt;
             card.querySelector('[data-field="duration"]').textContent = `${dream.test_duration.toFixed(2)}s`;
-            card.querySelector('[data-field="scene-count"]').textContent = dream.scenes.length;
-            card.querySelector('[data-field="creator-name"]').textContent = dream.creator.name;
-            card.querySelector('[data-field="creator-initial"]').textContent = dream.creator.name.charAt(0);
+            card.querySelector('[data-field="scene-count"]').textContent = dream.scene_count;
+            card.querySelector('[data-field="creator-name"]').textContent = `User ${dream.user_id}`;
+            card.querySelector('[data-field="creator-initial"]').textContent = dream.user_id.charAt(0).toUpperCase();
             card.querySelector('[data-field="created-at"]').textContent = formatDate(dream.created_at);
-            card.querySelector('[data-field="likes"]').textContent = `${dream.engagement.likes} likes`;
-            card.querySelector('[data-field="comments"]').textContent = `${dream.engagement.comments} comments`;
-                         card.querySelector('[data-field="shares"]').textContent = `${dream.engagement.shares} shares`;
+            card.querySelector('[data-field="likes"]').textContent = '0 likes';
+            card.querySelector('[data-field="comments"]').textContent = '0 comments';
+            card.querySelector('[data-field="shares"]').textContent = '0 shares';
              
-             // Status badge
-             const statusBadge = card.querySelector('[data-field="status-badge"]');
-             statusBadge.textContent = dream.test_status;
-             statusBadge.className = `px-2 py-1 text-xs font-medium rounded-full ${
-                 dream.test_status === 'completed' ? 'bg-green-100 text-green-800' :
-                 dream.test_status === 'error' ? 'bg-red-100 text-red-800' :
-                 'bg-yellow-100 text-yellow-800'
-             }`;
+            // Status badge
+            const statusBadge = card.querySelector('[data-field="status-badge"]');
+            statusBadge.textContent = 'Completed';
+            statusBadge.className = 'px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800';
              
-             // Display generated image if available
-             if (dream.generated_image) {
-                 const imageContainer = card.querySelector('[data-field="image-container"]');
-                 const imageElement = card.querySelector('[data-field="dream-image"]');
-                 imageContainer.style.display = 'block';
-                 imageElement.src = `data:image/png;base64,${dream.generated_image.image_data}`;
-             }
+            // Display generated image if available
+            if (dream.image_data) {
+                const imageContainer = card.querySelector('[data-field="image-container"]');
+                const imageElement = card.querySelector('[data-field="dream-image"]');
+                imageContainer.style.display = 'block';
+                imageElement.src = `data:image/png;base64,${dream.image_data}`;
+            }
              
-             // View details button
-             card.querySelector('[data-field="view-details"]').addEventListener('click', () => {
-                 showDreamDetails(dream);
-             });
+            // View details button
+            card.querySelector('[data-field="view-details"]').addEventListener('click', () => {
+                showDreamDetails(dream);
+            });
             
             return card;
         }
@@ -443,45 +521,29 @@
             document.querySelector('[data-field="modal-title"]').textContent = dream.title;
             document.querySelector('[data-field="modal-title-text"]').textContent = dream.title;
             document.querySelector('[data-field="modal-story-prompt"]').textContent = dream.excerpt;
-            document.querySelector('[data-field="modal-initial-goal"]').textContent = dream.content.substring(0, 100) + '...';
-            document.querySelector('[data-field="modal-pitch"]').textContent = dream.content;
-            document.querySelector('[data-field="modal-dream-id"]').textContent = dream.id;
-                         document.querySelector('[data-field="modal-duration"]').textContent = `${dream.test_duration.toFixed(2)}s`;
-             document.querySelector('[data-field="modal-scene-count"]').textContent = dream.scenes.length;
-             document.querySelector('[data-field="modal-image-prompt"]').textContent = dream.image_prompt || 'No image prompt generated';
+            document.querySelector('[data-field="modal-initial-goal"]').textContent = dream.story.substring(0, 100) + '...';
+            document.querySelector('[data-field="modal-pitch"]').textContent = dream.pitch;
+            document.querySelector('[data-field="modal-dream-id"]').textContent = dream.dream_id;
+            document.querySelector('[data-field="modal-duration"]').textContent = `${dream.test_duration.toFixed(2)}s`;
+            document.querySelector('[data-field="modal-scene-count"]').textContent = dream.scene_count;
+            document.querySelector('[data-field="modal-image-prompt"]').textContent = dream.image_prompt || 'No image prompt generated';
              
-             // Display generated image in modal if available
-             const modalImage = document.querySelector('[data-field="modal-dream-image"]');
-             const modalNoImage = document.querySelector('[data-field="modal-no-image"]');
+            // Display generated image in modal if available
+            const modalImage = document.querySelector('[data-field="modal-dream-image"]');
+            const modalNoImage = document.querySelector('[data-field="modal-no-image"]');
              
-             if (dream.generated_image) {
-                 modalImage.style.display = 'block';
-                 modalNoImage.style.display = 'none';
-                 modalImage.src = `data:image/png;base64,${dream.generated_image.image_data}`;
-             } else {
-                 modalImage.style.display = 'none';
-                 modalNoImage.style.display = 'block';
-             }
+            if (dream.image_data) {
+                modalImage.style.display = 'block';
+                modalNoImage.style.display = 'none';
+                modalImage.src = `data:image/png;base64,${dream.image_data}`;
+            } else {
+                modalImage.style.display = 'none';
+                modalNoImage.style.display = 'block';
+            }
             
-            // Load scenes
+            // Load scenes (placeholder for now since we don't have scene data in the new structure)
             const scenesContainer = document.getElementById('modal-scenes');
-            scenesContainer.innerHTML = '';
-            
-            dream.scenes.forEach((scene, index) => {
-                const sceneElement = document.createElement('div');
-                sceneElement.className = 'bg-gray-50 rounded-md p-4';
-                sceneElement.innerHTML = `
-                    <h4 class="font-semibold mb-2">Scene ${scene.scene_id}</h4>
-                    <p class="text-gray-700 mb-3">${scene.scene_context}</p>
-                    <div class="space-y-2">
-                        <h5 class="text-sm font-medium text-gray-600">Available Actions:</h5>
-                        <ul class="list-disc list-inside text-sm text-gray-700">
-                            ${scene.actions.map(action => `<li>${action}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-                scenesContainer.appendChild(sceneElement);
-            });
+            scenesContainer.innerHTML = '<p class="text-gray-500">Scene data not available in current structure</p>';
             
             dreamModal.classList.remove('hidden');
         }
@@ -498,6 +560,91 @@
             return date.toLocaleDateString();
         }
 
+        // Toggle debug panel
+        function toggleDebug() {
+            debugPanel.classList.toggle('hidden');
+            if (!debugPanel.classList.contains('hidden')) {
+                updateDebugInfo();
+            }
+        }
+        
+        // Update debug information
+        function updateDebugInfo() {
+            // Get current status with debug info
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(status => {
+                    const debugInfo = status.debug_info;
+                    
+                    // Update Current Agent Status
+                    const currentAgentStatus = document.getElementById('currentAgentStatus');
+                    if (debugInfo.current_agent) {
+                        currentAgentStatus.innerHTML = `
+                            <p class="text-green-600 font-semibold">${debugInfo.current_agent}</p>
+                            <p class="text-gray-600">Total Duration: ${debugInfo.total_duration ? debugInfo.total_duration.toFixed(2) + 's' : 'N/A'}</p>
+                        `;
+                    } else {
+                        currentAgentStatus.innerHTML = '<p class="text-gray-600">No agent currently running</p>';
+                    }
+                    
+                    // Update Memory Usage
+                    const memoryUsage = document.getElementById('memoryUsage');
+                    if (debugInfo.memory_usage) {
+                        memoryUsage.innerHTML = `
+                            <p class="text-blue-600">RSS: ${debugInfo.memory_usage.rss_mb.toFixed(1)} MB</p>
+                            <p class="text-blue-600">VMS: ${debugInfo.memory_usage.vms_mb.toFixed(1)} MB</p>
+                            <p class="text-blue-600">Percent: ${debugInfo.memory_usage.percent.toFixed(1)}%</p>
+                        `;
+                    } else {
+                        memoryUsage.innerHTML = '<p class="text-gray-600">No memory data available</p>';
+                    }
+                    
+                    // Update Timing Breakdown
+                    const timingBreakdown = document.getElementById('timingBreakdown');
+                    if (debugInfo.timing_breakdown && Object.keys(debugInfo.timing_breakdown).length > 0) {
+                        let timingHtml = '';
+                        for (const [step, timings] of Object.entries(debugInfo.timing_breakdown)) {
+                            const avgTime = timings.reduce((a, b) => a + b, 0) / timings.length;
+                            timingHtml += `<p class="text-purple-600">${step}: ${avgTime.toFixed(3)}s avg (${timings.length} samples)</p>`;
+                        }
+                        timingBreakdown.innerHTML = timingHtml;
+                    } else {
+                        timingBreakdown.innerHTML = '<p class="text-gray-600">No timing data available</p>';
+                    }
+                    
+                    // Update Recent Agent Execution
+                    const recentExecution = document.getElementById('recentExecution');
+                    if (debugInfo.recent_agent_execution && debugInfo.recent_agent_execution.length > 0) {
+                        let executionHtml = '';
+                        debugInfo.recent_agent_execution.slice(-5).forEach(exec => {
+                            const time = new Date(exec.timestamp * 1000).toLocaleTimeString();
+                            executionHtml += `<p class="text-orange-600">${time} - ${exec.agent}: ${exec.step}</p>`;
+                        });
+                        recentExecution.innerHTML = executionHtml;
+                    } else {
+                        recentExecution.innerHTML = '<p class="text-gray-600">No execution data available</p>';
+                    }
+                    
+                    // Update Pipeline Steps
+                    const pipelineSteps = document.getElementById('pipelineSteps');
+                    if (debugInfo.pipeline_steps && debugInfo.pipeline_steps.length > 0) {
+                        let stepsHtml = '';
+                        debugInfo.pipeline_steps.slice(-5).forEach(step => {
+                            const time = new Date(step.timestamp * 1000).toLocaleTimeString();
+                            const duration = step.duration ? ` (${step.duration.toFixed(3)}s)` : '';
+                            stepsHtml += `<p class="text-green-600">${time} - ${step.step}${duration}</p>`;
+                        });
+                        pipelineSteps.innerHTML = stepsHtml;
+                    } else {
+                        pipelineSteps.innerHTML = '<p class="text-gray-600">No pipeline data available</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating debug info:', error);
+                    document.getElementById('currentAgentStatus').innerHTML = '<p class="text-red-600">Error loading debug info</p>';
+                });
+        }
+        
         // Initial load
         loadDreamCards();
     </script>
