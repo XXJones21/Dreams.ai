@@ -78,9 +78,55 @@ def run_agents_in_parallel(prompt, user_id, imn_path):
 
 ## Implementation Plan
 
-### Phase 1: Agent Pooling & Priming
-- [ ] Implement a pool of pre-loaded agent processes/models (warm pool)
-- [ ] Add health checks and idle timeouts for unloading
+### Phase 1: Pipeline Instance Pooling (Step-by-Step Implementation Plan)
+
+**Goal:** Each user dream (IMN file) is handled by its own pipeline instance, enabling true parallelism, isolation, and scalability.
+
+#### Step 1: Design the `PipelineInstance` Class
+- Encapsulate the full agent pipeline (state graph, agent objects, and state) for a single dream/IMN file.
+- Provide methods to start, monitor, and clean up the pipeline.
+- Ensure each instance maintains its own state and resources.
+
+#### Step 2: Implement the `PipelinePool` Manager
+- Create a manager class to track all active `PipelineInstance` objects.
+- Provide methods to add, retrieve, and remove pipeline instances by dream ID (or user/session ID).
+- Implement resource cleanup for completed or idle pipelines.
+
+#### Step 3: Update the Entrypoint Logic
+- When a user starts a new dream, create a new `PipelineInstance` and add it to the pool.
+- Route all subsequent actions for that dream to the correct pipeline instance.
+- Ensure that each pipeline instance runs independently (thread, async task, or process).
+
+#### Step 4: Concurrency and Parallelism
+- Use threading, async, or multiprocessing to allow multiple pipeline instances to run in parallel.
+- Ensure thread/process safety for shared resources (e.g., IMN file access, logging).
+
+#### Step 5: Monitoring and Debugging
+- Add logging to track the lifecycle of each pipeline instance (creation, execution, completion, cleanup).
+- Optionally, expose a status endpoint or dashboard to monitor all active pipelines.
+
+#### Step 6: Resource Management and Cleanup
+- Implement timeouts or idle checks to automatically clean up unused pipeline instances.
+- Ensure all resources (memory, file handles, etc.) are released when a pipeline is removed from the pool.
+
+#### Step 7: Documentation and Review
+- Document the architecture and each class/method.
+- Review each step with the team before moving to the next phase.
+
+---
+
+**Review Checklist for Each Step:**
+- [ ] Step 1: `PipelineInstance` class implemented and reviewed
+- [ ] Step 2: `PipelinePool` manager implemented and reviewed
+- [ ] Step 3: Entrypoint logic updated and reviewed
+- [ ] Step 4: Concurrency/parallelism tested and reviewed
+- [ ] Step 5: Monitoring/debugging in place and reviewed
+- [ ] Step 6: Resource management/cleanup verified
+- [ ] Step 7: Documentation complete and reviewed
+
+---
+
+**Next Steps:** Begin with Step 1: Design and implement the `PipelineInstance` class.
 
 ### Phase 2: Parallel Execution Framework
 - [ ] Refactor agent orchestration to use a thread/process pool
