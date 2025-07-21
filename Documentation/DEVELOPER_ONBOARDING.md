@@ -2,7 +2,7 @@
 
 Welcome to Dreams.ai! This guide will help you get up and running quickly.
 
-## 🚀 Quick Start (5 minutes)
+## Quick Start (5 minutes)
 
 ### Prerequisites
 - **Python 3.13+** (required for the backend)
@@ -104,7 +104,7 @@ Dreams.ai/
 
 ---
 
-## 🤖 Understanding the Agent Workflow
+## Understanding the Agent Workflow
 
 ### Agent Responsibilities
 
@@ -174,7 +174,7 @@ The .imn (Imagination) file is the central data structure that stores all dream 
 
 ---
 
-## 🧪 Development Workflow
+## Development Workflow
 
 ### Daily Development Process
 1. **Morning**: Pull latest changes, check agent pipeline status
@@ -253,11 +253,11 @@ python main.py
 
 ---
 
-## 📞 Getting Help
+## Getting Help
 
 - **Technical Issues**: Check the troubleshooting section above
 - **Architecture Questions**: Review the Scoping documentation
 - **Code Reviews**: Submit pull requests for review
 - **General Questions**: Reach out to the team
 
-Welcome to the Dreams.ai team! 🚀 
+Welcome to the Dreams.ai team! 
