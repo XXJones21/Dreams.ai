@@ -182,11 +182,50 @@ npm run dev
 - **Main entry:** `api_server.py` (FastAPI app)
 - **LangGraph pipeline:** `main.py` (handles prompt-to-story pipeline)
 - **Test suite:** `test_pipeline.py` (comprehensive testing)
+- **GUI Test Suite:** `test_gui.py` (visual testing interface with image generation)
 
 ### API Endpoints
 - `POST /api/dream` — Create new dream from prompt
 - `GET /api/dreams/{dream_id}` — Retrieve specific dream
 - `GET /api/dreams` — List available dreams with pagination
+
+### GUI Test Suite
+The GUI test suite provides a visual interface for testing the complete AI agent pipeline:
+
+#### Quick Start
+**Option 1: Use launcher scripts (Recommended)**
+```bash
+# From project root
+start_gui_test.bat          # Windows Batch
+start_gui_test.ps1          # PowerShell
+
+# From Backend/Python directory
+start_gui_test.bat          # Windows Batch
+start_gui_test.ps1          # PowerShell
+```
+
+**Option 2: Manual start**
+```bash
+cd Backend/Python
+python test_gui.py
+```
+
+#### Features
+- **Visual Dream Cards**: See generated dreams in a frontend-like interface
+- **Real-time Testing**: Run pipeline tests with live status updates
+- **Image Generation**: Automatic image generation for each dream
+- **Detailed Views**: Modal windows with complete dream information
+- **Test History**: Track and review all test results
+- **Server Management**: Automatic dependency checking and server status monitoring
+
+#### Access
+Open `http://localhost:5000` in your browser
+
+#### Launcher Features
+- **Dependency Check**: Automatically installs required packages
+- **Server Status**: Checks if server is already running
+- **Browser Launch**: Automatically opens the test interface
+- **Graceful Shutdown**: Properly stops the server when done
 
 ---
 
