@@ -5,6 +5,7 @@ import json
 import os
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
+from filelock import FileLock
 
 
 def write_imn(data: dict, directory: str) -> bool:
@@ -118,3 +119,12 @@ def validate_imn_structure(data: Dict[str, Any]) -> bool:
             return False
     
     return True 
+
+
+def get_imn_filelock(imn_path: str):
+    """
+    Returns a FileLock object for the given IMN file path.
+    Ensures atomic read/write operations across threads and processes.
+    """
+    lock_path = imn_path + ".lock"
+    return FileLock(lock_path) 
