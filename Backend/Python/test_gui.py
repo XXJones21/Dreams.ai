@@ -18,7 +18,7 @@ import logging
 # Add the current directory to the path so we can import from main
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from main import graph
+from core.pipeline_instance import PipelineInstance
 from core.imn_utils import validate_imn_structure, read_imn, create_imn_structure
 from core.image_generator import generate_dream_image
 
@@ -157,7 +157,7 @@ def dream_card_to_dict(dream_card):
     }
 
 def run_pipeline_test(prompt, user_id):
-    """Run the complete pipeline test with detailed debugging"""
+    """Run the complete pipeline test with detailed debugging (using PipelineInstance)"""
     global current_test, test_results, debug_info
     
     logger.info(f"Starting pipeline test with prompt: {prompt}")
@@ -172,12 +172,11 @@ def run_pipeline_test(prompt, user_id):
         
         update_debug_info("Pipeline", "Initialization", {"prompt": prompt, "user_id": user_id})
         
-        # Execute the graph with detailed tracking
-        logger.info("Executing graph...")
+        # Execute the pipeline using PipelineInstance
+        logger.info("Executing pipeline instance...")
         update_debug_info("Graph", "Execution Start")
-        
-        result = graph.invoke(test_state)
-        
+        pipeline_instance = PipelineInstance(test_state)
+        result = pipeline_instance.run()
         update_debug_info("Graph", "Execution Complete", {"result_keys": list(result.keys())})
         
         # Extract dream ID
