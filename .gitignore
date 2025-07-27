@@ -166,3 +166,6 @@ cython_debug/
 # Generated files
 *.imn
 !Backend/Dreams/*.imn
+
+# Python models directory
+!Backend/Python/models/

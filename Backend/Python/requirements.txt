@@ -1,6 +1,7 @@
 langgraph
 langchain
 langchain-openai
+langchain-community
 python-dotenv
 fastapi
 uvicorn
@@ -10,3 +11,5 @@ flask-cors
 requests
 pillow
 psutil
+llama-cpp-python
+filelock
