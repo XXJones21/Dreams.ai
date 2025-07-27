@@ -339,4 +339,4 @@ def create_scene_for_imn(scene_data: Dict[str, Any], scene_number: int) -> Dict[
         "tap_location": None, # To be filled after user acts
         "object_tapped": None,# To be filled after user acts
         "actions": scene_data["actions"]
-    } 
+    }
