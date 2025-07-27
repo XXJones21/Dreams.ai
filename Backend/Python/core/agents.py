@@ -14,14 +14,14 @@ from typing import Annotated, Literal, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.channels import last_value
 from core.imn_utils import write_imn, read_imn, create_imn_structure, validate_imn_structure, get_imn_filelock
-from langchain_community.llms import LlamaCpp
+from langchain_community.chat_models import ChatLlamaCpp
 
 # Load environment and initialize LLM (if needed)
 from dotenv import load_dotenv
 load_dotenv()
 
-# Initialize the local GGUF model
-llm = LlamaCpp(
+# Initialize the local GGUF model with chat interface for compatibility
+llm = ChatLlamaCpp(
     model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
     temperature=0.7,
     max_tokens=2048,
@@ -30,38 +30,6 @@ llm = LlamaCpp(
     n_ctx=4096,  # Context window size
     n_threads=8,  # Adjust based on your CPU cores
 )
-
-
-def format_prompt_for_llama(messages):
-    """
-    Convert message list format to a single string prompt for LlamaCpp.
-    Uses Llama 3.1 chat template format.
-    """
-    prompt = "<|begin_of_text|>"
-    
-    for message in messages:
-        role = message.get("role", "user")
-        content = message.get("content", "")
-        
-        if role == "system":
-            prompt += f"<|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>"
-        elif role == "user":
-            prompt += f"<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|>"
-        elif role == "assistant":
-            prompt += f"<|start_header_id|>assistant<|end_header_id|>\n\n{content}<|eot_id|>"
-    
-    # Add assistant header for response
-    prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
-    
-    return prompt
-
-
-def invoke_llm(messages):
-    """
-    Helper function to invoke the LLM with proper prompt formatting.
-    """
-    formatted_prompt = format_prompt_for_llama(messages)
-    return llm.invoke(formatted_prompt)
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -144,7 +112,7 @@ def Carthir(state: State):
         }
     ]
 
-    reply = invoke_llm(pitch_prompt)
+    reply = llm.invoke(pitch_prompt)
     print(f"\n[DEBUG] Raw LLM reply from Carthir:\n{reply.content}\n")
 
     try:
@@ -229,7 +197,7 @@ def CarthirReview(state: State):
     ]
 
     try:
-        reply = invoke_llm(director_vision_prompt)
+        reply = llm.invoke(director_vision_prompt)
         content = reply.content.strip()
         codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if codeblock_match:
@@ -307,7 +275,7 @@ def Narnion(state: State):
         {"role": "system", "content": "You are Narnion, a master of interactive narrative."},
         {"role": "user", "content": prompt}
     ]
-    reply = invoke_llm(story_outline)
+    reply = llm.invoke(story_outline)
     try:
         import json as _json
         content = reply.content.strip()
@@ -381,7 +349,7 @@ def Cenedril(state: State):
             {"role": "user", "content": prompt}
         ]
         try:
-            reply = invoke_llm(image_prompt)
+            reply = llm.invoke(image_prompt)
             first_frame_prompt = reply.content.strip()
             imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
             directory = os.path.join("..", "Dreams")

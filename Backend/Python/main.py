@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langchain_community.llms import LlamaCpp
+from langchain_community.chat_models import ChatLlamaCpp
 from langgraph.channels import last_value
 
 from core.pipeline_instance import PipelineInstance, PipelinePool
@@ -18,8 +18,8 @@ from core.imn_utils import read_imn, write_imn
 
 load_dotenv()
 
-# Initialize the local GGUF model
-llm = LlamaCpp(
+# Initialize the local GGUF model with chat interface for compatibility
+llm = ChatLlamaCpp(
     model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
     temperature=0.7,
     max_tokens=2048,
@@ -28,38 +28,6 @@ llm = LlamaCpp(
     n_ctx=4096,  # Context window size
     n_threads=8,  # Adjust based on your CPU cores
 )
-
-
-def format_prompt_for_llama(messages):
-    """
-    Convert message list format to a single string prompt for LlamaCpp.
-    Uses Llama 3.1 chat template format.
-    """
-    prompt = "<|begin_of_text|>"
-    
-    for message in messages:
-        role = message.get("role", "user")
-        content = message.get("content", "")
-        
-        if role == "system":
-            prompt += f"<|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>"
-        elif role == "user":
-            prompt += f"<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|>"
-        elif role == "assistant":
-            prompt += f"<|start_header_id|>assistant<|end_header_id|>\n\n{content}<|eot_id|>"
-    
-    # Add assistant header for response
-    prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
-    
-    return prompt
-
-
-def invoke_llm(messages):
-    """
-    Helper function to invoke the LLM with proper prompt formatting.
-    """
-    formatted_prompt = format_prompt_for_llama(messages)
-    return llm.invoke(formatted_prompt)
 
 
 # Note: Agent functions are imported from core.agents module

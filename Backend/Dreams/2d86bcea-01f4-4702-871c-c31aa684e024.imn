@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "2d86bcea-01f4-4702-871c-c31aa684e024",
+        "user_id": "test-user-gguf",
+        "dream_name": "The Whispering Tomes",
+        "story_prompt": "You wander into a mystical library where ancient tomes float through the air, whispering secrets and beckoning you to uncover their mysteries.",
+        "initial_goal": "To navigate the labyrinthine shelves and unlock the secrets hidden within the floating books.",
+        "pitch": "(Opening shot of a grand, ornate library door creaking open. Camera pans across the room, revealing rows upon rows of ancient bookshelves. The camera zooms in on a particularly large tome as it begins to float off the shelf. Suddenly, pages start turning by themselves, and words begin to appear on the page. The camera follows the floating book as it floats through the air, beckoning you to follow.)",
+        "created_at": "2025-07-27T18:42:17.716527+00:00",
+        "director_vision": {
+            "director_vision": "Ethereal mystery and enchantment emanate from the ornate library door as it creaks open, revealing a realm of ancient knowledge and secrets waiting to be unearthed.",
+            "image_prompt": "A grand, ornate library with rows upon rows of ancient bookshelves. The camera pans across the room, revealing a large, leather-bound tome floating in mid-air. The book hovers in front of an ornate mirror with a rippling surface. Soft, golden light spills from the mirror, illuminating the surrounding books and creating an ethereal atmosphere.",
+            "visual_notes": "Soft focus on the library surroundings to create an air of mystery. Warm, golden lighting from the mirror to evoke a sense of enchantment. The floating book should be the central focus of the image, with the ornate mirror serving as a subtle background element.",
+            "approval_criteria": "I will approve this image if it effectively captures the ethereal and mysterious atmosphere of the library scene. The image should have a soft, dreamy quality to it, with the floating book being the central focus. I also want to see warm, golden lighting from the mirror to create an enchanting ambiance."
+        },
+        "first_frame_prompt": "A grand, ornate library with rows upon rows of ancient bookshelves. The camera pans across the room, revealing a large, leather-bound tome floating in mid-air. The book hovers in front of an ornate mirror with a rippling surface. Soft, golden light spills from the mirror, illuminating the surrounding books and creating an ethereal atmosphere.",
+        "visual_notes": "Soft focus on the library surroundings to create an air of mystery. Warm, golden lighting from the mirror to evoke a sense of enchantment. The floating book should be the central focus of the image, with the ornate mirror serving as a subtle background element."
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "The floating book hovers in front of a large, ornate mirror. The mirror's surface begins to ripple and distort, as if something is trying to break through.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Reach out and try to touch the mirror",
+                "Try to turn the page on the floating book",
+                "Step back and examine the room for any other clues or objects of interest"
+            ]
+        }
+    ],
+    "post_production": {}
+}
