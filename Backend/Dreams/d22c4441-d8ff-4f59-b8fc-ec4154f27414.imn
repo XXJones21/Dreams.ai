@@ -1,0 +1,21 @@
+{
+    "pre_production": {
+        "id": "d22c4441-d8ff-4f59-b8fc-ec4154f27414",
+        "user_id": "test-user-123",
+        "dream_name": "Paw of the Sea",
+        "story_prompt": "In a world where dogs can dream big, Rufus, a rambunctious corgi, sets his sights on becoming the greatest pirate that ever sailed the seven seas.",
+        "initial_goal": "To find and claim the legendary Golden Bone treasure, hidden deep within the treacherous waters of the Caribbean.",
+        "pitch": "(Full pitch text here...) 'Paw of the Sea' is an animated adventure film that follows Rufus, a charismatic corgi with a passion for piracy. With his trusty sidekick, a wise-cracking parrot named Polly, Rufus sets out on a thrilling quest to find the Golden Bone treasure and prove himself as the greatest pirate that ever sailed.",
+        "created_at": "2025-07-27T20:27:53.241202+00:00",
+        "director_vision": {
+            "director_vision": "Capture the essence of a swashbuckling pirate adventure, with a dash of whimsy and fantasy. The mood should be adventurous, exciting, and full of possibility.",
+            "image_prompt": "A first-person perspective image of Rufus, the charismatic corgi pirate, standing at the bow of a majestic sailing ship. The sun is setting behind him, casting a warm golden light across his fur and the surrounding sea. In the background, the silhouette of a mysterious island can be seen rising up from the horizon.",
+            "visual_notes": "The image should have a dynamic and active composition, with Rufus standing confidently at the bow of the ship. The colors should be rich and vibrant, with a focus on warm golden tones to evoke a sense of adventure and excitement. The lighting should be soft and subtle, with a focus on capturing the texture and detail of Rufus' fur and the surrounding sea.",
+            "approval_criteria": "The final image should meet the following criteria: 1) It should capture the essence of the original vision, with a focus on adventure, excitement, and possibility. 2) It should have a dynamic and active composition, with Rufus standing confidently at the bow of the ship. 3) It should have rich and vibrant colors, with a focus on warm golden tones to evoke a sense of adventure and excitement."
+        },
+        "first_frame_prompt": "A first-person perspective image of Rufus, the charismatic corgi pirate, standing at the bow of a majestic sailing ship. The sun is setting behind him, casting a warm golden light across his fur and the surrounding sea. In the background, the silhouette of a mysterious island can be seen rising up from the horizon.",
+        "visual_notes": "The image should have a dynamic and active composition, with Rufus standing confidently at the bow of the ship. The colors should be rich and vibrant, with a focus on warm golden tones to evoke a sense of adventure and excitement. The lighting should be soft and subtle, with a focus on capturing the texture and detail of Rufus' fur and the surrounding sea."
+    },
+    "in_production": [],
+    "post_production": {}
+}
