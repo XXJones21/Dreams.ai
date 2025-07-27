@@ -1,0 +1,85 @@
+{
+    "pre_production": {
+        "id": "097a2e29-a462-43f6-9ce2-e5ff7d22dc8c",
+        "user_id": "test-user-123",
+        "dream_name": "Dream of A corgi taking a nap on a sunn...",
+        "story_prompt": "A story about A corgi taking a nap on a sunny beach",
+        "initial_goal": "To explore and experience A corgi taking a nap on a sunny beach",
+        "pitch": "A creative journey through A corgi taking a nap on a sunny beach, filled with wonder and discovery.",
+        "created_at": "2025-07-27T16:58:04.063556+00:00",
+        "story_structure": {
+            "segment_1": {
+                "scene": "Opening scene featuring A corgi taking a nap on a sunny beach",
+                "tappable_elements": [
+                    "main element",
+                    "background element"
+                ],
+                "user_choices": [
+                    "Explore further",
+                    "Take a different path"
+                ],
+                "next_segments": {
+                    "Explore further": "segment_2a",
+                    "Take a different path": "segment_2b"
+                }
+            },
+            "segment_2": {
+                "scene": "Rising action and discovery",
+                "tappable_elements": [
+                    "discovery element",
+                    "mystery element"
+                ],
+                "user_choices": [
+                    "Investigate",
+                    "Continue journey"
+                ],
+                "next_segments": {
+                    "Investigate": "segment_3a",
+                    "Continue journey": "segment_3b"
+                }
+            },
+            "segment_3": {
+                "scene": "Climax and decision point",
+                "tappable_elements": [
+                    "choice element",
+                    "challenge element"
+                ],
+                "user_choices": [
+                    "Face challenge",
+                    "Find alternative"
+                ],
+                "next_segments": {
+                    "Face challenge": "segment_4a",
+                    "Find alternative": "segment_4b"
+                }
+            },
+            "segment_4": {
+                "scene": "Resolution and conclusion",
+                "tappable_elements": [
+                    "resolution element",
+                    "ending element"
+                ],
+                "user_choices": [
+                    "Accept outcome",
+                    "Start new journey"
+                ],
+                "next_segments": {
+                    "Accept outcome": "end",
+                    "Start new journey": "end"
+                }
+            }
+        },
+        "visual_style": "Cinematic storytelling with dynamic camera work and atmospheric lighting",
+        "interactive_design": "Users tap on highlighted elements to make choices that affect the story progression",
+        "director_vision": {
+            "director_vision": "Create a compelling first-person view of the scene",
+            "image_prompt": "First-person perspective of the scene",
+            "visual_notes": "Use warm lighting and immersive composition",
+            "approval_criteria": "Image should feel immersive and match the story context"
+        },
+        "first_frame_prompt": "First-person perspective of the scene",
+        "visual_notes": "Use warm lighting and immersive composition"
+    },
+    "in_production": [],
+    "post_production": {}
+}

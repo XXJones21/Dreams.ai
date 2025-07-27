@@ -1,0 +1,106 @@
+{
+    "pre_production": {
+        "id": "b131ff46-2162-4128-9bac-4bcafd388a04",
+        "user_id": "user-uuid-placeholder",
+        "dream_name": "Woodland Snooze",
+        "story_prompt": "A corgi finds a cozy spot to sleep in a wooded forest.",
+        "initial_goal": "User discovers a sleeping corgi",
+        "pitch": "The viewer is transported into a serene forest where they stumble upon a sleeping corgi, and through their choices, they guide the corgi through a series of peaceful experiences.",
+        "created_at": "2025-07-27T16:55:39.382576+00:00",
+        "story_structure": {
+            "segment_1": {
+                "scene": "A corgi lying on a bed of moss, surrounded by tall trees.",
+                "tappable_elements": [
+                    "Mossy spot",
+                    "Tree trunk"
+                ],
+                "user_choices": [
+                    "Pet the corgi",
+                    "Explore the forest"
+                ],
+                "next_segments": {
+                    "Pet the corgi": "segment_2a",
+                    "Explore the forest": "segment_2b"
+                }
+            },
+            "segment_2a": {
+                "scene": "The user gently pets the corgi, which starts to snuggle closer.",
+                "tappable_elements": [
+                    "Continue petting",
+                    "Get up and explore"
+                ],
+                "user_choices": [
+                    "Continue petting",
+                    "Get up and explore"
+                ],
+                "next_segments": {
+                    "Continue petting": "segment_3a",
+                    "Get up and explore": "segment_3b"
+                }
+            },
+            "segment_2b": {
+                "scene": "The user explores the forest, coming across a babbling brook.",
+                "tappable_elements": [
+                    "Follow the brook",
+                    "Return to the corgi"
+                ],
+                "user_choices": [
+                    "Follow the brook",
+                    "Return to the corgi"
+                ],
+                "next_segments": {
+                    "Follow the brook": "segment_3a",
+                    "Return to the corgi": "segment_3b"
+                }
+            },
+            "segment_3a": {
+                "scene": "The user returns to the corgi, which is now awake and stretching.",
+                "tappable_elements": [
+                    "Play with the corgi",
+                    "Let the corgi sleep"
+                ],
+                "user_choices": [
+                    "Play with the corgi",
+                    "Let the corgi sleep"
+                ],
+                "next_segments": {
+                    "Play with the corgi": "segment_4",
+                    "Let the corgi sleep": "segment_4"
+                }
+            },
+            "segment_3b": {
+                "scene": "The user continues to explore the forest, discovering a hidden clearing.",
+                "tappable_elements": [
+                    "Explore the clearing",
+                    "Return to the corgi"
+                ],
+                "user_choices": [
+                    "Explore the clearing",
+                    "Return to the corgi"
+                ],
+                "next_segments": {
+                    "Explore the clearing": "segment_4",
+                    "Return to the corgi": "segment_4"
+                }
+            },
+            "segment_4": {
+                "scene": "The user and the corgi share a heartwarming moment, and the video ends.",
+                "tappable_elements": [],
+                "user_choices": [],
+                "next_segments": {}
+            }
+        },
+        "visual_style": "A mix of live-action and CGI, with a focus on natural textures and colors to create a serene atmosphere.",
+        "interactive_design": "The user will be able to tap on elements in the scene to progress the story and interact with the corgi.",
+        "director_vision": {
+            "director_vision": "Create a compelling first-person view of the scene",
+            "image_prompt": "First-person perspective of the scene",
+            "visual_notes": "Use warm lighting and immersive composition",
+            "approval_criteria": "Image should feel immersive and match the story context"
+        },
+        "first_frame_prompt": "First-person perspective of the scene",
+        "visual_notes": "Use warm lighting and immersive composition"
+    },
+    "in_production": [],
+    "post_production": {}
+}

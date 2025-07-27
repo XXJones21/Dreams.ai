@@ -34,6 +34,12 @@ class ModelManager:
         
         # Model configurations
         self.model_configs = {
+            "llama-3.1-8b-instruct": {
+                "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+                "filename": "llama-3.1-8b-instruct.Q4_K_M.gguf",
+                "size_gb": 4.8,
+                "description": "Llama 3.1 8B Instruct (Q4_K_M quantization)"
+            },
             "mistral-small-3.2-24b": {
                 "repo_id": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
                 "filename": "mistral-small-3.2-24b-instruct-2506.Q4_K_M.gguf",
@@ -257,6 +263,19 @@ class ModelManager:
 model_manager = ModelManager()
 
 
+def setup_llama_model(auto_download: bool = True) -> Optional[Path]:
+    """
+    Convenience function to set up the Llama 3.1 8B Instruct model.
+    
+    Args:
+        auto_download: Automatically download if model not found
+        
+    Returns:
+        Path to the Llama 3.1 model, or None if setup failed
+    """
+    return model_manager.setup_model("llama-3.1-8b-instruct", auto_download)
+
+
 def setup_mistral_model(auto_download: bool = True) -> Optional[Path]:
     """
     Convenience function to set up the Mistral model.
@@ -302,6 +321,14 @@ if __name__ == "__main__":
     print("\n" + "=" * 50)
     print("Testing model setup...")
     
+    # Test Llama 3.1 8B Instruct model
+    model_path = setup_llama_model(auto_download=False)
+    if model_path:
+        print(f"Llama 3.1 8B Instruct model ready at: {model_path}")
+    else:
+        print("Llama 3.1 8B Instruct model not found. Run with auto_download=True to download.")
+    
+    # Test Mistral model
     model_path = setup_mistral_model(auto_download=False)
     if model_path:
         print(f"Mistral model ready at: {model_path}")

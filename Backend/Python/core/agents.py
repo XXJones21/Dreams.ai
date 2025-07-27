@@ -64,12 +64,18 @@ def convert_prompt_to_imn(state: State):
     story_prompt = carthir_mem.get("story_prompt")
     initial_goal = carthir_mem.get("initial_goal")
     pitch = carthir_mem.get("pitch")
+    story_structure = carthir_mem.get("story_structure")
+    visual_style = carthir_mem.get("visual_style")
+    interactive_design = carthir_mem.get("interactive_design")
     
     print(f"[DEBUG] Extracted fields:")
     print(f"[DEBUG]   dream_name: {repr(dream_name)} (type: {type(dream_name)})")
     print(f"[DEBUG]   story_prompt: {repr(story_prompt)} (type: {type(story_prompt)})")
     print(f"[DEBUG]   initial_goal: {repr(initial_goal)} (type: {type(initial_goal)})")
     print(f"[DEBUG]   pitch: {repr(pitch)} (type: {type(pitch)})")
+    print(f"[DEBUG]   story_structure: {repr(story_structure)} (type: {type(story_structure)})")
+    print(f"[DEBUG]   visual_style: {repr(visual_style)} (type: {type(visual_style)})")
+    print(f"[DEBUG]   interactive_design: {repr(interactive_design)} (type: {type(interactive_design)})")
     
     user_id = state.get("user_id", "user-uuid-placeholder")
     print(f"[DEBUG] user_id: {user_id}")
@@ -103,6 +109,17 @@ def convert_prompt_to_imn(state: State):
         pitch=pitch
     )
     
+    # Add the new enhanced fields to the .imn structure
+    if story_structure:
+        imn_data["pre_production"]["story_structure"] = story_structure
+        print(f"[DEBUG] Added story_structure to .imn")
+    if visual_style:
+        imn_data["pre_production"]["visual_style"] = visual_style
+        print(f"[DEBUG] Added visual_style to .imn")
+    if interactive_design:
+        imn_data["pre_production"]["interactive_design"] = interactive_design
+        print(f"[DEBUG] Added interactive_design to .imn")
+    
     print(f"[DEBUG] create_imn_structure returned: {type(imn_data)}")
     print(f"[DEBUG] IMN data keys: {list(imn_data.keys()) if isinstance(imn_data, dict) else 'Not a dict'}")
 
@@ -132,21 +149,30 @@ def Carthir(state: State):
         {
             "role": "system",
             "content": (
-                """
-                You are a creative film pitch generator. Given the user's prompt, generate a compelling minute-long film pitch in first person perspective. 
-                Respond ONLY with a valid JSON object with the following fields:\n
-                - dream_name: A short, evocative title for the dream journey.\n
-                - story_prompt: A one or two sentence summary of the narrative, suitable for use as a story prompt.\n
-                - initial_goal: An initial goal or natural conclusion for the dream, as a single sentence.\n
-                - pitch: The full, detailed pitch text (1-2 paragraphs, can include visual/audio notes).\n
-                Example:\n
-                {\n  \"dream_name\": \"Root & Whisper\",\n  \"story_prompt\": \"You are a child exploring a mysterious, ancient forest where the trees seem to whisper secrets.\",\n  \"initial_goal\": \"To understand what the woods are trying to tell you.\",\n  \"pitch\": \"(Full pitch text here...)\"\n}
-                """
+                """You are a Creative Director. Create a 4-segment interactive video story.
+
+Respond with ONLY valid JSON. No explanations, no formatting.
+
+JSON structure:
+{
+  "dream_name": "Short title",
+  "story_prompt": "One sentence summary",
+  "initial_goal": "What user achieves",
+  "pitch": "Creative vision description",
+  "story_structure": {
+    "segment_1": {"scene": "Opening", "tappable_elements": ["e1", "e2"], "user_choices": ["c1", "c2"], "next_segments": {"c1": "s2a", "c2": "s2b"}},
+    "segment_2": {"scene": "Rising", "tappable_elements": ["e1", "e2"], "user_choices": ["c1", "c2"], "next_segments": {"c1": "s3a", "c2": "s3b"}},
+    "segment_3": {"scene": "Climax", "tappable_elements": ["e1", "e2"], "user_choices": ["c1", "c2"], "next_segments": {"c1": "s4a", "c2": "s4b"}},
+    "segment_4": {"scene": "Resolution", "tappable_elements": ["e1", "e2"], "user_choices": ["c1", "c2"], "next_segments": {"c1": "end", "c2": "end"}}
+  },
+  "visual_style": "Visual description",
+  "interactive_design": "How users interact"
+}"""
             )
         },
         {
             "role": "user",
-            "content": last_message.content
+            "content": f"Create a 4-segment interactive video story for: {last_message.content}. Respond with ONLY the JSON object."
         }
     ]
 
@@ -221,24 +247,24 @@ def Carthir(state: State):
             "dream_name": result.get("dream_name"),
             "story_prompt": result.get("story_prompt"),
             "initial_goal": result.get("initial_goal"),
-            "pitch": result.get("pitch")
+            "pitch": result.get("pitch"),
+            "story_structure": result.get("story_structure"),
+            "visual_style": result.get("visual_style"),
+            "interactive_design": result.get("interactive_design")
         }
         state["messages"] = [{"role": "assistant", "content": result.get("pitch", "")}] 
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
     except Exception as e:
-        print(f"[DEBUG] ===== JSON PARSING ERROR =====")
-        print(f"[DEBUG] Error type: {type(e).__name__}")
-        print(f"[DEBUG] Error message: {str(e)}")
-        print(f"[DEBUG] Raw reply: {reply}")
-        print(f"[DEBUG] ===== END ERROR ANALYSIS =====\n")
+        print(f"[ERROR] ===== JSON PARSING ERROR =====")
+        print(f"[ERROR] Error type: {type(e).__name__}")
+        print(f"[ERROR] Error message: {str(e)}")
+        print(f"[ERROR] Raw reply: {reply}")
+        print(f"[ERROR] Content that failed to parse: {repr(content)}")
+        print(f"[ERROR] ===== END ERROR ANALYSIS =====\n")
         
-        state["carthir_memory"] = None
-        if isinstance(reply, dict) and 'content' in reply:
-            state["messages"] = [{"role": "assistant", "content": reply.get("content", "")}]
-        else:
-            state["messages"] = [{"role": "assistant", "content": str(reply)}]
-        return state
+        # NO FALLBACK - Let the error propagate to expose real issues
+        raise Exception(f"Carthir failed to generate valid JSON. Raw response: {reply}") from e
 
 
 def CarthirReview(state: State):
@@ -370,10 +396,12 @@ def Narnion(state: State):
     prompt = (
         f"Pitch: {narnion_prompt}\n\n"
         "Write a ten-second scene (no dialogue) for the next moment in the story, and suggest 2-3 actions the user could take next. "
-        "Respond in JSON with:\n"
+        "Respond with ONLY valid JSON. No explanations, no greetings, no emojis, no markdown formatting.\n\n"
+        "IMPORTANT: Respond with ONLY the raw JSON object, no code blocks, no ```json``` markers.\n\n"
+        "Required JSON structure:\n"
         "{\n"
-        "  \"scene_context\": \"...\",\n"
-        "  \"actions\": [\"...\", \"...\", \"...\"]\n"
+        "  \"scene_context\": \"Detailed scene description\",\n"
+        "  \"actions\": [\"action1\", \"action2\", \"action3\"]\n"
         "}"
     )
     story_outline = [
@@ -384,13 +412,36 @@ def Narnion(state: State):
     reply = llm.invoke("narnion", story_outline)
     try:
         import json as _json
-        content = reply.get("content", "").strip()
+        
+        # Handle the response format properly
+        if isinstance(reply, dict) and 'content' in reply:
+            content = reply['content'].strip()
+        else:
+            content = str(reply).strip()
+            
+        print(f"[DEBUG] Narnion raw content: {repr(content)}")
+        
+        # Extract JSON from code blocks if present
         match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if match:
             content = match.group(1).strip()
+            print(f"[DEBUG] Extracted JSON from code block: {repr(content)}")
+        
+        # Try to find JSON object boundaries if not already found
+        if not (content.startswith('{') and content.endswith('}')):
+            json_start = content.find('{')
+            json_end = content.rfind('}')
+            if json_start != -1 and json_end != -1 and json_end > json_start:
+                content = content[json_start:json_end + 1]
+                print(f"[DEBUG] Extracted JSON using boundaries: {repr(content)}")
+        
         result = _json.loads(content)
         scene_context = result.get("scene_context")
         actions = result.get("actions", [])
+        
+        if not scene_context:
+            raise Exception("Narnion response missing scene_context")
+        
         new_scene = {
             "scene_id": len(imn_data["in_production"]) + 1,
             "frame_image": None,
@@ -408,7 +459,11 @@ def Narnion(state: State):
             write_imn(imn_data, directory)
         print(f"[Narnion] Added new scene to in_production.")
     except Exception as e:
-        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply}")
+        print(f"[ERROR] Narnion failed to parse response: {e}")
+        print(f"[ERROR] Raw reply: {reply}")
+        print(f"[ERROR] Content that failed to parse: {repr(content)}")
+        # NO FALLBACK - Let the error propagate to expose real issues
+        raise Exception(f"Narnion failed to generate valid JSON. Raw response: {reply}") from e
     return state
 
 

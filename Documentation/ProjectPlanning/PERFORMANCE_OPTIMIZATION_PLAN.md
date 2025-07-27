@@ -1,227 +1,159 @@
-# Performance Optimization Plan: 10-Second Dream Generation
+# Performance Optimization Plan - Updated
 
-**Date:** July 20, 2025  
-**Target:** Reduce dream generation time from 49s to 10s (80% improvement)  
-**Status:** Updated for Parallel, Primed Agents & Seamless UX
+## Current Status (July 27, 2025)
 
-## Executive Summary
+### 🎯 **Priority Shift: Functionality First**
+We have successfully integrated Llama 3.1 8B Instruct model but discovered that our focus on achieving 10-second pipeline times has compromised core functionality. The current approach prioritizes **working outputs over speed**.
 
-The Dreams.ai pipeline aims to deliver a complete dream—including the first image prompt—within 10 seconds. This is achieved by priming agents in a warm pool, executing all agents in parallel using a shared IMN file, streaming progressive updates to the frontend, and caching all outputs (including partial and fallback results). The user experience is designed to be seamless, with real-time feedback and instant placeholder responses.
+### 📊 **Current Performance Metrics**
+- **Model Load Time**: ~2.37s (Carthir), ~2.59s (Narnion)
+- **Pipeline Execution**: ~5.27 seconds total
+- **Inference Time**: Very fast (0.17s, 0.03s) - **indicates incomplete responses**
+- **Model Size**: 4.6GB (Q4_K_M quantization)
 
-## Current Performance Analysis
+### ⚠️ **Critical Issues Identified**
+1. **Carthir Agent**: Generating incomplete JSON (`{` only)
+2. **Narnion Agent**: Empty responses (`content: ''`)
+3. **CarthirReview Agent**: JSON parsing errors
+4. **Fallback System**: Masking real functionality issues
 
-### Pipeline Breakdown
-```
-Carthir (49s) → convert_prompt → Narnion → CarthirReview → Cenedril → END
-```
+## Revised Optimization Strategy
 
-**Detailed Timing:**
-- **Carthir**: 49.34s (99.96% of total time) - LLM call for dream pitch
-- **Narnion**: ~2-3s - LLM call for scene generation  
-- **CarthirReview**: ~2-3s - LLM call for director vision
-- **Cenedril**: ~1s - LLM call for image prompt
-- **File Operations**: <0.01s - IMN file read/write
+### **Phase 1: Core Functionality Restoration** (Current Priority)
+**Goal**: Get working outputs from all agents before optimizing for speed
 
-### Bottlenecks Identified (Previous Architecture)
-1. **Sequential Processing**: Agents run one after another
-2. **LLM API Latency**: Each agent waits for Ollama response
-3. **No Caching**: Similar prompts processed repeatedly
-4. **Blocking Operations**: User waits for complete pipeline
-5. **No Streaming**: No real-time feedback to user
+#### 1.1 Remove Fallback Systems
+- **Action**: Eliminate fallback JSON structures in agent functions
+- **Rationale**: Fallbacks mask real issues and prevent proper debugging
+- **Files**: `core/agents.py` - Carthir, Narnion, CarthirReview functions
 
-## New Architecture: Primed Parallel Agents & Seamless UX
+#### 1.2 Fix Token and Context Limits
+- **Current**: carthir max_tokens=2048, n_ctx=8192
+- **Proposed**: Increase to max_tokens=4096, n_ctx=16384
+- **Rationale**: Llama 3.1 8B Instruct needs more tokens for complex JSON generation
 
-### Key Principles
-- **Agents Primed and Ready**: Agents are loaded and kept warm in a pool, reducing cold start latency.
-- **Parallel Agent Execution**: All agents (Carthir, Narnion, Cenedril, etc.) start simultaneously, using a shared IMN file for state.
-- **Progressive Streaming**: As each agent completes, updates are streamed to the frontend in real time (WebSockets/SSE).
-- **Cache All Outputs**: All agent outputs—including partial and fallback results—are cached for future similar prompts.
-- **Seamless UX**: Users receive instant placeholder feedback, progressive updates, and the first image prompt within 10 seconds.
+#### 1.3 Optimize Prompts for Llama 3.1 Instruct
+- **Current**: Using generic prompts
+- **Proposed**: Llama 3.1 Instruct-specific prompt engineering
+- **Focus**: Clear JSON structure requirements and examples
 
-### Logical Flow (User Journey)
-1. **User submits prompt**.
-2. **Immediate Response**: 
-   - Check cache for similar prompt. If found, return cached result instantly.
-   - If not, create placeholder dream card and IMN file.
-3. **Parallel Agent Start**:
-   - All agents start in parallel, reading from and writing to the IMN file (with file locking/atomic ops).
-   - Each agent updates its section of the IMN as soon as it completes.
-4. **Progressive Streaming**:
-   - As soon as the image prompt (Cenedril) is ready, push it to the frontend (even if other agents are still running).
-   - Continue updating the frontend as more data becomes available.
-5. **Cache Results**:
-   - Cache all agent outputs (including partial/fallbacks) for future similar prompts.
+#### 1.4 Test with Simple Prompts
+- **Approach**: Start with basic prompts, gradually increase complexity
+- **Goal**: Establish baseline of working functionality
 
-### Example: Parallel Agent Orchestration (Pseudocode)
+### **Phase 2: Performance Optimization** (Future)
+**Goal**: Optimize for speed once core functionality is working
+
+#### 2.1 Model Loading Optimization
+- **Current**: ~2.37s load time
+- **Target**: <1.5s load time
+- **Approaches**:
+  - Model warming and caching
+  - Parallel model loading
+  - Optimized llama-cpp-python settings
+
+#### 2.2 Inference Speed Optimization
+- **Current**: Very fast but incomplete responses
+- **Target**: Fast AND complete responses
+- **Approaches**:
+  - Optimize batch sizes
+  - GPU acceleration tuning
+  - Prompt optimization
+
+#### 2.3 Pipeline Parallelization
+- **Current**: Sequential agent execution
+- **Target**: Parallel execution where possible
+- **Approaches**:
+  - Parallel model loading
+  - Concurrent agent execution
+  - Async/await implementation
+
+## Updated Performance Targets
+
+### **Immediate Goals (Phase 1)**
+- ✅ **Model Integration**: Complete (Llama 3.1 8B Instruct working)
+- 🎯 **Core Functionality**: All agents producing complete, valid outputs
+- 🎯 **Pipeline Reliability**: 100% success rate (no fallbacks)
+- 🎯 **Response Quality**: High-quality, structured outputs
+
+### **Future Goals (Phase 2)**
+- 🎯 **Total Pipeline Time**: <15 seconds (realistic target)
+- 🎯 **Model Load Time**: <1.5 seconds
+- 🎯 **Inference Time**: <5 seconds per agent
+- 🎯 **Memory Usage**: Optimized for 16GB+ systems
+
+## Technical Implementation Plan
+
+### **Immediate Actions (Next 24-48 hours)**
+
+#### 1. Remove Fallback Systems
 ```python
-from concurrent.futures import ThreadPoolExecutor
-import threading
-
-def run_agents_in_parallel(prompt, user_id, imn_path):
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {
-            'carthir': executor.submit(run_carthir, prompt, imn_path),
-            'narnion': executor.submit(run_narnion, prompt, imn_path),
-            'cenedril': executor.submit(run_cenedril, prompt, imn_path)
-        }
-        # Stream updates as each completes
-        for name, future in futures.items():
-            result = future.result(timeout=8)
-            # Update IMN file and notify frontend
+# In core/agents.py - Remove fallback JSON structures
+# Focus on getting real model outputs
 ```
 
-### UX Example: Progressive Dream Card
-- **0s**: “Generating your dream…” (placeholder)
-- **2–4s**: “Story ready!” (Carthir/Narnion done)
-- **6–8s**: “Image prompt ready!” (Cenedril done, show image)
-- **10s**: “Dream complete!” (all agents done)
+#### 2. Increase Token Limits
+```python
+# In models/optimized_llm.py
+"carthir": {
+    "max_tokens": 4096,  # Increased from 2048
+    "n_ctx": 16384,      # Increased from 8192
+}
+```
 
-## Implementation Plan
+#### 3. Optimize Prompts
+```python
+# Llama 3.1 Instruct-specific prompt engineering
+# Clear JSON structure requirements
+# Better examples and formatting
+```
 
-### Phase 1: Pipeline Instance Pooling (Step-by-Step Implementation Plan)
+#### 4. Test Core Functionality
+- Simple prompt testing
+- JSON validation
+- Error handling without fallbacks
 
-**Goal:** Each user dream (IMN file) is handled by its own pipeline instance, enabling true parallelism, isolation, and scalability.
+### **Performance Monitoring**
 
-#### Step 1: Design the `PipelineInstance` Class
-- Encapsulate the full agent pipeline (state graph, agent objects, and state) for a single dream/IMN file.
-- Provide methods to start, monitor, and clean up the pipeline.
-- Ensure each instance maintains its own state and resources.
+#### Metrics to Track
+1. **Functionality Metrics**:
+   - JSON completion rate
+   - Response quality score
+   - Error rate (without fallbacks)
 
-#### Step 2: Implement the `PipelinePool` Manager
-- Create a manager class to track all active `PipelineInstance` objects.
-- Provide methods to add, retrieve, and remove pipeline instances by dream ID (or user/session ID).
-- Implement resource cleanup for completed or idle pipelines.
+2. **Performance Metrics**:
+   - Model load time
+   - Inference time
+   - Total pipeline time
+   - Memory usage
 
-#### Step 3: Update the Entrypoint Logic
-- When a user starts a new dream, create a new `PipelineInstance` and add it to the pool.
-- Route all subsequent actions for that dream to the correct pipeline instance.
-- Ensure that each pipeline instance runs independently (thread, async task, or process).
+#### Success Criteria
+- **Phase 1**: 100% functional outputs, <30 seconds total time
+- **Phase 2**: <15 seconds total time, maintained quality
 
-#### Step 4: Concurrency and Parallelism
-- Use threading, async, or multiprocessing to allow multiple pipeline instances to run in parallel.
-- Ensure thread/process safety for shared resources (e.g., IMN file access, logging).
+## Risk Mitigation
 
-#### Step 5: Monitoring and Debugging
-- Add logging to track the lifecycle of each pipeline instance (creation, execution, completion, cleanup).
-- Optionally, expose a status endpoint or dashboard to monitor all active pipelines.
+### **Current Risks**
+1. **Incomplete Responses**: Model not generating full JSON
+2. **Empty Responses**: Token limits too restrictive
+3. **Fallback Dependence**: Masking real issues
 
-#### Step 6: Resource Management and Cleanup
-- Implement timeouts or idle checks to automatically clean up unused pipeline instances.
-- Ensure all resources (memory, file handles, etc.) are released when a pipeline is removed from the pool.
-
-#### Step 7: Documentation and Review
-- Document the architecture and each class/method.
-- Review each step with the team before moving to the next phase.
-
----
-
-**Review Checklist for Each Step:**
-- [ ] Step 1: `PipelineInstance` class implemented and reviewed
-- [ ] Step 2: `PipelinePool` manager implemented and reviewed
-- [ ] Step 3: Entrypoint logic updated and reviewed
-- [ ] Step 4: Concurrency/parallelism tested and reviewed
-- [ ] Step 5: Monitoring/debugging in place and reviewed
-- [ ] Step 6: Resource management/cleanup verified
-- [ ] Step 7: Documentation complete and reviewed
-
----
-
-**Next Steps:** Begin with Step 1: Design and implement the `PipelineInstance` class.
-
-### Phase 2: Parallel Execution Framework (Step-by-Step Implementation Plan)
-
-**Goal:** Run all agents in parallel for each dream, minimizing total pipeline time and enabling true concurrent processing.
-
-#### Step 1: Design Parallel Agent Orchestration
-- Refactor the pipeline so that Carthir, Narnion, and Cenedril (and any other agents) are started simultaneously using a thread or process pool (e.g., Python's `concurrent.futures.ThreadPoolExecutor`).
-- Each agent should receive the same initial state and work independently, updating only its section of the IMN file.
-
-#### Step 2: Implement File Locking for IMN Updates
-- Add file locking (e.g., using `threading.Lock`, `filelock`, or platform-specific mechanisms) to ensure that concurrent agent writes to the IMN file are safe and atomic.
-- Document the locking strategy and ensure no race conditions or file corruption can occur.
-
-#### Step 3: Refactor PipelineInstance to Support Parallelism
-- Update the `PipelineInstance` class to manage and coordinate parallel agent execution.
-- Ensure that the pipeline waits for all agents to complete (or times out) before finalizing the dream.
-- Add error handling for agent failures or timeouts.
-
-#### Step 4: Test Parallel Execution
-- Run full pipeline tests with multiple agents in parallel.
-- Measure and log the total execution time and per-agent completion times.
-- Validate that the IMN file is correctly updated and no data is lost or corrupted.
-
-#### Step 5: Review and Optimize
-- Review thread/process pool size and adjust for optimal performance and resource usage.
-- Profile and optimize agent startup and execution times.
-- Document any bottlenecks or issues for future optimization.
-
----
-
-**Review Checklist for Each Step:**
-- [ ] Step 1: Parallel agent orchestration designed and implemented
-- [ ] Step 2: File locking implemented and validated
-- [ ] Step 3: PipelineInstance refactored for parallelism
-- [ ] Step 4: Parallel execution tested and results validated
-- [ ] Step 5: Performance reviewed and optimized
-
----
-
-**Next Steps:** Begin with Step 1: Design and implement parallel agent orchestration in the pipeline.
-
-### Phase 3: Progressive Streaming
-- [ ] Add backend support for streaming updates (WebSockets/SSE)
-- [ ] Update frontend to handle and display progressive updates
-
-### Phase 4: Caching & Optimization
-- [ ] Cache all agent outputs, including partial/fallbacks
-- [ ] Use semantic similarity for cache lookups
-- [ ] Monitor and tune for performance
-
-## Success Metrics
-- **First Image Prompt**: ≤10 seconds from user submission
-- **Initial Response**: <1 second for placeholder card
-- **Cache Hit Rate**: >30% for similar prompts
-- **User Satisfaction**: Seamless, real-time feedback
-- **Resource Usage**: Efficient agent pooling and memory management
-- **Error Rate**: <5% timeout or failure rate
-- **Scalability**: Support 10+ concurrent users
-
-## Technical Considerations
-- **File Locking**: Use platform-appropriate file locking for IMN file access, or consider a lightweight DB (e.g., SQLite) for concurrent writes.
-- **Agent Communication**: Use message queues for coordination if scaling out.
-- **Frontend**: Use React state to show progressive updates and loading indicators.
-
-## Risk Assessment
-- **Thread Safety**: Mitigated by file locking/atomic ops
-- **Memory Usage**: Managed by warm pool size and idle timeouts
-- **API Rate Limits**: Mitigated by request throttling and caching
-- **Response Quality**: Progressive enhancement and fallback caching
-- **Cache Staleness**: Invalidation and versioning
-- **Error Propagation**: Graceful degradation and retry logic
-
-## Future Enhancements
-- **Model Optimization**: Use quantized/distilled models for faster inference
-- **Edge Caching**: Distribute cache across nodes
-- **Predictive Loading**: Pre-generate common responses
-- **Adaptive Timeouts**: Dynamic timeout based on load
-- **Real-time Collaboration**: Multiple users on same dream
-- **Dream Templates**: Pre-built dream structures
-- **Batch Processing**: Multiple dreams at once
-- **Offline Mode**: Cached responses when API unavailable
+### **Mitigation Strategies**
+1. **Remove Fallbacks**: Force real issue identification
+2. **Increase Resources**: More tokens, larger context windows
+3. **Prompt Engineering**: Optimize for Llama 3.1 Instruct
+4. **Gradual Testing**: Start simple, increase complexity
 
 ## Conclusion
 
-This updated plan provides a clear, actionable roadmap to achieve the 10-second target for dream generation. By priming agents, running them in parallel, streaming progressive updates, and caching all outputs, we ensure a seamless, high-performance user experience.
+The current focus is **functionality over speed**. We have a working Llama 3.1 8B Instruct integration but need to fix core functionality issues before optimizing for performance. The 10-second target is temporarily suspended in favor of getting reliable, high-quality outputs.
 
-**Key Success Factors:**
-1. **Primed Agents**: No cold start delays
-2. **Parallel Processing**: All agents run simultaneously
-3. **Progressive Streaming**: Real-time feedback to user
-4. **Comprehensive Caching**: All outputs cached for future use
-5. **Seamless UX**: Immediate and progressive updates
+**Next Steps**:
+1. Remove fallback systems
+2. Increase token and context limits
+3. Optimize prompts for Llama 3.1 Instruct
+4. Test with simple prompts
+5. Gradually increase complexity
+6. Once working, optimize for speed
 
-**Expected Outcome**: 80%+ reduction in response time (49s → 10s) with a world-class, responsive user experience.
-
----
-
-**Next Steps**: Begin implementation with agent pooling, parallel execution, and progressive streaming framework. 
+This approach ensures we build on a solid foundation of working functionality rather than optimizing broken systems. 

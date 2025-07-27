@@ -1,0 +1,100 @@
+{
+    "pre_production": {
+        "id": "6faefd5c-d7e4-4ef8-ab1e-131f6e658e65",
+        "user_id": "cli-user",
+        "dream_name": "Glowing Mushrooms",
+        "story_prompt": "Explore a magical forest filled with glowing mushrooms.",
+        "initial_goal": "Find the rarest glowing mushroom",
+        "pitch": "Users embark on a mystical journey through a vibrant forest, where they must navigate through the luminescent landscape to discover the rarest glowing mushroom. Along the way, they'll encounter various obstacles and choices that will shape their adventure.",
+        "created_at": "2025-07-27T17:05:00.794053+00:00",
+        "story_structure": {
+            "segment_1": {
+                "scene": "Mushroom Meadow",
+                "tappable_elements": [
+                    "Glowing Mushroom",
+                    "Mysterious Glow"
+                ],
+                "user_choices": [
+                    "Investigate Mushroom",
+                    "Follow Mysterious Glow"
+                ],
+                "next_segments": {
+                    "Investigate Mushroom": "s2a",
+                    "Follow Mysterious Glow": "s2b"
+                }
+            },
+            "segment_2": {
+                "scene": "Glowing Grove",
+                "tappable_elements": [
+                    "Tall Mushroom",
+                    "Glowing River"
+                ],
+                "user_choices": [
+                    "Pick Mushroom",
+                    "Drink from River"
+                ],
+                "next_segments": {
+                    "Pick Mushroom": "s3a",
+                    "Drink from River": "s3b"
+                }
+            },
+            "segment_3": {
+                "scene": "Luminous Lagoon",
+                "tappable_elements": [
+                    "Glowing Fish",
+                    "Mushroom Tree"
+                ],
+                "user_choices": [
+                    "Catch Fish",
+                    "Harvest Mushroom"
+                ],
+                "next_segments": {
+                    "Catch Fish": "s4a",
+                    "Harvest Mushroom": "s4b"
+                }
+            },
+            "segment_4": {
+                "scene": "Rare Mushroom",
+                "tappable_elements": [
+                    "Rare Mushroom",
+                    "Exit Forest"
+                ],
+                "user_choices": [
+                    "Take Mushroom",
+                    "Leave Forest"
+                ],
+                "next_segments": {
+                    "Take Mushroom": "end",
+                    "Leave Forest": "end"
+                }
+            }
+        },
+        "visual_style": "Whimsical 3D animation with soft colors and ethereal lighting.",
+        "interactive_design": "Users tap on interactive elements to progress through the story, and make choices to determine the direction of their adventure.",
+        "director_vision": {
+            "director_vision": "Create a compelling first-person view of the scene",
+            "image_prompt": "First-person perspective of You've reached the edge of a clearing, and in the center stands an enormous, ancient tree, its branches twisted and gnarled with age. The air is heavy with the scent of damp earth and decaying leaves. As you approach the tree, you notice that its trunk is covered in a thick layer of soft, velvety moss, which glows with a soft, ethereal light.",
+            "visual_notes": "Use warm lighting and immersive composition",
+            "approval_criteria": "Image should feel immersive and match the story context"
+        },
+        "first_frame_prompt": "First-person perspective of You've reached the edge of a clearing, and in the center stands an enormous, ancient tree, its branches twisted and gnarled with age. The air is heavy with the scent of damp earth and decaying leaves. As you approach the tree, you notice that its trunk is covered in a thick layer of soft, velvety moss, which glows with a soft, ethereal light.",
+        "visual_notes": "Use warm lighting and immersive composition"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "You've reached the edge of a clearing, and in the center stands an enormous, ancient tree, its branches twisted and gnarled with age. The air is heavy with the scent of damp earth and decaying leaves. As you approach the tree, you notice that its trunk is covered in a thick layer of soft, velvety moss, which glows with a soft, ethereal light.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Examine the tree's roots",
+                "Reach out to touch the glowing moss",
+                "Climb the tree"
+            ]
+        }
+    ],
+    "post_production": {}
+}

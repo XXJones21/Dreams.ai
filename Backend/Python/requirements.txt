@@ -12,3 +12,4 @@ pillow
 psutil
 tqdm
 llama-cpp-python
+huggingface_hub
