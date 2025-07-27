@@ -8,16 +8,21 @@ from dotenv import load_dotenv
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langchain_openai import ChatOpenAI
 from langgraph.channels import last_value
 
 from core.pipeline_instance import PipelineInstance, PipelinePool
 from core.agents import State, Carthir, Narnion, Cenedril, CarthirReview, convert_prompt_to_imn, print_imn_agent
 
+# Import OptimizedLLM instead of Ollama
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
+from optimized_llm import OptimizedLLM
 
 load_dotenv()
 
-llm = ChatOpenAI(model="gemma3:12b", base_url="http://10.1.95.9:11434/v1")
+# Initialize OptimizedLLM with models directory
+models_dir = os.path.join(os.path.dirname(__file__), 'models')
+llm = OptimizedLLM(models_dir=models_dir)
 
 
 ### Converts a user's inital prompt into a basic .imn file stucture
@@ -90,15 +95,16 @@ def Carthir(state: State):
         }
     ]
 
-    reply = llm.invoke(pitch_prompt)
+    # Use OptimizedLLM for Carthir (Creative Director)
+    reply = llm.invoke("carthir", pitch_prompt)
 
     # Debug: print the raw LLM reply before any parsing
-    print(f"\n[DEBUG] Raw LLM reply from Carthir:\n{reply.content}\n")
+    print(f"\n[DEBUG] Raw LLM reply from Carthir:\n{reply}\n")
 
     # Try to parse the reply as JSON, robustly extracting the JSON block if present
     try:
         import json as _json
-        content = reply.content.strip()
+        content = reply.strip()
         # Use regex to extract JSON block inside code block, if present
         codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if codeblock_match:
@@ -116,9 +122,9 @@ def Carthir(state: State):
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
     except Exception as e:
-        print(f"Error parsing Carthir's response as JSON: {e}\nRaw reply: {reply.content}")
+        print(f"Error parsing Carthir's response as JSON: {e}\nRaw reply: {reply}")
         state["carthir_memory"] = None
-        state["messages"] = [{"role": "assistant", "content": reply.content}]
+        state["messages"] = [{"role": "assistant", "content": reply}]
         return state
 
 
@@ -180,10 +186,11 @@ def CarthirReview(state: State):
     ]
 
     try:
-        reply = llm.invoke(director_vision_prompt)
+        # Use OptimizedLLM for CarthirReview (Director's Vision)
+        reply = llm.invoke("carthir", director_vision_prompt)
         
         # Parse the director's vision with improved error handling
-        content = reply.content.strip()
+        content = reply.strip()
         
         # Extract JSON from code blocks if present
         codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
@@ -241,7 +248,7 @@ def CarthirReview(state: State):
         
     except Exception as e:
         print(f"Unexpected error in CarthirReview: {e}")
-        print(f"Raw reply: {reply.content if 'reply' in locals() else 'No reply'}")
+        print(f"Raw reply: {reply if 'reply' in locals() else 'No reply'}")
         # Fallback to basic prompt
         fallback_prompt = f"First-person view of {narnion_result.get('scene_context', 'the scene') if narnion_result else 'the dream world'}"
         state["messages"] = [{"role": "assistant", "content": fallback_prompt}]
@@ -284,12 +291,13 @@ def Narnion(state: State):
         {"role": "system", "content": "You are Narnion, a master of interactive narrative."},
         {"role": "user", "content": prompt}
     ]
-    reply = llm.invoke(story_outline)
+    # Use OptimizedLLM for Narnion (Storyteller)
+    reply = llm.invoke("narnion", story_outline)
 
     # Parse the LLM's JSON output
     try:
         import json as _json
-        content = reply.content.strip()
+        content = reply.strip()
         # Extract JSON block if present
         match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if match:
@@ -314,7 +322,7 @@ def Narnion(state: State):
         write_imn(imn_data, directory)
         print(f"[Narnion] Added new scene to in_production.")
     except Exception as e:
-        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
+        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply}")
 
     return state
 
@@ -374,10 +382,11 @@ def Cenedril(state: State):
         ]
 
         try:
-            reply = llm.invoke(image_prompt)
+            # Use OptimizedLLM for Cenedril (Cinematographer)
+            reply = llm.invoke("cenedril", image_prompt)
 
             # Save the result in the .imn file
-            first_frame_prompt = reply.content.strip()
+            first_frame_prompt = reply.strip()
             imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
             directory = os.path.join("..", "Dreams")
             write_imn(imn_data, directory)

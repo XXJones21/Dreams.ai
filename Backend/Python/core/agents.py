@@ -14,12 +14,19 @@ from typing import Annotated, Literal, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.channels import last_value
 from core.imn_utils import write_imn, read_imn, create_imn_structure, validate_imn_structure, get_imn_filelock
-from langchain_openai import ChatOpenAI
 
-# Load environment and initialize LLM (if needed)
+# Import OptimizedLLM instead of Ollama
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'models'))
+from optimized_llm import OptimizedLLM
+
+# Load environment and initialize OptimizedLLM
 from dotenv import load_dotenv
 load_dotenv()
-llm = ChatOpenAI(model="gemma3:12b", base_url="http://10.1.95.9:11434/v1")
+
+# Initialize OptimizedLLM with models directory
+models_dir = os.path.join(os.path.dirname(__file__), '..', 'models')
+llm = OptimizedLLM(models_dir=models_dir)
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -36,22 +43,56 @@ def convert_prompt_to_imn(state: State):
     """
     Creates the .imn file using Carthir's output in the state.
     """
-    print(f"\n[DEBUG] State at start of convert_prompt_to_imn:\n{json.dumps(state, indent=2, default=str)}\n")
+    print(f"\n[DEBUG] ===== CONVERT_PROMPT_TO_IMN ANALYSIS =====")
+    print(f"[DEBUG] State at start of convert_prompt_to_imn:")
+    print(json.dumps(state, indent=2, default=str))
+    
+    # Detailed analysis of carthir_memory
     carthir_mem = state.get("carthir_memory", {})
+    print(f"[DEBUG] carthir_memory type: {type(carthir_mem)}")
+    print(f"[DEBUG] carthir_memory value: {carthir_mem}")
+    
+    if carthir_mem is None:
+        print(f"[DEBUG] WARNING: carthir_memory is None!")
+        carthir_mem = {}
+    elif not isinstance(carthir_mem, dict):
+        print(f"[DEBUG] WARNING: carthir_memory is not a dict, it's: {type(carthir_mem)}")
+        carthir_mem = {}
+    
+    # Extract fields with detailed logging
     dream_name = carthir_mem.get("dream_name")
     story_prompt = carthir_mem.get("story_prompt")
     initial_goal = carthir_mem.get("initial_goal")
     pitch = carthir_mem.get("pitch")
+    
+    print(f"[DEBUG] Extracted fields:")
+    print(f"[DEBUG]   dream_name: {repr(dream_name)} (type: {type(dream_name)})")
+    print(f"[DEBUG]   story_prompt: {repr(story_prompt)} (type: {type(story_prompt)})")
+    print(f"[DEBUG]   initial_goal: {repr(initial_goal)} (type: {type(initial_goal)})")
+    print(f"[DEBUG]   pitch: {repr(pitch)} (type: {type(pitch)})")
+    
     user_id = state.get("user_id", "user-uuid-placeholder")
+    print(f"[DEBUG] user_id: {user_id}")
 
     if not state.get("id"):
         dream_id = str(uuid.uuid4())
         state["id"] = dream_id
+        print(f"[DEBUG] Generated new dream_id: {dream_id}")
     else:
         dream_id = state["id"]
+        print(f"[DEBUG] Using existing dream_id: {dream_id}")
 
     directory = os.path.join("..", "Dreams")
     filename = os.path.join(directory, f"{dream_id}.imn")
+    print(f"[DEBUG] Target filename: {filename}")
+
+    print(f"[DEBUG] Calling create_imn_structure with:")
+    print(f"[DEBUG]   dream_id: {dream_id}")
+    print(f"[DEBUG]   user_id: {user_id}")
+    print(f"[DEBUG]   dream_name: {dream_name}")
+    print(f"[DEBUG]   story_prompt: {story_prompt}")
+    print(f"[DEBUG]   initial_goal: {initial_goal}")
+    print(f"[DEBUG]   pitch: {pitch}")
 
     imn_data = create_imn_structure(
         dream_id=dream_id,
@@ -61,11 +102,18 @@ def convert_prompt_to_imn(state: State):
         initial_goal=initial_goal,
         pitch=pitch
     )
+    
+    print(f"[DEBUG] create_imn_structure returned: {type(imn_data)}")
+    print(f"[DEBUG] IMN data keys: {list(imn_data.keys()) if isinstance(imn_data, dict) else 'Not a dict'}")
 
     imn_file_path = os.path.join(directory, f"{dream_id}.imn")
+    print(f"[DEBUG] Writing to file: {imn_file_path}")
+    
     # Use file lock for writing
     with get_imn_filelock(imn_file_path):
         write_imn(imn_data, directory)
+    
+    print(f"[DEBUG] ===== END CONVERT_PROMPT_TO_IMN ANALYSIS =====\n")
     return state
 
 
@@ -102,16 +150,73 @@ def Carthir(state: State):
         }
     ]
 
-    reply = llm.invoke(pitch_prompt)
-    print(f"\n[DEBUG] Raw LLM reply from Carthir:\n{reply.content}\n")
+    # Use OptimizedLLM for Carthir (Creative Director)
+    reply = llm.invoke("carthir", pitch_prompt)
+    
+    # COMPREHENSIVE LOGGING TO VALIDATE ASSUMPTIONS
+    print(f"\n[DEBUG] ===== CARTHIR RESPONSE ANALYSIS =====")
+    print(f"[DEBUG] Raw reply type: {type(reply)}")
+    print(f"[DEBUG] Raw reply: {reply}")
+    
+    # Check if reply is a dict with metadata
+    if isinstance(reply, dict):
+        print(f"[DEBUG] Reply is a dict with keys: {list(reply.keys())}")
+        if 'content' in reply:
+            print(f"[DEBUG] Content field type: {type(reply['content'])}")
+            print(f"[DEBUG] Content field value: {repr(reply['content'])}")
+            print(f"[DEBUG] Content length: {len(reply['content']) if reply['content'] else 0}")
+        if 'usage' in reply:
+            print(f"[DEBUG] Usage field: {reply['usage']}")
+        if 'inference_time' in reply:
+            print(f"[DEBUG] Inference time: {reply['inference_time']}")
+        if 'agent_name' in reply:
+            print(f"[DEBUG] Agent name: {reply['agent_name']}")
+    else:
+        print(f"[DEBUG] Reply is not a dict, it's: {type(reply)}")
+    
+    print(f"[DEBUG] ===== END RESPONSE ANALYSIS =====\n")
 
     try:
         import json as _json
-        content = reply.content.strip()
+        
+        # Handle the response format properly
+        if isinstance(reply, dict) and 'content' in reply:
+            content = reply['content'].strip()
+        else:
+            content = str(reply).strip()
+            
+        print(f"[DEBUG] Extracted content: {repr(content)}")
+        print(f"[DEBUG] Content length after strip: {len(content)}")
+        
+        # Check if content looks like JSON
+        if content.startswith('{') and content.endswith('}'):
+            print(f"[DEBUG] Content appears to be JSON format")
+        elif '```json' in content or '```' in content:
+            print(f"[DEBUG] Content appears to have code blocks")
+        else:
+            print(f"[DEBUG] Content does not appear to be JSON format")
+            print(f"[DEBUG] First 100 chars: {repr(content[:100])}")
+            print(f"[DEBUG] Last 100 chars: {repr(content[-100:])}")
+        
+        # Use regex to extract JSON block inside code block, if present
         codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if codeblock_match:
             content = codeblock_match.group(1).strip()
+            print(f"[DEBUG] Extracted JSON from code block: {repr(content)}")
+        
+        # Try to find JSON object boundaries if not already found
+        if not (content.startswith('{') and content.endswith('}')):
+            json_start = content.find('{')
+            json_end = content.rfind('}')
+            if json_start != -1 and json_end != -1 and json_end > json_start:
+                content = content[json_start:json_end + 1]
+                print(f"[DEBUG] Extracted JSON using boundaries: {repr(content)}")
+        
+        print(f"[DEBUG] Final content to parse: {repr(content)}")
+        
         result = _json.loads(content)
+        print(f"[DEBUG] Successfully parsed JSON: {result}")
+        
         state["carthir_memory"] = {
             "dream_name": result.get("dream_name"),
             "story_prompt": result.get("story_prompt"),
@@ -122,9 +227,17 @@ def Carthir(state: State):
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
     except Exception as e:
-        print(f"Error parsing Carthir's response as JSON: {e}\nRaw reply: {reply.content}")
+        print(f"[DEBUG] ===== JSON PARSING ERROR =====")
+        print(f"[DEBUG] Error type: {type(e).__name__}")
+        print(f"[DEBUG] Error message: {str(e)}")
+        print(f"[DEBUG] Raw reply: {reply}")
+        print(f"[DEBUG] ===== END ERROR ANALYSIS =====\n")
+        
         state["carthir_memory"] = None
-        state["messages"] = [{"role": "assistant", "content": reply.content}]
+        if isinstance(reply, dict) and 'content' in reply:
+            state["messages"] = [{"role": "assistant", "content": reply.get("content", "")}]
+        else:
+            state["messages"] = [{"role": "assistant", "content": str(reply)}]
         return state
 
 
@@ -187,8 +300,9 @@ def CarthirReview(state: State):
     ]
 
     try:
-        reply = llm.invoke(director_vision_prompt)
-        content = reply.content.strip()
+        # Use OptimizedLLM for CarthirReview (Director's Vision)
+        reply = llm.invoke("carthir", director_vision_prompt)
+        content = reply.get("content", "").strip()
         codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if codeblock_match:
             content = codeblock_match.group(1).strip()
@@ -228,7 +342,8 @@ def CarthirReview(state: State):
         print(f"[CarthirReview] Using fallback director vision due to parsing error.")
     except Exception as e:
         print(f"Unexpected error in CarthirReview: {e}")
-        print(f"Raw reply: {reply.content if 'reply' in locals() else 'No reply'}")
+        print(f"Raw reply: {reply if 'reply' in locals() else 'No reply'}")
+        # Fallback to basic prompt
         fallback_prompt = f"First-person view of {narnion_result.get('scene_context', 'the scene') if narnion_result else 'the dream world'}"
         state["messages"] = [{"role": "assistant", "content": fallback_prompt}]
     return state
@@ -265,10 +380,11 @@ def Narnion(state: State):
         {"role": "system", "content": "You are Narnion, a master of interactive narrative."},
         {"role": "user", "content": prompt}
     ]
-    reply = llm.invoke(story_outline)
+    # Use OptimizedLLM for Narnion (Storyteller)
+    reply = llm.invoke("narnion", story_outline)
     try:
         import json as _json
-        content = reply.content.strip()
+        content = reply.get("content", "").strip()
         match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if match:
             content = match.group(1).strip()
@@ -292,7 +408,7 @@ def Narnion(state: State):
             write_imn(imn_data, directory)
         print(f"[Narnion] Added new scene to in_production.")
     except Exception as e:
-        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
+        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply}")
     return state
 
 
@@ -339,8 +455,9 @@ def Cenedril(state: State):
             {"role": "user", "content": prompt}
         ]
         try:
-            reply = llm.invoke(image_prompt)
-            first_frame_prompt = reply.content.strip()
+            # Use OptimizedLLM for Cenedril (Cinematographer)
+            reply = llm.invoke("cenedril", image_prompt)
+            first_frame_prompt = reply.get("content", "").strip()
             imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
             directory = os.path.join("..", "Dreams")
             # Use file lock for writing
