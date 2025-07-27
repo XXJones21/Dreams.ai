@@ -20,15 +20,19 @@ from langchain_community.chat_models import ChatLlamaCpp
 from dotenv import load_dotenv
 load_dotenv()
 
-# Initialize the local GGUF model with chat interface for compatibility
+# Initialize the local GGUF model with optimized settings for performance
 llm = ChatLlamaCpp(
     model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
     temperature=0.7,
-    max_tokens=2048,
+    max_tokens=1024,  # Reduced for faster generation
     top_p=0.9,
-    verbose=False,  # Set to True for debugging
-    n_ctx=4096,  # Context window size
-    n_threads=8,  # Adjust based on your CPU cores
+    verbose=False,
+    n_ctx=2048,  # Reduced context window for speed
+    n_threads=16,  # Increased threads (adjust based on your CPU)
+    n_batch=64,  # Batch size for faster processing
+    use_mmap=True,  # Memory mapping for faster loading
+    use_mlock=False,  # Disable memory locking to allow OS management
+    f16_kv=True,  # Use half precision for key-value cache to save memory
 )
 
 class State(TypedDict):

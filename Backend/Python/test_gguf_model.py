@@ -49,14 +49,18 @@ def test_gguf_model():
     # Test loading the model
     print("\n🤖 Testing model loading...")
     try:
-        llm = LlamaCpp(
+        from langchain_community.chat_models import ChatLlamaCpp
+        llm = ChatLlamaCpp(
             model_path=model_path,
             temperature=0.7,
             max_tokens=100,  # Reduced for testing
             top_p=0.9,
             verbose=False,
             n_ctx=2048,  # Reduced for testing
-            n_threads=4,  # Conservative for testing
+            n_threads=8,  # Conservative for testing
+            n_batch=64,
+            use_mmap=True,
+            f16_kv=True,
         )
         print("✅ Model loaded successfully")
     except Exception as e:

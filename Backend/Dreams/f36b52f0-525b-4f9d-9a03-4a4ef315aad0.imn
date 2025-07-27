@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "f36b52f0-525b-4f9d-9a03-4a4ef315aad0",
+        "user_id": "test-corgi",
+        "dream_name": "Pawprints in Slumber",
+        "story_prompt": "You find yourself in a serene meadow, where a corgi lies peacefully, its chest rising and falling with each gentle breath.",
+        "initial_goal": "To maintain the peaceful atmosphere and ensure that nothing disturbs the corgi's slumber.",
+        "pitch": "(The camera pans over the meadow, showing the corgi in the distance. As we draw closer, the sound of a stream burbling in the background creates a soothing ambiance. Suddenly, a butterfly flutters by, but the corgi remains completely still and peaceful.)",
+        "created_at": "2025-07-27T18:51:20.625116+00:00",
+        "director_vision": {
+            "director_vision": "Create a compelling first-person view of the scene",
+            "image_prompt": "First-person perspective of The corgi, seemingly entranced by the peaceful atmosphere of the meadow, begins to slowly stretch its legs.",
+            "visual_notes": "Use warm lighting and immersive composition",
+            "approval_criteria": "Image should feel immersive and match the story context"
+        },
+        "first_frame_prompt": "First-person perspective of The corgi, seemingly entranced by the peaceful atmosphere of the meadow, begins to slowly stretch its legs.",
+        "visual_notes": "Use warm lighting and immersive composition"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "The corgi, seemingly entranced by the peaceful atmosphere of the meadow, begins to slowly stretch its legs.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Gently approach the corgi and try to get its attention.",
+                "Sit down on a nearby rock or tree stump and observe the corgi in its natural state.",
+                "Try to communicate with the corgi by using animal-like gestures or vocalizations."
+            ]
+        }
+    ],
+    "post_production": {}
+}

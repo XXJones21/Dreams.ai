@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langchain_community.chat_models import ChatLlamaCpp
 from langgraph.channels import last_value
 
 from core.pipeline_instance import PipelineInstance, PipelinePool
@@ -18,16 +17,7 @@ from core.imn_utils import read_imn, write_imn
 
 load_dotenv()
 
-# Initialize the local GGUF model with chat interface for compatibility
-llm = ChatLlamaCpp(
-    model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
-    temperature=0.7,
-    max_tokens=2048,
-    top_p=0.9,
-    verbose=False,  # Set to True for debugging
-    n_ctx=4096,  # Context window size
-    n_threads=8,  # Adjust based on your CPU cores
-)
+# Note: GGUF model is initialized in core/agents.py - no duplicate needed here
 
 
 # Note: Agent functions are imported from core.agents module
