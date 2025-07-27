@@ -13,13 +13,48 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.channels import last_value
-from core.imn_utils import write_imn, read_imn, create_imn_structure, validate_imn_structure, get_imn_filelock
-from langchain_openai import ChatOpenAI
+from core.imn_utils import (
+    write_imn, read_imn, create_imn_structure, validate_imn_structure, get_imn_filelock,
+    parse_carthir_response, parse_director_vision_response, parse_narnion_response, create_scene_for_imn
+)
+from langchain_community.chat_models import ChatLlamaCpp
 
 # Load environment and initialize LLM (if needed)
 from dotenv import load_dotenv
 load_dotenv()
-llm = ChatOpenAI(model="gemma3:12b", base_url="http://10.1.95.9:11434/v1")
+
+# Initialize the local GGUF model with optimized settings for performance
+# Detect if running in Flask server environment and adjust accordingly
+import threading
+import os
+
+# Check if we're running in a multi-threaded environment (Flask)
+is_flask_server = threading.active_count() > 1 or os.environ.get('FLASK_RUN_PORT') is not None
+
+# Optimize threads for environment
+if is_flask_server:
+    # Conservative threading for Flask server to avoid contention
+    optimal_threads = min(8, os.cpu_count() // 2)
+    print(f"[GGUF] Detected Flask server environment - using {optimal_threads} threads")
+else:
+    # Aggressive threading for CLI/standalone
+    optimal_threads = min(16, os.cpu_count())
+    print(f"[GGUF] Detected CLI environment - using {optimal_threads} threads")
+
+llm = ChatLlamaCpp(
+    model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+    temperature=0.7,
+    max_tokens=1024,  # Reduced for faster generation
+    top_p=0.9,
+    verbose=True,  # Enable to see CUDA status
+    n_ctx=2048,  # Reduced context window for speed
+    n_threads=optimal_threads,  # Dynamic thread allocation
+    n_batch=512,  # Larger batch for GPU processing
+    use_mmap=True,  # Memory mapping for faster loading
+    use_mlock=False,  # Disable memory locking to allow OS management
+    f16_kv=True,  # Use half precision for key-value cache to save memory
+    n_gpu_layers=35,  # Offload layers to GPU (try max layers first)
+)
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -35,15 +70,38 @@ class convert_prompt_to_imn(TypedDict):
 def convert_prompt_to_imn(state: State):
     """
     Creates the .imn file using Carthir's output in the state.
+    Handles both successful and failed Carthir parsing with graceful fallbacks.
     """
     print(f"\n[DEBUG] State at start of convert_prompt_to_imn:\n{json.dumps(state, indent=2, default=str)}\n")
-    carthir_mem = state.get("carthir_memory", {})
-    dream_name = carthir_mem.get("dream_name")
-    story_prompt = carthir_mem.get("story_prompt")
-    initial_goal = carthir_mem.get("initial_goal")
-    pitch = carthir_mem.get("pitch")
+    
+    # Handle both successful parsing and None fallback from Carthir
+    carthir_mem = state.get("carthir_memory")
+    
+    if carthir_mem is None:
+        # Carthir parsing failed - create fallback dream data
+        original_prompt = ""
+        if state.get("messages") and len(state["messages"]) > 0:
+            first_message = state["messages"][0]
+            if hasattr(first_message, 'content'):
+                original_prompt = first_message.content
+            elif isinstance(first_message, dict):
+                original_prompt = first_message.get("content", "")
+        
+        print(f"[convert_prompt_to_imn] Carthir parsing failed, using fallback data")
+        dream_name = f"Dream: {original_prompt[:30]}..." if original_prompt else "Untitled Dream"
+        story_prompt = original_prompt or "A mysterious dream adventure"
+        initial_goal = "To explore and discover the dream's meaning"
+        pitch = f"A dream journey based on: {original_prompt}" if original_prompt else "A mysterious dream adventure"
+    else:
+        # Carthir parsing succeeded - use the parsed data
+        dream_name = carthir_mem.get("dream_name")
+        story_prompt = carthir_mem.get("story_prompt")
+        initial_goal = carthir_mem.get("initial_goal")
+        pitch = carthir_mem.get("pitch")
+
     user_id = state.get("user_id", "user-uuid-placeholder")
 
+    # Generate dream ID if not present
     if not state.get("id"):
         dream_id = str(uuid.uuid4())
         state["id"] = dream_id
@@ -51,8 +109,8 @@ def convert_prompt_to_imn(state: State):
         dream_id = state["id"]
 
     directory = os.path.join("..", "Dreams")
-    filename = os.path.join(directory, f"{dream_id}.imn")
 
+    # Create IMN structure with available data
     imn_data = create_imn_structure(
         dream_id=dream_id,
         user_id=user_id,
@@ -105,24 +163,18 @@ def Carthir(state: State):
     reply = llm.invoke(pitch_prompt)
     print(f"\n[DEBUG] Raw LLM reply from Carthir:\n{reply.content}\n")
 
-    try:
-        import json as _json
-        content = reply.content.strip()
-        codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
-        if codeblock_match:
-            content = codeblock_match.group(1).strip()
-        result = _json.loads(content)
-        state["carthir_memory"] = {
-            "dream_name": result.get("dream_name"),
-            "story_prompt": result.get("story_prompt"),
-            "initial_goal": result.get("initial_goal"),
-            "pitch": result.get("pitch")
-        }
-        state["messages"] = [{"role": "assistant", "content": result.get("pitch", "")}] 
+    # Use centralized, robust JSON parsing
+    parsed_data = parse_carthir_response(reply.content)
+    
+    if parsed_data:
+        # Successfully parsed - store in state for IMN structure
+        state["carthir_memory"] = parsed_data
+        state["messages"] = [{"role": "assistant", "content": parsed_data["pitch"]}]
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
-    except Exception as e:
-        print(f"Error parsing Carthir's response as JSON: {e}\nRaw reply: {reply.content}")
+    else:
+        # Failed to parse - use fallback
+        print(f"[Carthir] Failed to parse response, using fallback")
         state["carthir_memory"] = None
         state["messages"] = [{"role": "assistant", "content": reply.content}]
         return state
@@ -158,8 +210,20 @@ def CarthirReview(state: State):
     print(f"\n[CarthirReview] Narnion's Latest Scene:")
     print(json.dumps(narnion_result, indent=2, default=str))
 
+    # Handle both successful and failed Carthir parsing
+    if carthir_mem is None:
+        print(f"[CarthirReview] Carthir memory is None, using fallback vision")
+        original_vision = "A compelling dream scene"
+        # Try to get the original prompt from IMN data
+        pre_prod = imn_data.get("pre_production", {})
+        story_prompt = pre_prod.get("story_prompt", "")
+        if story_prompt:
+            original_vision = f"A dream based on: {story_prompt}"
+    else:
+        original_vision = carthir_mem.get('pitch', 'A compelling dream scene')
+
     director_prompt = (
-        f"Original Vision: {carthir_mem.get('pitch', '')}\n\n"
+        f"Original Vision: {original_vision}\n\n"
         f"Story Context: {narnion_result.get('scene_context', '') if narnion_result else 'No scene yet'}\n\n"
         f"As the Director, create a detailed visual prompt for the first frame that captures:\n"
         f"1. The mood and atmosphere from your original vision\n"
@@ -188,49 +252,36 @@ def CarthirReview(state: State):
 
     try:
         reply = llm.invoke(director_vision_prompt)
-        content = reply.content.strip()
-        codeblock_match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
-        if codeblock_match:
-            content = codeblock_match.group(1).strip()
-        content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
-        json_start = content.find('{')
-        json_end = content.rfind('}')
-        if json_start != -1 and json_end != -1 and json_end > json_start:
-            content = content[json_start:json_end + 1]
-        director_vision = json.loads(content)
-        required_fields = ["director_vision", "image_prompt", "visual_notes", "approval_criteria"]
-        for field in required_fields:
-            if field not in director_vision:
-                director_vision[field] = f"Default {field.replace('_', ' ')}"
+        
+        # Use centralized, robust JSON parsing with built-in fallbacks
+        director_vision = parse_director_vision_response(reply.content)
+        
+        # Store in IMN structure
         imn_data["pre_production"]["director_vision"] = director_vision
         directory = os.path.join("..", "Dreams")
+        
         # Use file lock for writing
         with get_imn_filelock(imn_file_path):
             write_imn(imn_data, directory)
+        
+        # Update state for next agent
         state["messages"] = [{"role": "assistant", "content": json.dumps(director_vision)}]
+        
         print(f"[CarthirReview] Director's vision generated and stored.")
         print(f"Image Prompt: {director_vision.get('image_prompt', 'No prompt generated')}")
-    except json.JSONDecodeError as e:
-        print(f"JSON parsing error in CarthirReview: {e}")
-        print(f"Attempted to parse: {content[:200]}...")
-        fallback_vision = {
-            "director_vision": f"Create a compelling first-person view of the scene",
-            "image_prompt": f"First-person perspective of {narnion_result.get('scene_context', 'the dream world') if narnion_result else 'the scene'}",
-            "visual_notes": "Use warm lighting and immersive composition",
-            "approval_criteria": "Image should feel immersive and match the story context"
-        }
+        
+    except Exception as e:
+        print(f"[CarthirReview] Unexpected error: {e}")
+        # Even if LLM call fails, use robust fallback
+        fallback_vision = parse_director_vision_response("")  # Empty string triggers full fallback
         imn_data["pre_production"]["director_vision"] = fallback_vision
         directory = os.path.join("..", "Dreams")
-        # Use file lock for writing
+        
         with get_imn_filelock(imn_file_path):
             write_imn(imn_data, directory)
+        
         state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
-        print(f"[CarthirReview] Using fallback director vision due to parsing error.")
-    except Exception as e:
-        print(f"Unexpected error in CarthirReview: {e}")
-        print(f"Raw reply: {reply.content if 'reply' in locals() else 'No reply'}")
-        fallback_prompt = f"First-person view of {narnion_result.get('scene_context', 'the scene') if narnion_result else 'the dream world'}"
-        state["messages"] = [{"role": "assistant", "content": fallback_prompt}]
+        print(f"[CarthirReview] Using complete fallback due to LLM error.")
     return state
 
 
@@ -266,33 +317,27 @@ def Narnion(state: State):
         {"role": "user", "content": prompt}
     ]
     reply = llm.invoke(story_outline)
-    try:
-        import json as _json
-        content = reply.content.strip()
-        match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
-        if match:
-            content = match.group(1).strip()
-        result = _json.loads(content)
-        scene_context = result.get("scene_context")
-        actions = result.get("actions", [])
-        new_scene = {
-            "scene_id": len(imn_data["in_production"]) + 1,
-            "frame_image": None,
-            "timestamp": None,
-            "scene_context": scene_context,
-            "user_action": None,
-            "tap_location": None,
-            "object_tapped": None,
-            "actions": actions
-        }
+    
+    # Use centralized, robust JSON parsing
+    parsed_scene = parse_narnion_response(reply.content)
+    
+    if parsed_scene:
+        # Successfully parsed - create proper IMN scene structure
+        scene_number = len(imn_data["in_production"]) + 1
+        new_scene = create_scene_for_imn(parsed_scene, scene_number)
+        
+        # Add to IMN structure
         imn_data["in_production"].append(new_scene)
         directory = os.path.join("..", "Dreams")
+        
         # Use file lock for writing
         with get_imn_filelock(imn_file_path):
             write_imn(imn_data, directory)
+        
         print(f"[Narnion] Added new scene to in_production.")
-    except Exception as e:
-        print(f"Error parsing Narnion's response: {e}\nRaw reply: {reply.content}")
+    else:
+        print(f"[Narnion] Failed to parse scene response - skipping scene creation")
+        print(f"[Narnion] Raw reply: {reply.content}")
     return state
 
 

@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "e2560e74-8525-4783-b130-80a66837ba6f",
+        "user_id": "backup-test",
+        "dream_name": "Echoes of Tomorrow",
+        "story_prompt": "In a world where technology has advanced to the point of near-singularity, you begin to experience strange echoes from parallel universes.",
+        "initial_goal": "To uncover the source of these echoes and prevent catastrophic events from occurring across multiple timelines.",
+        "pitch": "(The camera pans over a futuristic cityscape before zooming in on our protagonist, who is frantically searching through data streams. The air is filled with the hum of technology and the faint whispers of parallel universes.)",
+        "created_at": "2025-07-27T19:48:01.077222+00:00",
+        "director_vision": {
+            "director_vision": "Create a sense of urgency and anticipation as the protagonist finally locates the data they've been searching for. The atmosphere should be charged with excitement, yet tempered with a hint of uncertainty. The visual elements should evoke a sense of 'aha' moment, where the protagonist's eyes widen in surprise and realization.",
+            "image_prompt": "A futuristic cityscape at dusk, with towering skyscrapers and neon lights reflecting off the wet pavement. In the foreground, our protagonist is seated in front of a holographic display projecting data streams and graphs. The protagonist's eyes are fixed intently on the screen, their expression a mix of concentration and surprise. The lighting should be warm and golden, with deep shadows accentuating the textures and details of the scene.",
+            "visual_notes": "Style: High-contrast, cinematic visuals with a focus on texture and detail. Lighting: Warm, golden light with deep shadows to create depth and atmosphere. Composition: A mix of close-ups and wide shots to capture the protagonist's intense expression and the futuristic cityscape.",
+            "approval_criteria": "The final image should evoke a sense of 'aha' moment, where the protagonist's eyes widen in surprise and realization. The lighting and composition should be balanced to create depth and atmosphere, while maintaining a clear focus on the protagonist's face and expression."
+        },
+        "first_frame_prompt": "A futuristic cityscape at dusk, with towering skyscrapers and neon lights reflecting off the wet pavement. In the foreground, our protagonist is seated in front of a holographic display projecting data streams and graphs. The protagonist's eyes are fixed intently on the screen, their expression a mix of concentration and surprise. The lighting should be warm and golden, with deep shadows accentuating the textures and details of the scene.",
+        "visual_notes": "Style: High-contrast, cinematic visuals with a focus on texture and detail. Lighting: Warm, golden light with deep shadows to create depth and atmosphere. Composition: A mix of close-ups and wide shots to capture the protagonist's intense expression and the futuristic cityscape."
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "The protagonist's eyes widen as they finally locate the data they've been searching for. The air is charged with anticipation as the protagonist's fingers hover over the keyboard, poised to act.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Interrogate the data to uncover its secrets",
+                "Try to access the data's encrypted layers",
+                "Disconnect from the system and escape into the city"
+            ]
+        }
+    ],
+    "post_production": {}
+}
