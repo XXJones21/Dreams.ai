@@ -166,3 +166,15 @@ cython_debug/
 # Generated files
 *.imn
 !Backend/Dreams/*.imn
+
+# AI Models and Large Files
+*.gguf
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.onnx
+models/
+Backend/Python/models/
+*.model
+*.weights

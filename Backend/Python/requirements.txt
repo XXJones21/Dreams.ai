@@ -10,3 +10,5 @@ flask-cors
 requests
 pillow
 psutil
+tqdm
+llama-cpp-python
