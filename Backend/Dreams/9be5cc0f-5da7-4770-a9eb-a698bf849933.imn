@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "9be5cc0f-5da7-4770-a9eb-a698bf849933",
+        "user_id": "test-user-123",
+        "dream_name": "Dream: A corgi taking a snooze in a d...",
+        "story_prompt": "A corgi taking a snooze in a dark forest",
+        "initial_goal": "To explore and discover the dream's meaning",
+        "pitch": "A dream journey based on: A corgi taking a snooze in a dark forest",
+        "created_at": "2025-07-27T19:23:04.880215+00:00",
+        "director_vision": {
+            "director_vision": "Capture the eerie and suspenseful atmosphere of a dark forest, while also conveying Thistle's fear and alarm as she encounters the glowing eyes. The image should evoke a sense of unease and tension in the viewer.",
+            "image_prompt": "A dark and foreboding forest with towering trees that block out most of the moonlight. In the center of the image, Thistle, a small corgi, stands frozen in fear as she gazes up at a pair of glowing eyes staring back at her from the darkness.",
+            "visual_notes": "The color palette should be muted and dark, with shades of indigo, charcoal grey, and deep brown. The lighting should be soft and diffused, with long shadows stretching across the forest floor. Thistle's fur should be depicted as fluffy and textured, while her eyes should be wide with fear.",
+            "approval_criteria": "The final image should capture the eerie atmosphere of the dark forest, while also conveying Thistle's fear and alarm as she encounters the glowing eyes. The image should have a sense of tension and unease in it, and should draw the viewer into the scene."
+        },
+        "first_frame_prompt": "A dark and foreboding forest with towering trees that block out most of the moonlight. In the center of the image, Thistle, a small corgi, stands frozen in fear as she gazes up at a pair of glowing eyes staring back at her from the darkness.",
+        "visual_notes": "The color palette should be muted and dark, with shades of indigo, charcoal grey, and deep brown. The lighting should be soft and diffused, with long shadows stretching across the forest floor. Thistle's fur should be depicted as fluffy and textured, while her eyes should be wide with fear."
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "Thistle's eyes lock onto a pair of glowing eyes staring back at her from the darkness. The air is heavy with an eerie silence, and Thistle's fur stands on end as she takes a step back, her ears perked up in alarm.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Investigate the source of the glowing eyes",
+                "Turn and run away from the unknown threat",
+                "Stand her ground and prepare to defend herself"
+            ]
+        }
+    ],
+    "post_production": {}
+}

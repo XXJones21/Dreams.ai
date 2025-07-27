@@ -169,3 +169,8 @@ cython_debug/
 
 # Python models directory
 !Backend/Python/models/
+
+# Exclude large model files (GGUF, etc.)
+*.gguf
+*.bin
+*.safetensors
