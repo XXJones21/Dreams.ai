@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "228c4f7c-dc2c-42e2-9119-1eff80abd152",
+        "user_id": "cuda-test",
+        "dream_name": "Echoes of Dawn",
+        "story_prompt": "You wake up to find that your memories are trapped in a series of forgotten photographs.",
+        "initial_goal": "To uncover the truth about yourself by finding and restoring all of the missing photographs.",
+        "pitch": "(In 'Echoes of Dawn', our protagonist embarks on a poignant journey through fragmented memories. As they piece together their past, they begin to confront the truth about themselves and the world around them.)",
+        "created_at": "2025-07-27T19:21:39.887757+00:00",
+        "director_vision": {
+            "director_vision": "Echoes of Dawn: A poignant and introspective journey through fragmented memories, where the protagonist confronts the truth about themselves and their world.",
+            "image_prompt": "A close-up shot of a worn-out photograph in an old, dimly lit room. The image should evoke a sense of nostalgia and melancholy. The protagonist's hand is gently holding the photograph, with their eyes narrowed in concentration as they try to remember the people and places depicted in the image.",
+            "visual_notes": "Style: Warm, muted tones with a touch of sepia. Lighting: Soft, diffused lighting to create a sense of nostalgia and intimacy. Composition: A close-up shot of the photograph, with the protagonist's hand and face softly out of focus in the background.",
+            "approval_criteria": "The final image should evoke a strong sense of nostalgia and melancholy. The protagonist's expression and posture should convey a sense of concentration and introspection. The overall tone of the image should be warm, intimate, and hauntingly beautiful."
+        },
+        "first_frame_prompt": "A close-up shot of a worn-out photograph in an old, dimly lit room. The image should evoke a sense of nostalgia and melancholy. The protagonist's hand is gently holding the photograph, with their eyes narrowed in concentration as they try to remember the people and places depicted in the image.",
+        "visual_notes": "Style: Warm, muted tones with a touch of sepia. Lighting: Soft, diffused lighting to create a sense of nostalgia and intimacy. Composition: A close-up shot of the photograph, with the protagonist's hand and face softly out of focus in the background."
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "The protagonist, standing in a dimly lit room, stares at an old, worn-out photograph. Their eyes narrow as they try to remember the people and places depicted in the image.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Try to recognize the faces in the photograph",
+                "Reach out to touch the photograph, hoping for a spark of memory",
+                "Turn away from the photograph and begin searching the room for other clues"
+            ]
+        }
+    ],
+    "post_production": {}
+}

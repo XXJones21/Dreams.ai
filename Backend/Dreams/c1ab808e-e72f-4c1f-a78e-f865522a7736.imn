@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "c1ab808e-e72f-4c1f-a78e-f865522a7736",
+        "user_id": "test-user-123",
+        "dream_name": "Dream: A corgi taking a snooze in a d...",
+        "story_prompt": "A corgi taking a snooze in a dark forest",
+        "initial_goal": "To explore and discover the dream's meaning",
+        "pitch": "A dream journey based on: A corgi taking a snooze in a dark forest",
+        "created_at": "2025-07-27T19:14:12.403606+00:00",
+        "director_vision": {
+            "director_vision": "Create a compelling first-person view of the scene",
+            "image_prompt": "First-person perspective of the dream scene",
+            "visual_notes": "Use warm lighting and immersive composition",
+            "approval_criteria": "Image should feel immersive and match the story context"
+        },
+        "first_frame_prompt": "First-person perspective of the dream scene",
+        "visual_notes": "Use warm lighting and immersive composition"
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "Thistle, now deep within the dark forest, comes across a faint, flickering light in the distance. She pauses, her ears perked up, as she tries to determine the source of the light.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Investigate the light further, possibly getting closer to it.",
+                "Continue on Thistle's current path, trying to find a way out of the dark forest.",
+                "Stop and take a moment to sniff the air, trying to pick up any other scents or sounds in the area."
+            ]
+        }
+    ],
+    "post_production": {}
+}

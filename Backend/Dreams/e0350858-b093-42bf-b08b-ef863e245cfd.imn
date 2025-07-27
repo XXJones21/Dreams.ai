@@ -1,0 +1,36 @@
+{
+    "pre_production": {
+        "id": "e0350858-b093-42bf-b08b-ef863e245cfd",
+        "user_id": "test-successful-parse",
+        "dream_name": "Petals & Wings",
+        "story_prompt": "You find yourself in a vibrant meadow, surrounded by an kaleidoscope of butterflies. Their delicate wings flutter and dance around you.",
+        "initial_goal": "To catch the elusive 'Moon Butterfly', whose appearance is said to bring good fortune.",
+        "pitch": "In 'Petals & Wings', we follow our protagonist as they wander through the meadow, chasing after the Moon Butterfly. Along the way, they must navigate the complexities of friendship and loyalty, all set against the stunning backdrop of the meadow and its magical inhabitants.",
+        "created_at": "2025-07-27T19:09:39.053247+00:00",
+        "director_vision": {
+            "director_vision": "To capture the ethereal and dreamlike quality of 'Petals & Wings', I envision a frame that transports viewers into the enchanting world of the meadow. The soft, warm light of dawn or dusk should gently illuminate the scene, casting long shadows across the dew-kissed grass.",
+            "image_prompt": "A serene first-person perspective shot of a young protagonist standing at the edge of a small pond within the meadow. In the foreground, the water's surface is reflected with ripples from the distant fluttering of the Moon Butterfly. The delicate petals of wildflowers and the slender shoots of grasses should be subtly visible in the periphery of the frame.",
+            "visual_notes": "Soft focus, warm color palette (pastel shades of blue, pink, yellow), subtle lighting effects to capture the misty atmosphere of dawn or dusk. Composition: rule of thirds, leading lines, negative space to create a sense of depth and serenity.",
+            "approval_criteria": "I will approve the image if it successfully captures the dreamlike quality and serene atmosphere of the meadow. The image should be visually stunning, with a clear focus on the protagonist's figure at the edge of the pond. The Moon Butterfly should be subtly visible in the periphery of the frame, adding an element of enchantment to the scene."
+        },
+        "first_frame_prompt": "A serene first-person perspective shot of a young protagonist standing at the edge of a small pond within the meadow. In the foreground, the water's surface is reflected with ripples from the distant fluttering of the Moon Butterfly. The delicate petals of wildflowers and the slender shoots of grasses should be subtly visible in the periphery of the frame.",
+        "visual_notes": "Soft focus, warm color palette (pastel shades of blue, pink, yellow), subtle lighting effects to capture the misty atmosphere of dawn or dusk. Composition: rule of thirds, leading lines, negative space to create a sense of depth and serenity."
+    },
+    "in_production": [
+        {
+            "scene_id": 1,
+            "frame_image": null,
+            "timestamp": null,
+            "scene_context": "The protagonist has just reached the edge of a small pond within the meadow. The Moon Butterfly flutters above the water's surface, teasingly out of reach.",
+            "user_action": null,
+            "tap_location": null,
+            "object_tapped": null,
+            "actions": [
+                "Try to catch the Moon Butterfly in mid-air",
+                "Follow the gentle ripples on the pond's surface to see if they reveal any hidden secrets or creatures",
+                "Take a moment to pause and reflect on the journey so far, perhaps noticing something that was previously overlooked"
+            ]
+        }
+    ],
+    "post_production": {}
+}
