@@ -233,9 +233,10 @@ def run_pipeline_test(prompt, user_id):
             
             # Generate image
             update_debug_info("ImageGenerator", "Generation Start")
-            # Look for image prompt in multiple locations
+            # Look for image prompt in multiple locations - prioritize Cenedril's enhanced prompt
             director_vision = pre_production.get('director_vision', {})
             image_prompt = (
+                pre_production.get('enhanced_image_prompt') or  # PRIORITY: Cenedril's structured prompt
                 director_vision.get('image_prompt') or
                 pre_production.get('first_frame_prompt') or 
                 post_production.get('image_prompt') or
@@ -682,8 +683,10 @@ if __name__ == '__main__':
     
     # Run Flask with Windows-compatible settings
     try:
-        app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
+        # Use localhost binding to avoid Windows handle errors
+        app.run(debug=False, host='127.0.0.1', port=5000, use_reloader=False, threaded=True)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:
-        logger.error(f"Server error: {e}") 
+        logger.error(f"Server error: {e}")
+        logger.info("If you see 'Windows error 6', try running as Administrator or check Windows Defender/Firewall settings") 

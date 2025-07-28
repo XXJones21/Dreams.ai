@@ -346,7 +346,8 @@ def Narnion(state: State):
 
 def Cenedril(state: State):
     """
-    Cenedril uses the director's vision to create the first frame image prompt.
+    Cenedril: Creates structured, optimized image prompts using director's vision.
+    Now generates enhanced prompts with structured elements for superior image generation.
     """
     dream_id = state.get("id")
     if not dream_id:
@@ -359,20 +360,97 @@ def Cenedril(state: State):
     if imn_data is None:
         print("Error reading .imn file")
         return state
+    
     director_vision = imn_data["pre_production"].get("director_vision")
     if director_vision:
         image_prompt = director_vision.get("image_prompt", "")
         visual_notes = director_vision.get("visual_notes", "")
+        director_vision_text = director_vision.get("director_vision", "")
+        
         print(f"[Cenedril] Using director's vision for image generation.")
         print(f"Image Prompt: {image_prompt}")
         print(f"Visual Notes: {visual_notes}")
-        imn_data["pre_production"]["first_frame_prompt"] = image_prompt
-        imn_data["pre_production"]["visual_notes"] = visual_notes
-        directory = os.path.join("..", "Dreams")
-        # Use file lock for writing
-        with get_imn_filelock(imn_file_path):
-            write_imn(imn_data, directory)
-        print(f"[Cenedril] Director's image prompt saved to .imn file.")
+        
+        # Create enhanced structured prompt using LLM
+        try:
+            # Get additional story context for character details
+            story_prompt = imn_data["pre_production"].get("story_prompt", "")
+            pitch = imn_data["pre_production"].get("pitch", "")
+            
+            # Get latest scene context if available
+            in_production = imn_data.get("in_production", [])
+            latest_scene = ""
+            if in_production:
+                latest_scene = in_production[-1].get("scene_context", "")
+            
+            enhancement_prompt = f"""
+You are Cenedril, the master cinematographer. Transform this basic image prompt into a structured, SDXL-optimized prompt for superior image generation.
+
+FULL STORY CONTEXT:
+Story Prompt: {story_prompt}
+Pitch: {pitch}
+Latest Scene: {latest_scene}
+
+DIRECTOR'S VISION:
+Original Director's Vision: {director_vision_text}
+Basic Image Prompt: {image_prompt}  
+Visual Notes: {visual_notes}
+
+CRITICAL INSTRUCTIONS:
+1. ANALYZE the full story context to identify key CHARACTER DETAILS (species, appearance, traits)
+2. If characters are mentioned by name (like "Captain Rufus"), determine WHO/WHAT they are from the story context
+3. PRESERVE all important character details in the enhanced prompt
+4. Maintain first-person perspective - if the character is non-human, reflect that in the "I" perspective
+5. Include specific visual elements that match the character and story world
+
+Create a structured prompt with these exact sections:
+
+Main prompt: [Enhanced version with CHARACTER DETAILS preserved, vivid first-person perspective that reflects the actual character]
+
+Style modifiers: first-person perspective, immersive viewpoint, cinematic composition, high detail, atmospheric lighting, [additional style elements based on visual notes and story context]
+
+Negative prompt: blurry, low quality, distorted, third-person view, watermark, text, signature
+
+Technical notes: SDXL optimized, structured for Dreams.ai, first-person immersive experience
+
+EXAMPLE: If the story mentions "corgi pilot" and the prompt mentions "Captain Rufus", then Captain Rufus IS the corgi pilot, so the enhanced prompt should reflect the corgi's perspective and appearance.
+"""
+            
+            enhancement_request = [
+                {"role": "system", "content": "You are Cenedril, a master cinematographer specializing in structured prompt engineering for AI image generation. You excel at extracting character details from story context."},
+                {"role": "user", "content": enhancement_prompt}
+            ]
+            
+            print(f"[Cenedril] 🚀 Generating enhanced structured prompt...")
+            reply = llm.invoke(enhancement_request)
+            enhanced_prompt = reply.content.strip()
+            
+            # Store both original and enhanced prompts
+            imn_data["pre_production"]["first_frame_prompt"] = image_prompt
+            imn_data["pre_production"]["enhanced_image_prompt"] = enhanced_prompt
+            imn_data["pre_production"]["visual_notes"] = visual_notes
+            
+            directory = os.path.join("..", "Dreams")
+            # Use file lock for writing
+            with get_imn_filelock(imn_file_path):
+                write_imn(imn_data, directory)
+            
+            print(f"[Cenedril] ✅ Enhanced structured prompt generated and saved")
+            print(f"[Cenedril] 📏 Enhanced prompt length: {len(enhanced_prompt)} characters")
+            print(f"[Cenedril] 🎯 Structured elements optimized for SDXL")
+            
+        except Exception as e:
+            print(f"[Cenedril] ⚠️ Error generating enhanced prompt: {e}")
+            # Fallback to basic prompt storage
+            imn_data["pre_production"]["first_frame_prompt"] = image_prompt
+            imn_data["pre_production"]["visual_notes"] = visual_notes
+            imn_data["pre_production"]["enhancement_error"] = str(e)
+            directory = os.path.join("..", "Dreams")
+            # Use file lock for writing
+            with get_imn_filelock(imn_file_path):
+                write_imn(imn_data, directory)
+            print(f"[Cenedril] 💾 Basic prompt saved despite enhancement error")
+            
     else:
         print(f"[Cenedril] No director vision found, using fallback prompt generation.")
         last_message = state["messages"][-1]
