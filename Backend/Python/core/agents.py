@@ -384,7 +384,7 @@ def Cenedril(state: State):
                 latest_scene = in_production[-1].get("scene_context", "")
             
             enhancement_prompt = f"""
-You are Cenedril, the master cinematographer. Transform this basic image prompt into a structured, SDXL-optimized prompt for superior image generation.
+You are Cenedril, the master cinematographer and SDXL optimization expert. Transform this basic image prompt into a precision-engineered, PHOTOREALISTIC first-person perspective prompt for Dreams.ai.
 
 FULL STORY CONTEXT:
 Story Prompt: {story_prompt}
@@ -396,24 +396,37 @@ Original Director's Vision: {director_vision_text}
 Basic Image Prompt: {image_prompt}  
 Visual Notes: {visual_notes}
 
-CRITICAL INSTRUCTIONS:
-1. ANALYZE the full story context to identify key CHARACTER DETAILS (species, appearance, traits)
-2. If characters are mentioned by name (like "Captain Rufus"), determine WHO/WHAT they are from the story context
-3. PRESERVE all important character details in the enhanced prompt
-4. Maintain first-person perspective - if the character is non-human, reflect that in the "I" perspective
-5. Include specific visual elements that match the character and story world
+CRITICAL INSTRUCTIONS FOR DREAMS.AI FIRST-PERSON PERSPECTIVES:
+1. ANALYZE story context to identify character details (species, role, situation)
+2. Generate what the CHARACTER SEES through their own eyes, NOT a portrait of them
+3. Use PHOTOREALISTIC professional photography style - no fantasy/artistic rendering
+4. Focus on realistic environments, lighting, and objects the character would actually see
+5. If character is a corgi, show what a corgi-height perspective would see (lower viewpoint)
 
 Create a structured prompt with these exact sections:
 
-Main prompt: [Enhanced version with CHARACTER DETAILS preserved, vivid first-person perspective that reflects the actual character]
+**MAIN SUBJECT & COMPOSITION:**
+[First-person POV description: "Through my eyes as [character], I see..." Focus on what's IN FRONT of the character, not the character themselves. Include realistic environmental details at appropriate height/perspective for the character species.]
 
-Style modifiers: first-person perspective, immersive viewpoint, cinematic composition, high detail, atmospheric lighting, [additional style elements based on visual notes and story context]
+**VISUAL STYLE & TECHNIQUE:**
+[ALWAYS: Professional photography, photorealistic, DSLR camera, natural lighting, realistic textures, sharp focus, high resolution]
 
-Negative prompt: blurry, low quality, distorted, third-person view, watermark, text, signature
+**LIGHTING & ATMOSPHERE:**
+[Realistic lighting only: natural sunlight, indoor lighting, streetlights, etc. NO fantasy lighting, NO mystical glows, NO magical elements]
 
-Technical notes: SDXL optimized, structured for Dreams.ai, first-person immersive experience
+**TECHNICAL PARAMETERS:**
+[SDXL photorealism: masterpiece, best quality, ultra detailed, 8K resolution, professional photography, sharp focus, realistic, natural colors]
 
-EXAMPLE: If the story mentions "corgi pilot" and the prompt mentions "Captain Rufus", then Captain Rufus IS the corgi pilot, so the enhanced prompt should reflect the corgi's perspective and appearance.
+**NEGATIVE PROMPT:**
+[Fantasy prevention: drawing, painting, cartoon, anime, fantasy, mystical, magical, artistic rendering, illustration, sketch, + standard quality controls: low quality, blurry, distorted, deformed, watermark, signature, text]
+
+**COMPOSITION NOTES:**
+[Camera settings: realistic depth of field, natural perspective, documentary style, environmental storytelling through realistic objects and settings]
+
+EXAMPLE FOR CORGI CHARACTER: 
+"Through my eyes as Finley the corgi, I see the wooden deck planks of the sailboat stretching out in front of me. The grain of the weathered wood is clearly visible, and I can see the metal cleats and rope coils at my eye level. Beyond the deck railing, the ocean extends to the horizon..."
+
+Remember: Generate what the character SEES, not what they LOOK LIKE. Focus on photorealistic environments from their unique perspective.
 """
             
             enhancement_request = [
