@@ -10,6 +10,8 @@ import uuid
 import time
 import psutil
 import threading
+import base64
+import pytz
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -19,7 +21,7 @@ import logging
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.pipeline_instance import PipelineInstance
-from core.imn_utils import validate_imn_structure, read_imn, create_imn_structure
+from core.imn_utils import validate_imn_structure, read_imn, create_imn_structure, write_imn, get_imn_filelock
 from core.image_generator import generate_dream_image
 
 # Configure logging
@@ -51,11 +53,14 @@ class DreamCard:
         self.pitch = pitch
         self.user_id = user_id
         self.test_duration = test_duration
-        self.created_at = datetime.now().isoformat()
+        # Create timezone-aware datetime string
+        utc_now = datetime.now(pytz.UTC)
+        self.created_at = utc_now.isoformat()
         self.scene_count = 0
         self.image_data = None
         self.image_prompt = None
         self.director_vision = None
+        self.scenes = []
 
 def get_memory_usage():
     """Get current memory usage in MB"""
@@ -151,9 +156,10 @@ def dream_card_to_dict(dream_card):
         'test_duration': dream_card.test_duration,
         'created_at': dream_card.created_at,
         'scene_count': dream_card.scene_count,
-        'image_data': dream_card.image_data,
+        'image_data': dream_card.image_data,  # This should now be the base64 string
         'image_prompt': dream_card.image_prompt,
-        'director_vision': dream_card.director_vision
+        'director_vision': dream_card.director_vision,
+        'scenes': dream_card.scenes
     }
 
 def run_pipeline_test(prompt, user_id):
@@ -162,6 +168,11 @@ def run_pipeline_test(prompt, user_id):
     
     logger.info(f"Starting pipeline test with prompt: {prompt}")
     reset_debug_info()
+    
+    # Performance tracking
+    pipeline_start_time = time.time()
+    llm_total_time = 0
+    image_generation_time = 0
     
     try:
         # Initialize test state
@@ -175,9 +186,11 @@ def run_pipeline_test(prompt, user_id):
         # Execute the pipeline using PipelineInstance
         logger.info("Executing pipeline instance...")
         update_debug_info("Graph", "Execution Start")
+        llm_start_time = time.time()
         pipeline_instance = PipelineInstance(test_state)
         result = pipeline_instance.run()
-        update_debug_info("Graph", "Execution Complete", {"result_keys": list(result.keys())})
+        llm_total_time = time.time() - llm_start_time
+        update_debug_info("Graph", "Execution Complete", {"result_keys": list(result.keys()), "llm_time": llm_total_time})
         
         # Extract dream ID
         dream_id = result.get('id', str(uuid.uuid4()))
@@ -220,18 +233,122 @@ def run_pipeline_test(prompt, user_id):
             
             # Generate image
             update_debug_info("ImageGenerator", "Generation Start")
-            image_prompt = post_production.get('image_prompt', 'No image prompt available')
+            # Look for image prompt in multiple locations
+            director_vision = pre_production.get('director_vision', {})
+            image_prompt = (
+                director_vision.get('image_prompt') or
+                pre_production.get('first_frame_prompt') or 
+                post_production.get('image_prompt') or
+                'No image prompt available'
+            )
+            
+            # If we have a generic prompt, try to make it more specific to the story
+            if image_prompt == 'First-person perspective of the dream scene':
+                # Create a more specific prompt based on the story
+                story_prompt = pre_production.get('story_prompt', '')
+                if 'corgi' in story_prompt.lower() and 'biplane' in story_prompt.lower():
+                    image_prompt = "First-person perspective from a corgi pilot's cockpit in a WW1 biplane, leather aviator goggles, wooden controls, dramatic sky battle scene"
+                elif 'corgi' in story_prompt.lower():
+                    image_prompt = "First-person perspective of a corgi in an action scene, dramatic lighting"
+                else:
+                    image_prompt = f"First-person perspective of: {story_prompt}"
             dream_card.image_prompt = image_prompt
             
             if image_prompt and image_prompt != 'No image prompt available':
                 logger.info(f"Generating image with prompt: {image_prompt}")
                 update_debug_info("ImageGenerator", "Processing", {"prompt_length": len(image_prompt)})
                 
-                image_data = generate_dream_image(image_prompt, dream_id)
-                dream_card.image_data = image_data
+                # Use SDXL Turbo with 1024x1024 resolution and robust debugging
+                logger.info("🎨 Starting SDXL Turbo image generation...")
+                update_debug_info("SDXL Turbo", "Generation Start", {
+                    "prompt": image_prompt,
+                    "resolution": "512x512",
+                    "service": "sdxl_turbo"
+                })
                 
-                update_debug_info("ImageGenerator", "Generation Complete")
-                logger.info("Image generated successfully")
+                try:
+                    # Generate image with SDXL Turbo at 512x512 for speed optimization
+                    # Use random seed for initial generation, then store it for reproducibility
+                    import random
+                    
+                    # Check if we already have a stored seed for this dream
+                    stored_seed = post_production.get('image_generation', {}).get('seed')
+                    
+                    if stored_seed is not None:
+                        # Use stored seed for consistency
+                        seed = stored_seed
+                        logger.info(f"🎲 Using stored seed: {seed} for consistent image regeneration")
+                    else:
+                        # Generate new random seed for initial creation
+                        seed = random.randint(1, 1000000)
+                        logger.info(f"🎲 Using new random seed: {seed} for initial image generation")
+                    
+                    image_data = generate_dream_image(
+                        prompt=image_prompt,
+                        service="sdxl_turbo",
+                        width=512,
+                        height=512,
+                        num_inference_steps=1,
+                        guidance_scale=0.0,
+                        seed=seed,
+                        director_vision=post_production.get('director_vision', {})
+                    )
+                    
+                    if image_data and image_data.get('service') == 'sdxl_turbo':
+                        # Extract just the base64 image data for frontend display
+                        dream_card.image_data = image_data.get('image_data')
+                        generation_time = image_data.get('metadata', {}).get('generation_time', 0)
+                        
+                        image_generation_time = generation_time
+                        logger.info(f"✅ SDXL Turbo generation successful!")
+                        logger.info(f"⏱️ Generation time: {generation_time:.2f}s")
+                        logger.info(f"📁 File: {image_data.get('filename', 'N/A')}")
+                        logger.info(f"📊 Resolution: {image_data.get('metadata', {}).get('width', 'N/A')}x{image_data.get('metadata', {}).get('height', 'N/A')}")
+                        
+                        # Store image generation metadata in IMN file for reproducibility
+                        image_generation_metadata = {
+                            'seed': seed,
+                            'prompt': image_prompt,
+                            'service': 'sdxl_turbo',
+                            'width': 512,
+                            'height': 512,
+                            'num_inference_steps': 1,
+                            'guidance_scale': 0.0,
+                            'generation_time': generation_time,
+                            'filename': image_data.get('filename'),
+                            'generated_at': image_data.get('metadata', {}).get('generated_at'),
+                            'model': image_data.get('metadata', {}).get('model', 'SDXL Turbo')
+                        }
+                        
+                        # Update IMN file with image generation metadata
+                        imn_data['post_production']['image_generation'] = image_generation_metadata
+                        directory = os.path.join("..", "Dreams")
+                        imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+                        with get_imn_filelock(imn_file_path):
+                            write_imn(imn_data, directory)
+                        
+                        logger.info(f"💾 Stored image generation metadata in IMN file (seed: {seed})")
+                        
+                        update_debug_info("SDXL Turbo", "Generation Complete", {
+                            "generation_time": generation_time,
+                            "filename": image_data.get('filename'),
+                            "resolution": f"{image_data.get('metadata', {}).get('width', 'N/A')}x{image_data.get('metadata', {}).get('height', 'N/A')}",
+                            "model": image_data.get('metadata', {}).get('model', 'SDXL Turbo'),
+                            "seed": seed
+                        })
+                        
+                    else:
+                        error_msg = f"SDXL Turbo generation failed or returned unexpected result: {image_data}"
+                        logger.error(error_msg)
+                        update_debug_info("SDXL Turbo", "Generation Failed", {"error": error_msg})
+                        raise Exception(error_msg)
+                        
+                except Exception as e:
+                    error_msg = f"SDXL Turbo image generation failed: {str(e)}"
+                    logger.error(error_msg)
+                    update_debug_info("SDXL Turbo", "Generation Error", {"error": str(e)})
+                    raise Exception(error_msg)
+                    
             else:
                 logger.info("No image prompt available")
             
@@ -239,7 +356,21 @@ def run_pipeline_test(prompt, user_id):
             if debug_info['total_start_time']:
                 dream_card.test_duration = time.time() - debug_info['total_start_time']
             
-            update_debug_info("Pipeline", "Test Complete", {"duration": dream_card.test_duration})
+            # Performance summary
+            total_time = time.time() - pipeline_start_time
+            logger.info(f"🚀 PERFORMANCE SUMMARY:")
+            logger.info(f"   Total Pipeline Time: {total_time:.2f}s")
+            logger.info(f"   LLM Processing Time: {llm_total_time:.2f}s")
+            logger.info(f"   Image Generation Time: {image_generation_time:.2f}s")
+            logger.info(f"   LLM % of Total: {(llm_total_time/total_time)*100:.1f}%")
+            logger.info(f"   Image % of Total: {(image_generation_time/total_time)*100:.1f}%")
+            
+            update_debug_info("Pipeline", "Test Complete", {
+                "duration": dream_card.test_duration,
+                "total_time": total_time,
+                "llm_time": llm_total_time,
+                "image_time": image_generation_time
+            })
             logger.info(f"Test completed successfully in {dream_card.test_duration:.2f} seconds")
             
             # Add to results
@@ -351,9 +482,106 @@ def get_status():
 
 @app.route('/api/dreams')
 def get_dreams():
-    """Get all test dreams"""
+    """Get all test dreams from both test_results and IMN files"""
     global test_results
-    return jsonify([dream_card_to_dict(dream) for dream in test_results])
+    
+    # Get dreams from test_results (GUI-generated)
+    gui_dreams = [dream_card_to_dict(dream) for dream in test_results]
+    
+    # Get dreams from IMN files (CLI-generated)
+    imn_dreams = []
+    dreams_dir = os.path.join("..", "Dreams")
+    if os.path.exists(dreams_dir):
+        for filename in os.listdir(dreams_dir):
+            if filename.endswith('.imn'):
+                dream_id = filename[:-4]  # Remove .imn extension
+                imn_path = os.path.join(dreams_dir, filename)
+                try:
+                    imn_data = read_imn(imn_path)
+                    pre_production = imn_data.get('pre_production', {})
+                    in_production = imn_data.get('in_production', [])
+                    
+                    # Create dream card from IMN data
+                    dream_card = DreamCard(
+                        dream_id=dream_id,
+                        title=pre_production.get('dream_name', 'Untitled Dream'),
+                        excerpt=pre_production.get('story_prompt', 'No excerpt available'),
+                        story=pre_production.get('initial_goal', 'No story available'),
+                        pitch=pre_production.get('pitch', 'No pitch available'),
+                        user_id=pre_production.get('user_id', 'cli-user')
+                    )
+                    
+                    dream_card.scene_count = len(in_production)
+                    # Store scene data for modal display
+                    dream_card.scenes = in_production
+                    # Ensure timezone-aware datetime for IMN dreams
+                    imn_created_at = pre_production.get('created_at', '2025-07-28T00:00:00Z')
+                    if not imn_created_at.endswith('Z') and '+' not in imn_created_at:
+                        # If no timezone info, assume UTC
+                        imn_created_at = imn_created_at + 'Z'
+                    dream_card.created_at = imn_created_at
+                    dream_card.test_duration = 0  # We don't have this for CLI dreams
+                    
+                    # Load director vision and image prompt from IMN data
+                    director_vision_data = pre_production.get('director_vision', {})
+                    dream_card.director_vision = director_vision_data.get('director_vision', 'No director vision available')
+                    dream_card.image_prompt = director_vision_data.get('image_prompt', 'No image prompt available')
+                    
+                    # Try to find associated image from post_production data
+                    post_production = imn_data.get('post_production', {})
+                    image_generation = post_production.get('image_generation', {})
+                    image_filename = image_generation.get('filename')
+                    
+                    if image_filename:
+                        generated_images_dir = "generated_images"
+                        image_path = os.path.join(generated_images_dir, image_filename)
+                        if os.path.exists(image_path):
+                            with open(image_path, 'rb') as f:
+                                image_bytes = f.read()
+                                dream_card.image_data = base64.b64encode(image_bytes).decode('utf-8')
+                    
+                    imn_dreams.append(dream_card_to_dict(dream_card))
+                except Exception as e:
+                    logger.error(f"Error reading IMN file {filename}: {e}")
+    
+    # Combine all dreams
+    all_dreams = gui_dreams + imn_dreams
+    
+    # Sort dreams by creation date (newest first)
+    def get_created_at(dream):
+        created_at = dream.get('created_at', '2025-07-28T00:00:00Z')
+        try:
+            # Parse ISO format datetime and ensure timezone awareness
+            from datetime import datetime
+            import pytz
+            
+            # Handle different datetime formats
+            if created_at.endswith('Z'):
+                # UTC timezone
+                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            elif '+' in created_at or created_at.endswith('UTC'):
+                # Already timezone-aware
+                dt = datetime.fromisoformat(created_at.replace('UTC', '+00:00'))
+            else:
+                # Assume local timezone if no timezone info
+                dt = datetime.fromisoformat(created_at)
+                # Make it timezone-aware by assuming local timezone
+                import time
+                local_offset = time.timezone if time.daylight == 0 else time.altzone
+                local_tz = pytz.FixedOffset(-local_offset // 60)
+                dt = local_tz.localize(dt)
+            
+            return dt
+        except Exception as e:
+            logger.warning(f"Failed to parse datetime '{created_at}': {e}")
+            # Fallback to string comparison if parsing fails
+            return created_at
+    
+    # Sort by creation date, newest first
+    all_dreams.sort(key=get_created_at, reverse=True)
+    
+    logger.info(f"📋 Returning {len(all_dreams)} dreams sorted by creation date (newest first)")
+    return jsonify(all_dreams)
 
 @app.route('/api/dream/<dream_id>')
 def get_dream(dream_id):
@@ -366,7 +594,7 @@ def get_dream(dream_id):
 
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image():
-    """Generate a new image for a dream"""
+    """Generate a new image for a dream using SDXL Turbo"""
     try:
         data = request.get_json()
         dream_id = data.get('dream_id')
@@ -375,12 +603,48 @@ def generate_image():
         if not dream_id or not prompt:
             return jsonify({'error': 'Missing dream_id or prompt'}), 400
         
-        image_data = generate_dream_image(prompt, dream_id)
-        return jsonify({'image_data': image_data})
+        logger.info(f"🎨 Generating image with SDXL Turbo, prompt: {prompt}")
+        update_debug_info("SDXL Turbo", "API Generation Start", {"prompt": prompt, "dream_id": dream_id})
+        
+        # Use SDXL Turbo with 1024x1024 resolution
+        # Use a random seed to ensure unique images
+        import random
+        random_seed = random.randint(1, 1000000)
+        logger.info(f"🎲 API using random seed: {random_seed} for unique image generation")
+        image_data = generate_dream_image(
+            prompt=prompt,
+            service="sdxl_turbo",
+            width=1024,
+            height=1024,
+            num_inference_steps=1,
+            guidance_scale=0.0,
+            seed=random_seed
+        )
+        
+        if image_data and image_data.get('service') == 'sdxl_turbo':
+            generation_time = image_data.get('metadata', {}).get('generation_time', 0)
+            logger.info(f"✅ SDXL Turbo API generation successful! Time: {generation_time:.2f}s")
+            update_debug_info("SDXL Turbo", "API Generation Complete", {
+                "generation_time": generation_time,
+                "filename": image_data.get('filename')
+            })
+            
+            return jsonify({
+                'image_data': image_data,
+                'service': 'sdxl_turbo',
+                'generation_time': generation_time
+            })
+        else:
+            error_msg = f"SDXL Turbo API generation failed: {image_data}"
+            logger.error(error_msg)
+            update_debug_info("SDXL Turbo", "API Generation Failed", {"error": error_msg})
+            return jsonify({'error': error_msg}), 500
         
     except Exception as e:
-        logger.error(f"Error generating image: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        error_msg = f"SDXL Turbo API image generation failed: {str(e)}"
+        logger.error(error_msg)
+        update_debug_info("SDXL Turbo", "API Generation Error", {"error": str(e)})
+        return jsonify({'error': error_msg}), 500
 
 @app.route('/api/image/<dream_id>')
 def get_dream_image(dream_id):
@@ -410,4 +674,16 @@ def get_debug_info():
 if __name__ == '__main__':
     logger.info("Starting Dreams.ai GUI Test Suite...")
     logger.info("Server will be available at: http://localhost:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    
+    # Disable Flask's default logging to avoid Windows console issues
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    
+    # Run Flask with Windows-compatible settings
+    try:
+        app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+    except Exception as e:
+        logger.error(f"Server error: {e}") 

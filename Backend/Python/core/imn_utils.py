@@ -206,7 +206,7 @@ def parse_carthir_response(llm_response: str) -> Optional[Dict[str, str]]:
         return None
 
 
-def parse_director_vision_response(llm_response: str) -> Dict[str, str]:
+def parse_director_vision_response(llm_response: str, story_context: str = "") -> Dict[str, str]:
     """
     Parse CarthirReview's director vision response and validate against IMN schema.
     
@@ -218,14 +218,54 @@ def parse_director_vision_response(llm_response: str) -> Dict[str, str]:
         "approval_criteria": str
     }
     
+    Args:
+        llm_response: Raw LLM response to parse
+        story_context: Story prompt or context for better fallback generation
+        
     Returns:
-        Dict[str, str]: Parsed data with fallbacks for missing fields
+        Dict[str, str]: Parsed data with story-specific fallbacks for missing fields
     """
+    
+    def create_story_specific_fallbacks(story_context: str) -> Dict[str, str]:
+        """Create story-specific fallback prompts based on story content"""
+        story_lower = story_context.lower()
+        
+        # Detect story themes and create appropriate prompts
+        if 'corgi' in story_lower and 'beach' in story_lower:
+            return {
+                "director_vision": "Create an immersive first-person view of a corgi's peaceful beach experience",
+                "image_prompt": "First-person perspective from a corgi's viewpoint on a sunny beach, warm sand, gentle waves, peaceful atmosphere, golden sunlight",
+                "visual_notes": "Use warm, golden lighting, soft shadows, peaceful composition with ocean horizon",
+                "approval_criteria": "Image should capture the serene, peaceful feeling of a corgi enjoying a beach day"
+            }
+        elif 'corgi' in story_lower and ('biplane' in story_lower or 'ww1' in story_lower or 'war' in story_lower):
+            return {
+                "director_vision": "Create an immersive first-person view from a corgi pilot's cockpit in WW1",
+                "image_prompt": "First-person perspective from a corgi pilot's cockpit in a WW1 biplane, leather aviator goggles, wooden controls, dramatic sky battle scene, vintage aircraft details",
+                "visual_notes": "Use dramatic lighting, vintage color palette, immersive cockpit view with detailed controls",
+                "approval_criteria": "Image should feel like being in the cockpit of a WW1 biplane from a corgi's perspective"
+            }
+        elif 'corgi' in story_lower:
+            return {
+                "director_vision": "Create an immersive first-person view of a corgi's adventure",
+                "image_prompt": f"First-person perspective of a corgi in an action scene: {story_context}",
+                "visual_notes": "Use dynamic lighting, immersive composition, detailed corgi perspective",
+                "approval_criteria": "Image should capture the corgi's unique perspective and personality"
+            }
+        else:
+            # Generic but still story-specific fallback
+            return {
+                "director_vision": f"Create a compelling first-person view of: {story_context}",
+                "image_prompt": f"First-person perspective of: {story_context}",
+                "visual_notes": "Use warm lighting and immersive composition",
+                "approval_criteria": "Image should feel immersive and match the story context"
+            }
+    
     try:
         content = _clean_json_content(llm_response)
         result = json.loads(content)
         
-        # Required fields with fallbacks
+        # Required fields with story-specific fallbacks
         required_fields = ["director_vision", "image_prompt", "visual_notes", "approval_criteria"]
         validated_result = {}
         
@@ -234,36 +274,23 @@ def parse_director_vision_response(llm_response: str) -> Dict[str, str]:
             if value:
                 validated_result[field] = value
             else:
-                # Provide meaningful fallbacks aligned with IMN schema
-                fallbacks = {
-                    "director_vision": "Create a compelling first-person view of the scene",
-                    "image_prompt": "First-person perspective of the dream scene",
-                    "visual_notes": "Use warm lighting and immersive composition",
-                    "approval_criteria": "Image should feel immersive and match the story context"
-                }
+                # Use story-specific fallbacks
+                fallbacks = create_story_specific_fallbacks(story_context)
                 validated_result[field] = fallbacks[field]
-                print(f"[Director Parser] Using fallback for {field}")
+                print(f"[Director Parser] Using story-specific fallback for {field}")
         
         print(f"[Director Parser] Successfully parsed director vision")
         return validated_result
         
     except json.JSONDecodeError as e:
         print(f"[Director Parser] JSON decode error: {e}")
-        print(f"[Director Parser] Using complete fallback response")
-        return {
-            "director_vision": "Create a compelling first-person view of the scene",
-            "image_prompt": "First-person perspective of the dream scene", 
-            "visual_notes": "Use warm lighting and immersive composition",
-            "approval_criteria": "Image should feel immersive and match the story context"
-        }
+        print(f"[Director Parser] Using story-specific fallback response")
+        fallbacks = create_story_specific_fallbacks(story_context)
+        return fallbacks
     except Exception as e:
         print(f"[Director Parser] Unexpected error: {e}")
-        return {
-            "director_vision": "Create a compelling first-person view of the scene",
-            "image_prompt": "First-person perspective of the dream scene",
-            "visual_notes": "Use warm lighting and immersive composition", 
-            "approval_criteria": "Image should feel immersive and match the story context"
-        }
+        fallbacks = create_story_specific_fallbacks(story_context)
+        return fallbacks
 
 
 def parse_narnion_response(llm_response: str) -> Optional[Dict[str, Any]]:

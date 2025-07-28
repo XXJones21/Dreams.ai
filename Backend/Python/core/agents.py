@@ -44,12 +44,12 @@ else:
 llm = ChatLlamaCpp(
     model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
     temperature=0.7,
-    max_tokens=1024,  # Reduced for faster generation
+    max_tokens=512,  # Further reduced for faster generation
     top_p=0.9,
-    verbose=True,  # Enable to see CUDA status
-    n_ctx=2048,  # Reduced context window for speed
+    verbose=False,  # Disable verbose for speed
+    n_ctx=1024,  # Further reduced context window for speed
     n_threads=optimal_threads,  # Dynamic thread allocation
-    n_batch=512,  # Larger batch for GPU processing
+    n_batch=1024,  # Larger batch for GPU processing
     use_mmap=True,  # Memory mapping for faster loading
     use_mlock=False,  # Disable memory locking to allow OS management
     f16_kv=True,  # Use half precision for key-value cache to save memory
@@ -250,11 +250,14 @@ def CarthirReview(state: State):
         }
     ]
 
+    # Get story context for better fallback generation
+    story_context = imn_data.get("pre_production", {}).get("story_prompt", "")
+    
     try:
         reply = llm.invoke(director_vision_prompt)
         
-        # Use centralized, robust JSON parsing with built-in fallbacks
-        director_vision = parse_director_vision_response(reply.content)
+        # Use centralized, robust JSON parsing with story-specific fallbacks
+        director_vision = parse_director_vision_response(reply.content, story_context)
         
         # Store in IMN structure
         imn_data["pre_production"]["director_vision"] = director_vision
@@ -272,8 +275,8 @@ def CarthirReview(state: State):
         
     except Exception as e:
         print(f"[CarthirReview] Unexpected error: {e}")
-        # Even if LLM call fails, use robust fallback
-        fallback_vision = parse_director_vision_response("")  # Empty string triggers full fallback
+        # Even if LLM call fails, use robust fallback with story context
+        fallback_vision = parse_director_vision_response("", story_context)  # Pass story context for better fallback
         imn_data["pre_production"]["director_vision"] = fallback_vision
         directory = os.path.join("..", "Dreams")
         
@@ -281,7 +284,7 @@ def CarthirReview(state: State):
             write_imn(imn_data, directory)
         
         state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
-        print(f"[CarthirReview] Using complete fallback due to LLM error.")
+        print(f"[CarthirReview] Using story-specific fallback due to LLM error.")
     return state
 
 

@@ -8,65 +8,17 @@ from dotenv import load_dotenv
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-<<<<<<< HEAD
-=======
-from langchain_openai import ChatOpenAI
->>>>>>> 1ebfb8602f4cfe1acfbc6072f3f4832af1495ca9
 from langgraph.channels import last_value
 
 from core.pipeline_instance import PipelineInstance, PipelinePool
 from core.agents import State, Carthir, Narnion, Cenedril, CarthirReview, convert_prompt_to_imn, print_imn_agent
-<<<<<<< HEAD
 from core.imn_utils import read_imn, write_imn
-=======
->>>>>>> 1ebfb8602f4cfe1acfbc6072f3f4832af1495ca9
 
 
 load_dotenv()
 
-<<<<<<< HEAD
 # Note: GGUF model is initialized in core/agents.py - no duplicate needed here
-
-
 # Note: Agent functions are imported from core.agents module
-=======
-llm = ChatOpenAI(model="gemma3:12b", base_url="http://10.1.95.9:11434/v1")
-
-
-### Converts a user's inital prompt into a basic .imn file stucture
-def convert_prompt_to_imn(state: State):
-    """
-    Creates the .imn file using Carthir's output in the state.
-    """
-    print(f"\n[DEBUG] State at start of convert_prompt_to_imn:\n{json.dumps(state, indent=2, default=str)}\n")
-    carthir_mem = state.get("carthir_memory", {})
-    dream_name = carthir_mem.get("dream_name")
-    story_prompt = carthir_mem.get("story_prompt")
-    initial_goal = carthir_mem.get("initial_goal")
-    pitch = carthir_mem.get("pitch")
-    user_id = state.get("user_id", "user-uuid-placeholder")  # Replace with real user_id logic
-
-    # Only generate a new dream_id if not already present
-    if not state.get("id"):
-        dream_id = str(uuid.uuid4())
-        state["id"] = dream_id
-    else:
-        dream_id = state["id"]
-
-    directory = os.path.join("..", "Dreams")
-    filename = os.path.join(directory, f"{dream_id}.imn")
-
-    imn_data = convert_prompt_to_imn(
-        dream_id=dream_id,
-        user_id=user_id,
-        dream_name=dream_name,
-        story_prompt=story_prompt,
-        initial_goal=initial_goal,
-        pitch=pitch
-    )
-
-    write_imn(imn_data, directory)
-    return state
 
 
 def Carthir(state: State):
@@ -236,13 +188,13 @@ def CarthirReview(state: State):
     except json.JSONDecodeError as e:
         print(f"JSON parsing error in CarthirReview: {e}")
         print(f"Attempted to parse: {content[:200]}...")
-        # Create fallback director vision
-        fallback_vision = {
-            "director_vision": f"Create a compelling first-person view of the scene",
-            "image_prompt": f"First-person perspective of {narnion_result.get('scene_context', 'the dream world') if narnion_result else 'the scene'}",
-            "visual_notes": "Use warm lighting and immersive composition",
-            "approval_criteria": "Image should feel immersive and match the story context"
-        }
+        
+        # Get story context for better fallback generation
+        story_context = imn_data.get("pre_production", {}).get("story_prompt", "")
+        
+        # Use story-specific fallback
+        from core.imn_utils import parse_director_vision_response
+        fallback_vision = parse_director_vision_response("", story_context)
         
         # Store fallback vision
         imn_data["pre_production"]["director_vision"] = fallback_vision
@@ -250,14 +202,25 @@ def CarthirReview(state: State):
         write_imn(imn_data, directory)
         
         state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
-        print(f"[CarthirReview] Using fallback director vision due to parsing error.")
+        print(f"[CarthirReview] Using story-specific fallback director vision due to parsing error.")
         
     except Exception as e:
         print(f"Unexpected error in CarthirReview: {e}")
         print(f"Raw reply: {reply.content if 'reply' in locals() else 'No reply'}")
-        # Fallback to basic prompt
-        fallback_prompt = f"First-person view of {narnion_result.get('scene_context', 'the scene') if narnion_result else 'the dream world'}"
-        state["messages"] = [{"role": "assistant", "content": fallback_prompt}]
+        
+        # Get story context for better fallback generation
+        story_context = imn_data.get("pre_production", {}).get("story_prompt", "")
+        
+        # Use story-specific fallback
+        from core.imn_utils import parse_director_vision_response
+        fallback_vision = parse_director_vision_response("", story_context)
+        
+        imn_data["pre_production"]["director_vision"] = fallback_vision
+        directory = os.path.join("..", "Dreams")
+        write_imn(imn_data, directory)
+        
+        state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
+        print(f"[CarthirReview] Using story-specific fallback due to LLM error.")
 
     return state
 
@@ -426,7 +389,6 @@ def print_imn_agent(state: State):
         return state
     print(f"\n[print_imn_agent] .imn file contents for '{imn_file_path}':\n{json.dumps(imn_data, indent=2)}\n")
     return state
->>>>>>> 1ebfb8602f4cfe1acfbc6072f3f4832af1495ca9
 
 
 # Initialize the global pipeline pool

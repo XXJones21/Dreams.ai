@@ -11,8 +11,4 @@ flask-cors
 requests
 pillow
 psutil
-llama-cpp-python
-filelock
-pytz
-
-
+filelock 

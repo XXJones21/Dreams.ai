@@ -11,6 +11,8 @@ import io
 from typing import Optional, Dict, Any
 import json
 from datetime import datetime
+import torch
+from diffusers import DiffusionPipeline
 
 class ImageGenerator:
     """Base class for image generation services"""
@@ -197,6 +199,148 @@ class DALLEGenerator(ImageGenerator):
         
         return result
 
+class SDXLTurboGenerator(ImageGenerator):
+    """SDXL Turbo image generator for ultra-fast generation"""
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        super().__init__(config)
+        self.service_name = "sdxl_turbo"
+        self.pipeline = None
+        self.is_loaded = False
+        self._setup_pipeline()
+    
+    def _setup_pipeline(self):
+        """Initialize SDXL Turbo pipeline"""
+        try:
+            print("[SDXL Turbo] 🚀 Initializing SDXL Turbo pipeline...")
+            
+            # Load SDXL Turbo pipeline
+            self.pipeline = DiffusionPipeline.from_pretrained(
+                "stabilityai/sdxl-turbo",
+                torch_dtype=torch.float16,
+                variant="fp16"
+            )
+            
+            # Move to GPU if available
+            if torch.cuda.is_available():
+                self.pipeline = self.pipeline.to("cuda")
+                print(f"[SDXL Turbo] ✅ Pipeline loaded on GPU: {torch.cuda.get_device_name()}")
+            else:
+                print("[SDXL Turbo] ⚠️ CUDA not available, using CPU")
+            
+            self.is_loaded = True
+            print("[SDXL Turbo] ✅ SDXL Turbo pipeline initialized successfully")
+            
+        except Exception as e:
+            print(f"[SDXL Turbo] ❌ Failed to initialize SDXL Turbo pipeline: {e}")
+            self.is_loaded = False
+    
+    def generate_image(self, prompt: str, **kwargs) -> Optional[Dict[str, Any]]:
+        """Generate image using SDXL Turbo for ultra-fast generation"""
+        if not self.is_loaded:
+            print(f"[SDXL Turbo] Pipeline not loaded, falling back to placeholder")
+            placeholder = PlaceholderImageGenerator()
+            result = placeholder.generate_image(prompt, **kwargs)
+            if result:
+                result['service'] = 'sdxl_turbo_fallback'
+                result['metadata']['original_service'] = 'sdxl_turbo'
+            return result
+        
+        try:
+            # Enhanced prompt engineering for Dreams.ai
+            director_vision = kwargs.get('director_vision')
+            enhanced_prompt = self._create_enhanced_prompt(prompt, director_vision)
+            
+            print(f"[SDXL Turbo] 🎨 Generating image with prompt: {enhanced_prompt[:100]}...")
+            
+            # SDXL Turbo optimized settings
+            width = kwargs.get('width', 512)  # Default to 512 for speed optimization
+            height = kwargs.get('height', 512)
+            num_inference_steps = kwargs.get('num_inference_steps', 1)  # 1-4 steps
+            guidance_scale = kwargs.get('guidance_scale', 0.0)  # Turbo uses 0.0
+            
+            start_time = datetime.now()
+            
+            with torch.no_grad():
+                result = self.pipeline(
+                    enhanced_prompt,
+                    height=height,
+                    width=width,
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    generator=torch.Generator("cpu").manual_seed(kwargs.get('seed', 0))
+                )
+            
+            end_time = datetime.now()
+            generation_time = (end_time - start_time).total_seconds()
+            
+            # Extract the generated image
+            image = result.images[0]
+            
+            # Convert PIL image to bytes
+            img_byte_arr = io.BytesIO()
+            image.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"sdxl_turbo_{timestamp}.png"
+            
+            # Save image
+            filepath = self.save_image(img_byte_arr, filename)
+            
+            return {
+                'image_data': base64.b64encode(img_byte_arr).decode('utf-8'),
+                'filepath': filepath,
+                'filename': filename,
+                'prompt': enhanced_prompt,
+                'service': self.service_name,
+                'metadata': {
+                    'width': width,
+                    'height': height,
+                    'format': 'PNG',
+                    'generated_at': end_time.isoformat(),
+                    'generation_time': generation_time,
+                    'model': 'SDXL Turbo',
+                    'guidance_scale': guidance_scale,
+                    'num_inference_steps': num_inference_steps,
+                    'device': 'cuda' if torch.cuda.is_available() else 'cpu'
+                }
+            }
+            
+        except Exception as e:
+            print(f"[SDXL Turbo] ❌ Error during image generation: {e}")
+            placeholder = PlaceholderImageGenerator()
+            result = placeholder.generate_image(prompt, **kwargs)
+            if result:
+                result['service'] = 'sdxl_turbo_error'
+                result['metadata']['sdxl_turbo_error'] = str(e)
+            return result
+    
+    def _create_enhanced_prompt(self, base_prompt: str, director_vision: dict = None) -> str:
+        """Create enhanced prompt optimized for Dreams.ai"""
+        style_elements = [
+            "first-person perspective",
+            "immersive viewpoint", 
+            "cinematic composition",
+            "high detail",
+            "atmospheric lighting"
+        ]
+        
+        if director_vision:
+            visual_notes = director_vision.get("visual_notes", "")
+            if visual_notes:
+                style_elements.append(visual_notes)
+        
+        style_text = ", ".join(style_elements)
+        enhanced_prompt = f"{base_prompt}, {style_text}"
+        
+        return enhanced_prompt
+
+
+
+
+
 class ImageGenerationManager:
     """Manages multiple image generation services"""
     
@@ -210,9 +354,14 @@ class ImageGenerationManager:
     
     def _setup_generators(self):
         """Setup available image generators"""
-        # Always include placeholder generator
+        # Add SDXL Turbo as the only generator
+        self.generators['sdxl_turbo'] = SDXLTurboGenerator(self.config.get('sdxl_turbo', {}))
+        
+        # Set SDXL Turbo as default
+        self.default_generator = self.generators['sdxl_turbo']
+        
+        # Add placeholder generator as fallback
         self.generators['placeholder'] = PlaceholderImageGenerator()
-        self.default_generator = self.generators['placeholder']
         
         # Add other generators if configured
         if self.config.get('stable_diffusion'):
