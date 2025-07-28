@@ -163,9 +163,117 @@ cython_debug/
 # VS Code
 .vscode/
 
-# Generated files
-*.imn
-!Backend/Dreams/*.imn
+# Dreams.ai Specific Exclusions
 
-# Model files (large files should not be in repo)
+# Generated Images - All generated images should not be tracked
+Backend/Python/generated_images/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tiff
+*.svg
+
+# .imn Files - Imagination files contain generated content
+*.imn
+Backend/Dreams/*.imn
+
+# Model Files - Large AI models should not be in repository
 Backend/Python/models/
+*.gguf
+*.bin
+*.safetensors
+*.ckpt
+*.pth
+*.pt
+*.onnx
+*.tflite
+*.pb
+
+# Flux Models - Specific FLUX model files
+flux-1-dev-*.gguf
+flux-*.gguf
+flux-*.bin
+flux-*.safetensors
+
+# Cache Directories
+cache/
+Backend/Python/cache/
+Backend/Python/.venv/
+Backend/Python/__pycache__/
+
+# Test Images
+test_*.png
+test_*.jpg
+test_*.jpeg
+
+# Temporary Files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log Files
+*.log
+logs/
+
+# Environment Files
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Build Artifacts
+build/
+dist/
+out/
+
+# Package Lock Files (keep package.json but not lock files for large dependencies)
+uv.lock
+poetry.lock
+Pipfile.lock
+
+# Sentencepiece (large library that should be installed via package manager)
+sentencepiece-0.2.0/
+
+# Large Test Files
+test_*.png
+test_*.jpg
+test_*.jpeg
+
+# Generated Documentation
+docs/_build/
+site/
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Temporary Directories
+tmp/
+temp/

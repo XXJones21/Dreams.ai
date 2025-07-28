@@ -44,12 +44,12 @@ else:
 llm = ChatLlamaCpp(
     model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
     temperature=0.7,
-    max_tokens=1024,  # Reduced for faster generation
+    max_tokens=512,  # Further reduced for faster generation
     top_p=0.9,
-    verbose=True,  # Enable to see CUDA status
-    n_ctx=2048,  # Reduced context window for speed
+    verbose=False,  # Disable verbose for speed
+    n_ctx=1024,  # Further reduced context window for speed
     n_threads=optimal_threads,  # Dynamic thread allocation
-    n_batch=512,  # Larger batch for GPU processing
+    n_batch=1024,  # Larger batch for GPU processing
     use_mmap=True,  # Memory mapping for faster loading
     use_mlock=False,  # Disable memory locking to allow OS management
     f16_kv=True,  # Use half precision for key-value cache to save memory
@@ -250,11 +250,14 @@ def CarthirReview(state: State):
         }
     ]
 
+    # Get story context for better fallback generation
+    story_context = imn_data.get("pre_production", {}).get("story_prompt", "")
+    
     try:
         reply = llm.invoke(director_vision_prompt)
         
-        # Use centralized, robust JSON parsing with built-in fallbacks
-        director_vision = parse_director_vision_response(reply.content)
+        # Use centralized, robust JSON parsing with story-specific fallbacks
+        director_vision = parse_director_vision_response(reply.content, story_context)
         
         # Store in IMN structure
         imn_data["pre_production"]["director_vision"] = director_vision
@@ -272,8 +275,8 @@ def CarthirReview(state: State):
         
     except Exception as e:
         print(f"[CarthirReview] Unexpected error: {e}")
-        # Even if LLM call fails, use robust fallback
-        fallback_vision = parse_director_vision_response("")  # Empty string triggers full fallback
+        # Even if LLM call fails, use robust fallback with story context
+        fallback_vision = parse_director_vision_response("", story_context)  # Pass story context for better fallback
         imn_data["pre_production"]["director_vision"] = fallback_vision
         directory = os.path.join("..", "Dreams")
         
@@ -281,7 +284,7 @@ def CarthirReview(state: State):
             write_imn(imn_data, directory)
         
         state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
-        print(f"[CarthirReview] Using complete fallback due to LLM error.")
+        print(f"[CarthirReview] Using story-specific fallback due to LLM error.")
     return state
 
 
@@ -343,7 +346,8 @@ def Narnion(state: State):
 
 def Cenedril(state: State):
     """
-    Cenedril uses the director's vision to create the first frame image prompt.
+    Cenedril: Creates structured, optimized image prompts using director's vision.
+    Now generates enhanced prompts with structured elements for superior image generation.
     """
     dream_id = state.get("id")
     if not dream_id:
@@ -356,20 +360,110 @@ def Cenedril(state: State):
     if imn_data is None:
         print("Error reading .imn file")
         return state
+    
     director_vision = imn_data["pre_production"].get("director_vision")
     if director_vision:
         image_prompt = director_vision.get("image_prompt", "")
         visual_notes = director_vision.get("visual_notes", "")
+        director_vision_text = director_vision.get("director_vision", "")
+        
         print(f"[Cenedril] Using director's vision for image generation.")
         print(f"Image Prompt: {image_prompt}")
         print(f"Visual Notes: {visual_notes}")
-        imn_data["pre_production"]["first_frame_prompt"] = image_prompt
-        imn_data["pre_production"]["visual_notes"] = visual_notes
-        directory = os.path.join("..", "Dreams")
-        # Use file lock for writing
-        with get_imn_filelock(imn_file_path):
-            write_imn(imn_data, directory)
-        print(f"[Cenedril] Director's image prompt saved to .imn file.")
+        
+        # Create enhanced structured prompt using LLM
+        try:
+            # Get additional story context for character details
+            story_prompt = imn_data["pre_production"].get("story_prompt", "")
+            pitch = imn_data["pre_production"].get("pitch", "")
+            
+            # Get latest scene context if available
+            in_production = imn_data.get("in_production", [])
+            latest_scene = ""
+            if in_production:
+                latest_scene = in_production[-1].get("scene_context", "")
+            
+            enhancement_prompt = f"""
+You are Cenedril, the master cinematographer and SDXL optimization expert. Transform this basic image prompt into a precision-engineered, PHOTOREALISTIC first-person perspective prompt for Dreams.ai.
+
+FULL STORY CONTEXT:
+Story Prompt: {story_prompt}
+Pitch: {pitch}
+Latest Scene: {latest_scene}
+
+DIRECTOR'S VISION:
+Original Director's Vision: {director_vision_text}
+Basic Image Prompt: {image_prompt}  
+Visual Notes: {visual_notes}
+
+CRITICAL INSTRUCTIONS FOR DREAMS.AI FIRST-PERSON PERSPECTIVES:
+1. ANALYZE story context to identify character details (species, role, situation)
+2. Generate what the CHARACTER SEES through their own eyes, NOT a portrait of them
+3. Use PHOTOREALISTIC professional photography style - no fantasy/artistic rendering
+4. Focus on realistic environments, lighting, and objects the character would actually see
+5. If character is a corgi, show what a corgi-height perspective would see (lower viewpoint)
+
+Create a structured prompt with these exact sections:
+
+**MAIN SUBJECT & COMPOSITION:**
+[First-person POV description: "Through my eyes as [character], I see..." Focus on what's IN FRONT of the character, not the character themselves. Include realistic environmental details at appropriate height/perspective for the character species.]
+
+**VISUAL STYLE & TECHNIQUE:**
+[ALWAYS: Professional photography, photorealistic, DSLR camera, natural lighting, realistic textures, sharp focus, high resolution]
+
+**LIGHTING & ATMOSPHERE:**
+[Realistic lighting only: natural sunlight, indoor lighting, streetlights, etc. NO fantasy lighting, NO mystical glows, NO magical elements]
+
+**TECHNICAL PARAMETERS:**
+[SDXL photorealism: masterpiece, best quality, ultra detailed, 8K resolution, professional photography, sharp focus, realistic, natural colors]
+
+**NEGATIVE PROMPT:**
+[Fantasy prevention: drawing, painting, cartoon, anime, fantasy, mystical, magical, artistic rendering, illustration, sketch, + standard quality controls: low quality, blurry, distorted, deformed, watermark, signature, text]
+
+**COMPOSITION NOTES:**
+[Camera settings: realistic depth of field, natural perspective, documentary style, environmental storytelling through realistic objects and settings]
+
+EXAMPLE FOR CORGI CHARACTER: 
+"Through my eyes as Finley the corgi, I see the wooden deck planks of the sailboat stretching out in front of me. The grain of the weathered wood is clearly visible, and I can see the metal cleats and rope coils at my eye level. Beyond the deck railing, the ocean extends to the horizon..."
+
+Remember: Generate what the character SEES, not what they LOOK LIKE. Focus on photorealistic environments from their unique perspective.
+"""
+            
+            enhancement_request = [
+                {"role": "system", "content": "You are Cenedril, a master cinematographer specializing in structured prompt engineering for AI image generation. You excel at extracting character details from story context."},
+                {"role": "user", "content": enhancement_prompt}
+            ]
+            
+            print(f"[Cenedril] 🚀 Generating enhanced structured prompt...")
+            reply = llm.invoke(enhancement_request)
+            enhanced_prompt = reply.content.strip()
+            
+            # Store both original and enhanced prompts
+            imn_data["pre_production"]["first_frame_prompt"] = image_prompt
+            imn_data["pre_production"]["enhanced_image_prompt"] = enhanced_prompt
+            imn_data["pre_production"]["visual_notes"] = visual_notes
+            
+            directory = os.path.join("..", "Dreams")
+            # Use file lock for writing
+            with get_imn_filelock(imn_file_path):
+                write_imn(imn_data, directory)
+            
+            print(f"[Cenedril] ✅ Enhanced structured prompt generated and saved")
+            print(f"[Cenedril] 📏 Enhanced prompt length: {len(enhanced_prompt)} characters")
+            print(f"[Cenedril] 🎯 Structured elements optimized for SDXL")
+            
+        except Exception as e:
+            print(f"[Cenedril] ⚠️ Error generating enhanced prompt: {e}")
+            # Fallback to basic prompt storage
+            imn_data["pre_production"]["first_frame_prompt"] = image_prompt
+            imn_data["pre_production"]["visual_notes"] = visual_notes
+            imn_data["pre_production"]["enhancement_error"] = str(e)
+            directory = os.path.join("..", "Dreams")
+            # Use file lock for writing
+            with get_imn_filelock(imn_file_path):
+                write_imn(imn_data, directory)
+            print(f"[Cenedril] 💾 Basic prompt saved despite enhancement error")
+            
     else:
         print(f"[Cenedril] No director vision found, using fallback prompt generation.")
         last_message = state["messages"][-1]

@@ -7,6 +7,6 @@ echo Attempting to change to: "%SCRIPT_DIR%Python"
 cd /d "%SCRIPT_DIR%Python"
 
 echo Current directory is: %cd%
-echo Attempting to run: python3.13 -m uvicorn api_server:app --reload
+echo Attempting to run: py -3.13 -m uvicorn api_server:app --reload
 
-start cmd /k "python3.13 -m uvicorn api_server:app --reload" 
+start cmd /k "py -3.13 -m uvicorn api_server:app --reload" 
