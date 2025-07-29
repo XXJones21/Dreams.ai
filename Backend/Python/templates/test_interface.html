@@ -502,16 +502,19 @@
 
         // Create dream card element
         function createDreamCard(dream) {
+            // Debug: Log dream data structure
+            console.log('Creating dream card for:', dream);
+            
             const template = document.getElementById('dreamCardTemplate');
             const card = template.content.cloneNode(true);
             
-            // Fill in the data
-            card.querySelector('[data-field="title"]').textContent = dream.title;
-            card.querySelector('[data-field="excerpt"]').textContent = dream.excerpt;
-            card.querySelector('[data-field="duration"]').textContent = `${dream.test_duration.toFixed(2)}s`;
-            card.querySelector('[data-field="scene-count"]').textContent = dream.scene_count;
-            card.querySelector('[data-field="creator-name"]').textContent = `User ${dream.user_id}`;
-            card.querySelector('[data-field="creator-initial"]').textContent = dream.user_id.charAt(0).toUpperCase();
+            // Fill in the data with safe defaults
+            card.querySelector('[data-field="title"]').textContent = dream.title || 'Untitled Dream';
+            card.querySelector('[data-field="excerpt"]').textContent = dream.excerpt || 'No description available';
+            card.querySelector('[data-field="duration"]').textContent = `${(dream.test_duration || 0).toFixed(2)}s`;
+            card.querySelector('[data-field="scene-count"]').textContent = dream.scene_count || 0;
+            card.querySelector('[data-field="creator-name"]').textContent = `User ${dream.user_id || 'Unknown'}`;
+            card.querySelector('[data-field="creator-initial"]').textContent = (dream.user_id || 'U').charAt(0).toUpperCase();
             card.querySelector('[data-field="created-at"]').textContent = formatDate(dream.created_at);
             card.querySelector('[data-field="likes"]').textContent = '0 likes';
             card.querySelector('[data-field="comments"]').textContent = '0 comments';
@@ -540,15 +543,20 @@
 
         // Show dream details modal
         function showDreamDetails(dream) {
-            // Fill modal with dream data
-            document.querySelector('[data-field="modal-title"]').textContent = dream.title;
-            document.querySelector('[data-field="modal-title-text"]').textContent = dream.title;
-            document.querySelector('[data-field="modal-story-prompt"]').textContent = dream.excerpt;
-            document.querySelector('[data-field="modal-initial-goal"]').textContent = dream.story.substring(0, 100) + '...';
-            document.querySelector('[data-field="modal-pitch"]').textContent = dream.pitch;
-            document.querySelector('[data-field="modal-dream-id"]').textContent = dream.dream_id;
-            document.querySelector('[data-field="modal-duration"]').textContent = `${dream.test_duration.toFixed(2)}s`;
-            document.querySelector('[data-field="modal-scene-count"]').textContent = dream.scene_count;
+            // Fill modal with dream data with safe defaults
+            document.querySelector('[data-field="modal-title"]').textContent = dream.title || 'Untitled Dream';
+            document.querySelector('[data-field="modal-title-text"]').textContent = dream.title || 'Untitled Dream';
+            document.querySelector('[data-field="modal-story-prompt"]').textContent = dream.excerpt || 'No story prompt available';
+            
+            // Handle story field safely
+            const story = dream.story || 'No initial goal available';
+            const truncatedStory = story.length > 100 ? story.substring(0, 100) + '...' : story;
+            document.querySelector('[data-field="modal-initial-goal"]').textContent = truncatedStory;
+            
+            document.querySelector('[data-field="modal-pitch"]').textContent = dream.pitch || 'No pitch available';
+            document.querySelector('[data-field="modal-dream-id"]').textContent = dream.dream_id || 'Unknown ID';
+            document.querySelector('[data-field="modal-duration"]').textContent = `${(dream.test_duration || 0).toFixed(2)}s`;
+            document.querySelector('[data-field="modal-scene-count"]').textContent = dream.scene_count || 0;
             document.querySelector('[data-field="modal-image-prompt"]').textContent = dream.image_prompt || 'No image prompt generated';
              
             // Display generated image in modal if available
@@ -566,21 +574,26 @@
             
             // Load scenes from dream data
             const scenesContainer = document.getElementById('modal-scenes');
-            if (dream.scenes && dream.scenes.length > 0) {
+            if (dream.scenes && Array.isArray(dream.scenes) && dream.scenes.length > 0) {
                 let scenesHtml = '';
                 dream.scenes.forEach((scene, index) => {
+                    // Safely handle scene data
+                    const sceneId = scene.scene_id || index + 1;
+                    const sceneContext = scene.scene_context || 'No context available';
+                    const actions = scene.actions || [];
+                    
                     scenesHtml += `
                         <div class="bg-gray-50 rounded-md p-4 mb-4">
-                            <h4 class="font-semibold text-gray-900 mb-2">Scene ${scene.scene_id || index + 1}</h4>
-                            <p class="text-gray-700 mb-3">${scene.scene_context || 'No context available'}</p>
-                            ${scene.actions && scene.actions.length > 0 ? `
+                            <h4 class="font-semibold text-gray-900 mb-2">Scene ${sceneId}</h4>
+                            <p class="text-gray-700 mb-3">${sceneContext}</p>
+                            ${Array.isArray(actions) && actions.length > 0 ? `
                                 <div class="mt-3">
                                     <h5 class="font-medium text-gray-800 mb-2">Available Actions:</h5>
                                     <ul class="list-disc list-inside space-y-1">
-                                        ${scene.actions.map(action => `<li class="text-gray-600">${action}</li>`).join('')}
+                                        ${actions.map(action => `<li class="text-gray-600">${action || 'No action description'}</li>`).join('')}
                                     </ul>
                                 </div>
-                            ` : ''}
+                            ` : '<p class="text-gray-500 text-sm">No actions available</p>'}
                         </div>
                     `;
                 });
@@ -594,14 +607,23 @@
 
         // Format date
         function formatDate(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diff = now - date;
+            if (!dateString) return 'Unknown time';
             
-            if (diff < 60000) return 'Just now';
-            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-            return date.toLocaleDateString();
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'Invalid date';
+                
+                const now = new Date();
+                const diff = now - date;
+                
+                if (diff < 60000) return 'Just now';
+                if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+                if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+                return date.toLocaleDateString();
+            } catch (error) {
+                console.error('Error formatting date:', error);
+                return 'Unknown time';
+            }
         }
 
         // Toggle debug panel

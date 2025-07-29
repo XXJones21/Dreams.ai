@@ -439,25 +439,26 @@ def Cenedril(state: State) -> Command[Literal["carthir_supervisor"]]:
             print(f"[Cenedril] 🎭 Latest scene: {len(latest_scene)} chars")
             
             enhancement_prompt = f"""
-You are Cenedril, the master cinematographer. Create a CONCISE, focused image prompt optimized for CLIP's 77-token limit.
+You are Cenedril, master cinematographer specializing in SDXL image generation. Create a professional, structured prompt optimized for photorealistic results.
 
 STORY CONTEXT:
 Story: {story_prompt}
 Scene: {latest_scene}
 Vision: {director_vision_text}
 
-REQUIREMENTS:
-1. Generate what the CHARACTER SEES through their eyes (first-person perspective)
-2. Keep it under 15 words maximum for essential content
-3. Focus on: viewpoint + main environment + lighting + style
-4. If character is a corgi, use lower eye-level perspective
+SDXL PROMPT STRUCTURE - Generate ONLY the final prompt, no explanations:
+
+[Subject/Character]: Detailed first-person perspective description
+[Photography]: Camera model, lens, lighting style, composition
+[Environment]: Setting, atmosphere, background elements  
+[Style & Quality]: Art style, quality tags, material descriptions
 
 EXAMPLES:
-- "Through corgi eyes: sailboat deck planks, ocean horizon, wooden railings, nautical details, photorealistic"
-- "Corgi viewpoint in pirate ship cabin: wooden floor, treasure chests, lantern light, realistic"
-- "First-person corgi perspective: ship's wheel, ocean spray, sailing ropes, maritime adventure, photorealistic"
+"First-person POV of a corgi on sandy beach, Canon EOS R5 with 85mm lens, golden hour lighting, shallow depth of field, warm sunlight filtering through palm trees, photorealistic, masterpiece, detailed textures, professional photography"
 
-Generate a single, concise prompt (under 15 words) that captures the essential visual elements:"""
+"Through corgi eyes: mystical forest clearing, Sony A7 III, 50mm f/1.8, soft natural lighting, dappled shadows, glowing mushrooms, moss-covered trees, cinematic composition, high quality, detailed, fantasy realism"
+
+Generate a complete structured prompt (40-60 words) with professional photography elements:"""
             
             enhancement_request = [
                 {"role": "system", "content": "You are Cenedril, a master cinematographer specializing in structured prompt engineering for AI image generation. You excel at extracting character details from story context."},
@@ -466,10 +467,35 @@ Generate a single, concise prompt (under 15 words) that captures the essential v
             
             print(f"[Cenedril] 🚀 Generating enhanced structured prompt...")
             reply = llm.invoke(enhancement_request)
-            enhanced_prompt = reply.content.strip()
+            raw_response = reply.content.strip()
             
-            print(f"[Cenedril] 📨 LLM response length: {len(enhanced_prompt)} characters")
-            print(f"[Cenedril] ✂️ Generated prompt: {enhanced_prompt}")
+            # Clean the prompt - remove any explanatory text or prefixes
+            enhanced_prompt = raw_response
+            
+            # Remove common prefixes that LLM might add
+            prefixes_to_remove = [
+                "Here's a structured prompt:",
+                "Here's the enhanced prompt:",
+                "Generated prompt:",
+                "Final prompt:",
+                "Structured prompt:",
+                "SDXL prompt:",
+                "Here's a ",
+                "This is a ",
+                "The prompt is:",
+                "\n"
+            ]
+            
+            for prefix in prefixes_to_remove:
+                if enhanced_prompt.startswith(prefix):
+                    enhanced_prompt = enhanced_prompt[len(prefix):].strip()
+            
+            # Remove quotes if the entire prompt is wrapped in them
+            if enhanced_prompt.startswith('"') and enhanced_prompt.endswith('"'):
+                enhanced_prompt = enhanced_prompt[1:-1].strip()
+                
+            print(f"[Cenedril] 📨 LLM response length: {len(raw_response)} characters")
+            print(f"[Cenedril] ✂️ Cleaned prompt: {enhanced_prompt}")
             
             # Store both original and enhanced prompts
             imn_data["pre_production"]["first_frame_prompt"] = image_prompt
@@ -483,20 +509,25 @@ Generate a single, concise prompt (under 15 words) that captures the essential v
             
             print(f"[Cenedril] ✅ Enhanced structured prompt generated and saved")
             print(f"[Cenedril] 📏 Final prompt length: {len(enhanced_prompt)} characters")
-            print(f"[Cenedril] 🎯 CLIP optimization: {'✅ Under limit' if len(enhanced_prompt) < 300 else '⚠️ May exceed CLIP limit'}")
+            print(f"[Cenedril] 🎯 SDXL optimization: {'✅ Professional structure' if 30 <= len(enhanced_prompt.split()) <= 80 else '⚠️ Consider adjusting length'}")
             
         except Exception as e:
             print(f"[Cenedril] ⚠️ Error generating enhanced prompt: {e}")
             print(f"[Cenedril] 🔧 Error type: {type(e).__name__}")
-            # Fallback to basic prompt storage
+            
+            # Create structured fallback prompt
+            fallback_prompt = f"First-person POV, {image_prompt.lower()}, Canon EOS R5, 85mm lens, natural lighting, photorealistic, high quality, detailed"
+            
+            # Store fallback with structured format
             imn_data["pre_production"]["first_frame_prompt"] = image_prompt
+            imn_data["pre_production"]["enhanced_image_prompt"] = fallback_prompt
             imn_data["pre_production"]["visual_notes"] = visual_notes
             imn_data["pre_production"]["enhancement_error"] = str(e)
             directory = os.path.join("..", "Dreams")
             # Use file lock for writing
             with get_imn_filelock(imn_file_path):
                 write_imn(imn_data, directory)
-            print(f"[Cenedril] 💾 Basic prompt saved despite enhancement error")
+            print(f"[Cenedril] 💾 Structured fallback prompt saved: {fallback_prompt}")
     else:
         print(f"[Cenedril] ⚠️ No director's vision found - skipping image prompt generation")
     
@@ -537,6 +568,30 @@ def CarthirSupervisor(state: State) -> Command[Literal["narnion", "carthir_revie
         
         # Run original Carthir logic
         state = Carthir(state)
+        
+        # Update IMN file with rich Carthir content
+        dream_id = state.get("id")
+        if dream_id and state.get("carthir_memory"):
+            carthir_mem = state["carthir_memory"]
+            imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+            
+            # Read existing IMN file
+            with get_imn_filelock(imn_file_path):
+                imn_data = read_imn(imn_file_path)
+            
+            if imn_data:
+                # Update with rich Carthir content
+                imn_data["pre_production"]["dream_name"] = carthir_mem.get("dream_name", imn_data["pre_production"]["dream_name"])
+                imn_data["pre_production"]["story_prompt"] = carthir_mem.get("story_prompt", imn_data["pre_production"]["story_prompt"])
+                imn_data["pre_production"]["initial_goal"] = carthir_mem.get("initial_goal", imn_data["pre_production"]["initial_goal"])
+                imn_data["pre_production"]["pitch"] = carthir_mem.get("pitch", imn_data["pre_production"]["pitch"])
+                
+                # Write updated IMN file
+                directory = os.path.join("..", "Dreams")
+                with get_imn_filelock(imn_file_path):
+                    write_imn(imn_data, directory)
+                
+                print("[CarthirSupervisor] ✅ Updated IMN file with rich story content")
         
         print("[CarthirSupervisor] ✅ Story generated, routing to Narnion for scene creation")
         return Command(

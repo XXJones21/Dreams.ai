@@ -145,22 +145,42 @@ def reset_debug_info():
     }
 
 def dream_card_to_dict(dream_card):
-    """Convert DreamCard object to dictionary for JSON serialization"""
-    return {
-        'dream_id': dream_card.dream_id,
-        'title': dream_card.title,
-        'excerpt': dream_card.excerpt,
-        'story': dream_card.story,
-        'pitch': dream_card.pitch,
-        'user_id': dream_card.user_id,
-        'test_duration': dream_card.test_duration,
-        'created_at': dream_card.created_at,
-        'scene_count': dream_card.scene_count,
-        'image_data': dream_card.image_data,  # This should now be the base64 string
-        'image_prompt': dream_card.image_prompt,
-        'director_vision': dream_card.director_vision,
-        'scenes': dream_card.scenes
-    }
+    """Convert DreamCard object or dictionary to dictionary for JSON serialization"""
+    # Handle both dictionary and object formats
+    if isinstance(dream_card, dict):
+        # Already a dictionary - return as is with safe defaults
+        return {
+            'dream_id': dream_card.get('dream_id', ''),
+            'title': dream_card.get('title', 'Untitled'),
+            'excerpt': dream_card.get('excerpt', ''),
+            'story': dream_card.get('story', ''),
+            'pitch': dream_card.get('pitch', ''),
+            'user_id': dream_card.get('user_id', ''),
+            'test_duration': dream_card.get('test_duration', 0),
+            'created_at': dream_card.get('created_at', dream_card.get('timestamp', '')),
+            'scene_count': dream_card.get('scene_count', 0),
+            'image_data': dream_card.get('image_data', None),
+            'image_prompt': dream_card.get('image_prompt', ''),
+            'director_vision': dream_card.get('director_vision', ''),
+            'scenes': dream_card.get('scenes', [])
+        }
+    else:
+        # Object format - use attributes
+        return {
+            'dream_id': dream_card.dream_id,
+            'title': dream_card.title,
+            'excerpt': dream_card.excerpt,
+            'story': dream_card.story,
+            'pitch': dream_card.pitch,
+            'user_id': dream_card.user_id,
+            'test_duration': dream_card.test_duration,
+            'created_at': dream_card.created_at,
+            'scene_count': dream_card.scene_count,
+            'image_data': dream_card.image_data,  # This should now be the base64 string
+            'image_prompt': dream_card.image_prompt,
+            'director_vision': dream_card.director_vision,
+            'scenes': dream_card.scenes
+        }
 
 def run_pipeline_test(prompt, user_id):
     """Run the complete pipeline test with detailed debugging (using PipelineInstance)"""
@@ -341,14 +361,23 @@ def run_pipeline_test(prompt, user_id):
             logger.info(f"   Image % of Total: {image_generation_time/total_time*100:.1f}%")
             logger.info(f"Test completed successfully in {total_time:.2f} seconds")
             
-            # Store successful result
+            # Store successful result with complete dream information
             test_results.append({
                 'dream_id': dream_id,
                 'title': dream_card.title,
+                'excerpt': dream_card.excerpt,
+                'story': dream_card.story,
+                'pitch': dream_card.pitch,
                 'user_id': user_id,
                 'test_duration': total_time,
                 'llm_time': llm_total_time,
                 'image_time': image_generation_time,
+                'created_at': dream_card.created_at,
+                'scene_count': dream_card.scene_count,
+                'image_data': dream_card.image_data,
+                'image_prompt': dream_card.image_prompt,
+                'director_vision': dream_card.director_vision,
+                'scenes': dream_card.scenes,
                 'timestamp': time.time()
             })
             logger.info(f"Test completed and added to results. Total tests: {len(test_results)}")
