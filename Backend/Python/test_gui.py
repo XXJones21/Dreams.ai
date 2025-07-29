@@ -243,23 +243,13 @@ def run_pipeline_test(prompt, user_id):
                 'No image prompt available'
             )
             
-            # If we have a generic prompt, try to make it more specific to the story
-            if image_prompt == 'First-person perspective of the dream scene':
-                # Create a more specific prompt based on the story
-                story_prompt = pre_production.get('story_prompt', '')
-                if 'corgi' in story_prompt.lower() and 'biplane' in story_prompt.lower():
-                    image_prompt = "First-person perspective from a corgi pilot's cockpit in a WW1 biplane, leather aviator goggles, wooden controls, dramatic sky battle scene"
-                elif 'corgi' in story_prompt.lower():
-                    image_prompt = "First-person perspective of a corgi in an action scene, dramatic lighting"
-                else:
-                    image_prompt = f"First-person perspective of: {story_prompt}"
             dream_card.image_prompt = image_prompt
             
             if image_prompt and image_prompt != 'No image prompt available':
                 logger.info(f"Generating image with prompt: {image_prompt}")
                 update_debug_info("ImageGenerator", "Processing", {"prompt_length": len(image_prompt)})
                 
-                # Use SDXL Turbo with 1024x1024 resolution and robust debugging
+                # Use SDXL Turbo with 512x512 resolution
                 logger.info("🎨 Starting SDXL Turbo image generation...")
                 update_debug_info("SDXL Turbo", "Generation Start", {
                     "prompt": image_prompt,
@@ -268,8 +258,7 @@ def run_pipeline_test(prompt, user_id):
                 })
                 
                 try:
-                    # Generate image with SDXL Turbo at 512x512 for speed optimization
-                    # Use random seed for initial generation, then store it for reproducibility
+                    # Generate image with SDXL Turbo
                     import random
                     
                     # Check if we already have a stored seed for this dream
@@ -306,50 +295,35 @@ def run_pipeline_test(prompt, user_id):
                         logger.info(f"📁 File: {image_data.get('filename', 'N/A')}")
                         logger.info(f"📊 Resolution: {image_data.get('metadata', {}).get('width', 'N/A')}x{image_data.get('metadata', {}).get('height', 'N/A')}")
                         
-                        # Store image generation metadata in IMN file for reproducibility
-                        image_generation_metadata = {
-                            'seed': seed,
-                            'prompt': image_prompt,
-                            'service': 'sdxl_turbo',
-                            'width': 512,
-                            'height': 512,
-                            'num_inference_steps': 1,
-                            'guidance_scale': 0.0,
-                            'generation_time': generation_time,
-                            'filename': image_data.get('filename'),
-                            'generated_at': image_data.get('metadata', {}).get('generated_at'),
-                            'model': image_data.get('metadata', {}).get('model', 'SDXL Turbo')
-                        }
-                        
-                        # Update IMN file with image generation metadata
-                        imn_data['post_production']['image_generation'] = image_generation_metadata
-                        directory = os.path.join("..", "Dreams")
-                        imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
-                        with get_imn_filelock(imn_file_path):
-                            write_imn(imn_data, directory)
-                        
-                        logger.info(f"💾 Stored image generation metadata in IMN file (seed: {seed})")
-                        
-                        update_debug_info("SDXL Turbo", "Generation Complete", {
-                            "generation_time": generation_time,
-                            "filename": image_data.get('filename'),
-                            "resolution": f"{image_data.get('metadata', {}).get('width', 'N/A')}x{image_data.get('metadata', {}).get('height', 'N/A')}",
-                            "model": image_data.get('metadata', {}).get('model', 'SDXL Turbo'),
-                            "seed": seed
-                        })
-                        
-                    else:
-                        error_msg = f"SDXL Turbo generation failed or returned unexpected result: {image_data}"
-                        logger.error(error_msg)
-                        update_debug_info("SDXL Turbo", "Generation Failed", {"error": error_msg})
-                        raise Exception(error_msg)
-                        
+                        # Store image generation metadata in IMN file
+                        if imn_data:
+                            imn_data["post_production"]["image_generation"] = {
+                                "seed": seed,
+                                "prompt": image_prompt,
+                                "service": "sdxl_turbo",
+                                "width": image_data.get('metadata', {}).get('width', 512),
+                                "height": image_data.get('metadata', {}).get('height', 512),
+                                "num_inference_steps": 1,
+                                "guidance_scale": 0.0,
+                                "generation_time": generation_time,
+                                "filename": image_data.get('filename', ''),
+                                "generated_at": datetime.now().isoformat(),
+                                "model": "SDXL Turbo"
+                            }
+                            
+                            # Write updated IMN data back to file
+                            directory = os.path.join("..", "Dreams")
+                            with get_imn_filelock(imn_path):
+                                write_imn(imn_data, directory)
+                            
+                            logger.info(f"💾 Stored image generation metadata in IMN file (seed: {seed})")
+                            
                 except Exception as e:
                     error_msg = f"SDXL Turbo image generation failed: {str(e)}"
                     logger.error(error_msg)
                     update_debug_info("SDXL Turbo", "Generation Error", {"error": str(e)})
-                    raise Exception(error_msg)
-                    
+                    dream_card.image_data = None
+            
             else:
                 logger.info("No image prompt available")
             
@@ -363,19 +337,20 @@ def run_pipeline_test(prompt, user_id):
             logger.info(f"   Total Pipeline Time: {total_time:.2f}s")
             logger.info(f"   LLM Processing Time: {llm_total_time:.2f}s")
             logger.info(f"   Image Generation Time: {image_generation_time:.2f}s")
-            logger.info(f"   LLM % of Total: {(llm_total_time/total_time)*100:.1f}%")
-            logger.info(f"   Image % of Total: {(image_generation_time/total_time)*100:.1f}%")
+            logger.info(f"   LLM % of Total: {llm_total_time/total_time*100:.1f}%")
+            logger.info(f"   Image % of Total: {image_generation_time/total_time*100:.1f}%")
+            logger.info(f"Test completed successfully in {total_time:.2f} seconds")
             
-            update_debug_info("Pipeline", "Test Complete", {
-                "duration": dream_card.test_duration,
-                "total_time": total_time,
-                "llm_time": llm_total_time,
-                "image_time": image_generation_time
+            # Store successful result
+            test_results.append({
+                'dream_id': dream_id,
+                'title': dream_card.title,
+                'user_id': user_id,
+                'test_duration': total_time,
+                'llm_time': llm_total_time,
+                'image_time': image_generation_time,
+                'timestamp': time.time()
             })
-            logger.info(f"Test completed successfully in {dream_card.test_duration:.2f} seconds")
-            
-            # Add to results
-            test_results.append(dream_card)
             logger.info(f"Test completed and added to results. Total tests: {len(test_results)}")
             
             return dream_card

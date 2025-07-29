@@ -13,6 +13,7 @@ import json
 from datetime import datetime
 import torch
 from diffusers import DiffusionPipeline
+import re
 
 class ImageGenerator:
     """Base class for image generation services"""
@@ -317,25 +318,107 @@ class SDXLTurboGenerator(ImageGenerator):
                 result['metadata']['sdxl_turbo_error'] = str(e)
             return result
     
-    def _create_enhanced_prompt(self, base_prompt: str, director_vision: dict = None) -> str:
-        """Create enhanced prompt optimized for Dreams.ai"""
-        style_elements = [
-            "first-person perspective",
-            "immersive viewpoint", 
-            "cinematic composition",
-            "high detail",
-            "atmospheric lighting"
+    def _optimize_prompt_for_clip(self, prompt: str, max_tokens: int = 75) -> str:
+        """
+        Optimize prompt to stay within CLIP's token limit.
+        Preserves key content while reducing length.
+        """
+        # Simple tokenization approximation (CLIP uses roughly 1.3 chars per token)
+        # Use a conservative estimate to stay well under the limit
+        max_chars = max_tokens * 4  # Conservative estimate: ~4 chars per token
+        
+        if len(prompt) <= max_chars:
+            return prompt
+        
+        print(f"[SDXL Turbo] 📏 Prompt too long ({len(prompt)} chars), optimizing for CLIP...")
+        
+        # Strategy: Extract most important elements and reconstruct concisely
+        # Priority order: subject, action, setting, style
+        
+        # Remove structured formatting markers that Cenedril adds
+        clean_prompt = prompt
+        
+        # Remove section headers and formatting
+        clean_prompt = re.sub(r'\*\*[^*]+\*\*:?\s*', '', clean_prompt)
+        clean_prompt = re.sub(r'Here\'s the structured prompt with all sections filled out:\s*', '', clean_prompt)
+        clean_prompt = re.sub(r'\[.*?\]', '', clean_prompt)  # Remove bracketed instructions
+        
+        # Extract key phrases (look for important descriptive content)
+        # Remove redundant technical terms
+        redundant_terms = [
+            'professional photography', 'photorealistic', 'DSLR camera', 
+            'natural lighting', 'realistic textures', 'sharp focus', 
+            'high resolution', 'masterpiece', 'best quality', 'ultra detailed',
+            'high detail', 'atmospheric lighting', 'cinematic composition'
         ]
+        
+        for term in redundant_terms:
+            clean_prompt = clean_prompt.replace(term, '')
+        
+        # Clean up extra whitespace and punctuation
+        clean_prompt = re.sub(r'\s+', ' ', clean_prompt)
+        clean_prompt = re.sub(r'[,\s]*[,\s]+', ', ', clean_prompt)
+        clean_prompt = clean_prompt.strip(' ,.')
+        
+        # If still too long, truncate to essential content
+        if len(clean_prompt) > max_chars:
+            # Split into sentences and keep the most important ones
+            sentences = [s.strip() for s in clean_prompt.split('.') if s.strip()]
+            
+            # Prioritize sentences with character perspective ("Through my eyes", "I see")
+            prioritized = []
+            regular = []
+            
+            for sentence in sentences:
+                if any(phrase in sentence.lower() for phrase in ['through my eyes', 'i see', 'through the eyes']):
+                    prioritized.append(sentence)
+                else:
+                    regular.append(sentence)
+            
+            # Reconstruct with priority content first
+            result_sentences = prioritized + regular
+            
+            # Add sentences until we approach the limit
+            optimized_prompt = ""
+            for sentence in result_sentences:
+                test_prompt = optimized_prompt + sentence + ". " if optimized_prompt else sentence + ". "
+                if len(test_prompt) <= max_chars:
+                    optimized_prompt = test_prompt
+                else:
+                    break
+            
+            clean_prompt = optimized_prompt.strip(' .')
+        
+        # Add essential style markers back if there's room
+        essential_style = "first-person perspective, photorealistic"
+        if len(clean_prompt) + len(essential_style) + 2 <= max_chars:
+            clean_prompt = f"{clean_prompt}, {essential_style}"
+        
+        print(f"[SDXL Turbo] ✂️ Optimized prompt: {len(clean_prompt)} chars")
+        return clean_prompt
+    
+    def _create_enhanced_prompt(self, base_prompt: str, director_vision: dict = None) -> str:
+        """Create enhanced prompt optimized for Dreams.ai and CLIP token limits"""
+        
+        # First, optimize the base prompt for CLIP if it's too long
+        optimized_base = self._optimize_prompt_for_clip(base_prompt)
+        
+        # Only add minimal style elements to stay within CLIP limits
+        essential_style = ["first-person perspective", "photorealistic"]
         
         if director_vision:
             visual_notes = director_vision.get("visual_notes", "")
-            if visual_notes:
-                style_elements.append(visual_notes)
+            # Only add visual notes if they're short and we have room
+            if visual_notes and len(visual_notes) < 50:
+                essential_style.append(visual_notes[:30])  # Truncate visual notes
         
-        style_text = ", ".join(style_elements)
-        enhanced_prompt = f"{base_prompt}, {style_text}"
+        style_text = ", ".join(essential_style)
         
-        return enhanced_prompt
+        # Ensure final prompt stays within limits
+        test_prompt = f"{optimized_base}, {style_text}"
+        final_prompt = self._optimize_prompt_for_clip(test_prompt)
+        
+        return final_prompt
 
 
 

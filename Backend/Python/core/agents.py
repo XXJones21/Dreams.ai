@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.channels import last_value
+from langgraph.types import Command
 from core.imn_utils import (
     write_imn, read_imn, create_imn_structure, validate_imn_structure, get_imn_filelock,
     parse_carthir_response, parse_director_vision_response, parse_narnion_response, create_scene_for_imn
@@ -62,6 +63,7 @@ class State(TypedDict):
     id: Annotated[str | None, last_value]
     user_id: str | None
     carthir_memory: dict | None
+    pipeline_step: Annotated[str | None, last_value]
 
 class convert_prompt_to_imn(TypedDict):
     message_type: Literal["story_prompt", "dream_name", "initial_goal", "pitch"]
@@ -101,12 +103,10 @@ def convert_prompt_to_imn(state: State):
 
     user_id = state.get("user_id", "user-uuid-placeholder")
 
-    # Generate dream ID if not present
-    if not state.get("id"):
-        dream_id = str(uuid.uuid4())
-        state["id"] = dream_id
-    else:
-        dream_id = state["id"]
+    # Get dream ID from state (should already be set by PipelineInstance)
+    dream_id = state.get("id")
+    if not dream_id:
+        raise ValueError("[convert_prompt_to_imn] No dream ID found in state - pipeline initialization error")
 
     directory = os.path.join("..", "Dreams")
 
@@ -136,27 +136,64 @@ def Carthir(state: State):
         print("[Carthir] Using existing memory.")
         return state
 
-    last_message = state["messages"][-1]
+    # Handle both old and new message formats
+    messages = state.get("messages", [])
+    if not messages:
+        print("[Carthir] ❌ No messages found in state")
+        return state
+        
+    last_message = messages[-1]
+    
+    # Extract content from either dict or object format
+    if hasattr(last_message, 'content'):
+        # LangChain message object
+        prompt_content = last_message.content
+    elif isinstance(last_message, dict):
+        # Dictionary format
+        prompt_content = last_message.get('content', '')
+    else:
+        # String format
+        prompt_content = str(last_message)
+    
+    if not prompt_content:
+        print("[Carthir] ❌ No content found in last message")
+        return state
 
     pitch_prompt = [
         {
             "role": "system",
             "content": (
                 """
-                You are a creative film pitch generator. Given the user's prompt, generate a compelling minute-long film pitch in first person perspective. 
-                Respond ONLY with a valid JSON object with the following fields:\n
-                - dream_name: A short, evocative title for the dream journey.\n
-                - story_prompt: A one or two sentence summary of the narrative, suitable for use as a story prompt.\n
-                - initial_goal: An initial goal or natural conclusion for the dream, as a single sentence.\n
-                - pitch: The full, detailed pitch text (1-2 paragraphs, can include visual/audio notes).\n
-                Example:\n
-                {\n  \"dream_name\": \"Root & Whisper\",\n  \"story_prompt\": \"You are a child exploring a mysterious, ancient forest where the trees seem to whisper secrets.\",\n  \"initial_goal\": \"To understand what the woods are trying to tell you.\",\n  \"pitch\": \"(Full pitch text here...)\"\n}
+                You are a creative film pitch generator. Given the user's prompt, generate a compelling minute-long film pitch in first person perspective.
+                
+                CRITICAL JSON FORMATTING RULES:
+                1. Respond ONLY with valid JSON - no additional text before or after
+                2. Use \\n for line breaks within strings (not actual newlines)
+                3. Escape all quotes within strings using \"
+                4. Keep all content on single lines within JSON values
+                5. Do not use any control characters or unescaped newlines
+                
+                Respond with this exact JSON structure:
+                {
+                  "dream_name": "A short, evocative title",
+                  "story_prompt": "A one-sentence summary of the narrative",
+                  "initial_goal": "A single sentence describing the initial goal",
+                  "pitch": "The full pitch as a single paragraph with \\n for line breaks"
+                }
+                
+                Example format:
+                {
+                  "dream_name": "Root & Whisper",
+                  "story_prompt": "You are a child exploring a mysterious, ancient forest where the trees seem to whisper secrets.",
+                  "initial_goal": "To understand what the woods are trying to tell you.",
+                  "pitch": "Opening shot of small hands touching ancient bark.\\n\\nCut to close-up of curious eyes looking up at towering trees.\\n\\nThe forest seems alive with whispered secrets only you can hear."
+                }
                 """
             )
         },
         {
             "role": "user",
-            "content": last_message.content
+            "content": prompt_content
         }
     ]
 
@@ -169,6 +206,7 @@ def Carthir(state: State):
     if parsed_data:
         # Successfully parsed - store in state for IMN structure
         state["carthir_memory"] = parsed_data
+        # Update messages to maintain compatibility
         state["messages"] = [{"role": "assistant", "content": parsed_data["pitch"]}]
         print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
         return state
@@ -180,27 +218,30 @@ def Carthir(state: State):
         return state
 
 
-def CarthirReview(state: State):
+def CarthirReview(state: State) -> Command[Literal["carthir_supervisor"]]:
     """
     Enhanced Carthir review that generates director's vision for image generation.
     Uses persistent memory to ensure the visual matches the original creative vision.
+    Now works with IMN-based context retrieval for resource-aware execution.
     """
     print("\n[CarthirReview] --- DIRECTOR'S VISION REVIEW ---")
-    carthir_mem = state.get("carthir_memory")
-
+    
     dream_id = state.get("id")
     if not dream_id:
-        print("No dream ID found in state.")
+        print("[CarthirReview] ❌ No dream ID found in state.")
         return state
+    
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
 
-    # Use file lock for reading
+    # Use file lock for reading fresh context
     with get_imn_filelock(imn_file_path):
         imn_data = read_imn(imn_file_path)
     if imn_data is None:
-        print("Error reading .imn file")
+        print("[CarthirReview] ❌ Error reading .imn file")
         return state
 
+    # Get context from IMN data
+    carthir_mem = imn_data["pre_production"]
     narnion_result = None
     if imn_data["in_production"]:
         narnion_result = imn_data["in_production"][-1]
@@ -210,17 +251,15 @@ def CarthirReview(state: State):
     print(f"\n[CarthirReview] Narnion's Latest Scene:")
     print(json.dumps(narnion_result, indent=2, default=str))
 
-    # Handle both successful and failed Carthir parsing
-    if carthir_mem is None:
-        print(f"[CarthirReview] Carthir memory is None, using fallback vision")
-        original_vision = "A compelling dream scene"
-        # Try to get the original prompt from IMN data
-        pre_prod = imn_data.get("pre_production", {})
-        story_prompt = pre_prod.get("story_prompt", "")
-        if story_prompt:
-            original_vision = f"A dream based on: {story_prompt}"
+    # Get story context for director vision
+    story_prompt = carthir_mem.get("story_prompt", "")
+    pitch = carthir_mem.get("pitch", "")
+    
+    if story_prompt:
+        original_vision = pitch or f"A dream based on: {story_prompt}"
     else:
-        original_vision = carthir_mem.get('pitch', 'A compelling dream scene')
+        print(f"[CarthirReview] ⚠️ Using fallback vision - no story context found")
+        original_vision = "A compelling dream scene"
 
     director_prompt = (
         f"Original Vision: {original_vision}\n\n"
@@ -285,29 +324,38 @@ def CarthirReview(state: State):
         
         state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
         print(f"[CarthirReview] Using story-specific fallback due to LLM error.")
-    return state
+    return Command(goto="carthir_supervisor")
 
 
-def Narnion(state: State):
+def Narnion(state: State) -> Command[Literal["carthir_supervisor"]]:
     """
     Narnion writes the next scene and suggested actions, appending to in_production.
+    Now works with IMN-based context retrieval for resource-aware execution.
     """
     dream_id = state.get("id")
     if not dream_id:
-        print("No dream ID found in state.")
+        print("[Narnion] ❌ No dream ID found in state.")
         return state
+    
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
-    # Use file lock for reading
+    
+    # Use file lock for reading fresh context
     with get_imn_filelock(imn_file_path):
         imn_data = read_imn(imn_file_path)
     if imn_data is None:
-        print("Error reading .imn file")
+        print("[Narnion] ❌ Error reading .imn file")
         return state
+    
+    # Get story context from IMN data instead of state messages
     pre = imn_data["pre_production"]
-    last_message = state["messages"][-1]
-    narnion_prompt = last_message.content
+    story_prompt = pre.get("story_prompt", "")
+    pitch = pre.get("pitch", "")
+    
+    # Use story prompt for context instead of last message
+    narnion_prompt = story_prompt or pitch or "A mysterious adventure"
+    
     prompt = (
-        f"Pitch: {narnion_prompt}\n\n"
+        f"Story Context: {narnion_prompt}\n\n"
         "Write a ten-second scene (no dialogue) for the next moment in the story, and suggest 2-3 actions the user could take next. "
         "Respond in JSON with:\n"
         "{\n"
@@ -337,28 +385,31 @@ def Narnion(state: State):
         with get_imn_filelock(imn_file_path):
             write_imn(imn_data, directory)
         
-        print(f"[Narnion] Added new scene to in_production.")
+        print(f"[Narnion] ✅ Added new scene to in_production.")
     else:
-        print(f"[Narnion] Failed to parse scene response - skipping scene creation")
+        print(f"[Narnion] ❌ Failed to parse scene response - skipping scene creation")
         print(f"[Narnion] Raw reply: {reply.content}")
-    return state
+    
+    return Command(goto="carthir_supervisor")
 
 
-def Cenedril(state: State):
+def Cenedril(state: State) -> Command[Literal["carthir_supervisor"]]:
     """
     Cenedril: Creates structured, optimized image prompts using director's vision.
     Now generates enhanced prompts with structured elements for superior image generation.
     """
+    print(f"[Cenedril] 🎬 Starting image prompt generation...")
+    
     dream_id = state.get("id")
     if not dream_id:
-        print("No dream ID found in state.")
+        print("[Cenedril] ❌ No dream ID found in state.")
         return state
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
     # Use file lock for reading
     with get_imn_filelock(imn_file_path):
         imn_data = read_imn(imn_file_path)
     if imn_data is None:
-        print("Error reading .imn file")
+        print("[Cenedril] ❌ Error reading .imn file")
         return state
     
     director_vision = imn_data["pre_production"].get("director_vision")
@@ -367,9 +418,10 @@ def Cenedril(state: State):
         visual_notes = director_vision.get("visual_notes", "")
         director_vision_text = director_vision.get("director_vision", "")
         
-        print(f"[Cenedril] Using director's vision for image generation.")
-        print(f"Image Prompt: {image_prompt}")
-        print(f"Visual Notes: {visual_notes}")
+        print(f"[Cenedril] 📝 Using director's vision for image generation.")
+        print(f"[Cenedril] 📏 Original prompt length: {len(image_prompt)} characters")
+        print(f"[Cenedril] 🎯 Original prompt: {image_prompt[:100]}...")
+
         
         # Create enhanced structured prompt using LLM
         try:
@@ -383,51 +435,29 @@ def Cenedril(state: State):
             if in_production:
                 latest_scene = in_production[-1].get("scene_context", "")
             
+            print(f"[Cenedril] 📖 Story context: {len(story_prompt)} chars")
+            print(f"[Cenedril] 🎭 Latest scene: {len(latest_scene)} chars")
+            
             enhancement_prompt = f"""
-You are Cenedril, the master cinematographer and SDXL optimization expert. Transform this basic image prompt into a precision-engineered, PHOTOREALISTIC first-person perspective prompt for Dreams.ai.
+You are Cenedril, the master cinematographer. Create a CONCISE, focused image prompt optimized for CLIP's 77-token limit.
 
-FULL STORY CONTEXT:
-Story Prompt: {story_prompt}
-Pitch: {pitch}
-Latest Scene: {latest_scene}
+STORY CONTEXT:
+Story: {story_prompt}
+Scene: {latest_scene}
+Vision: {director_vision_text}
 
-DIRECTOR'S VISION:
-Original Director's Vision: {director_vision_text}
-Basic Image Prompt: {image_prompt}  
-Visual Notes: {visual_notes}
+REQUIREMENTS:
+1. Generate what the CHARACTER SEES through their eyes (first-person perspective)
+2. Keep it under 15 words maximum for essential content
+3. Focus on: viewpoint + main environment + lighting + style
+4. If character is a corgi, use lower eye-level perspective
 
-CRITICAL INSTRUCTIONS FOR DREAMS.AI FIRST-PERSON PERSPECTIVES:
-1. ANALYZE story context to identify character details (species, role, situation)
-2. Generate what the CHARACTER SEES through their own eyes, NOT a portrait of them
-3. Use PHOTOREALISTIC professional photography style - no fantasy/artistic rendering
-4. Focus on realistic environments, lighting, and objects the character would actually see
-5. If character is a corgi, show what a corgi-height perspective would see (lower viewpoint)
+EXAMPLES:
+- "Through corgi eyes: sailboat deck planks, ocean horizon, wooden railings, nautical details, photorealistic"
+- "Corgi viewpoint in pirate ship cabin: wooden floor, treasure chests, lantern light, realistic"
+- "First-person corgi perspective: ship's wheel, ocean spray, sailing ropes, maritime adventure, photorealistic"
 
-Create a structured prompt with these exact sections:
-
-**MAIN SUBJECT & COMPOSITION:**
-[First-person POV description: "Through my eyes as [character], I see..." Focus on what's IN FRONT of the character, not the character themselves. Include realistic environmental details at appropriate height/perspective for the character species.]
-
-**VISUAL STYLE & TECHNIQUE:**
-[ALWAYS: Professional photography, photorealistic, DSLR camera, natural lighting, realistic textures, sharp focus, high resolution]
-
-**LIGHTING & ATMOSPHERE:**
-[Realistic lighting only: natural sunlight, indoor lighting, streetlights, etc. NO fantasy lighting, NO mystical glows, NO magical elements]
-
-**TECHNICAL PARAMETERS:**
-[SDXL photorealism: masterpiece, best quality, ultra detailed, 8K resolution, professional photography, sharp focus, realistic, natural colors]
-
-**NEGATIVE PROMPT:**
-[Fantasy prevention: drawing, painting, cartoon, anime, fantasy, mystical, magical, artistic rendering, illustration, sketch, + standard quality controls: low quality, blurry, distorted, deformed, watermark, signature, text]
-
-**COMPOSITION NOTES:**
-[Camera settings: realistic depth of field, natural perspective, documentary style, environmental storytelling through realistic objects and settings]
-
-EXAMPLE FOR CORGI CHARACTER: 
-"Through my eyes as Finley the corgi, I see the wooden deck planks of the sailboat stretching out in front of me. The grain of the weathered wood is clearly visible, and I can see the metal cleats and rope coils at my eye level. Beyond the deck railing, the ocean extends to the horizon..."
-
-Remember: Generate what the character SEES, not what they LOOK LIKE. Focus on photorealistic environments from their unique perspective.
-"""
+Generate a single, concise prompt (under 15 words) that captures the essential visual elements:"""
             
             enhancement_request = [
                 {"role": "system", "content": "You are Cenedril, a master cinematographer specializing in structured prompt engineering for AI image generation. You excel at extracting character details from story context."},
@@ -437,6 +467,9 @@ Remember: Generate what the character SEES, not what they LOOK LIKE. Focus on ph
             print(f"[Cenedril] 🚀 Generating enhanced structured prompt...")
             reply = llm.invoke(enhancement_request)
             enhanced_prompt = reply.content.strip()
+            
+            print(f"[Cenedril] 📨 LLM response length: {len(enhanced_prompt)} characters")
+            print(f"[Cenedril] ✂️ Generated prompt: {enhanced_prompt}")
             
             # Store both original and enhanced prompts
             imn_data["pre_production"]["first_frame_prompt"] = image_prompt
@@ -449,11 +482,12 @@ Remember: Generate what the character SEES, not what they LOOK LIKE. Focus on ph
                 write_imn(imn_data, directory)
             
             print(f"[Cenedril] ✅ Enhanced structured prompt generated and saved")
-            print(f"[Cenedril] 📏 Enhanced prompt length: {len(enhanced_prompt)} characters")
-            print(f"[Cenedril] 🎯 Structured elements optimized for SDXL")
+            print(f"[Cenedril] 📏 Final prompt length: {len(enhanced_prompt)} characters")
+            print(f"[Cenedril] 🎯 CLIP optimization: {'✅ Under limit' if len(enhanced_prompt) < 300 else '⚠️ May exceed CLIP limit'}")
             
         except Exception as e:
             print(f"[Cenedril] ⚠️ Error generating enhanced prompt: {e}")
+            print(f"[Cenedril] 🔧 Error type: {type(e).__name__}")
             # Fallback to basic prompt storage
             imn_data["pre_production"]["first_frame_prompt"] = image_prompt
             imn_data["pre_production"]["visual_notes"] = visual_notes
@@ -463,39 +497,10 @@ Remember: Generate what the character SEES, not what they LOOK LIKE. Focus on ph
             with get_imn_filelock(imn_file_path):
                 write_imn(imn_data, directory)
             print(f"[Cenedril] 💾 Basic prompt saved despite enhancement error")
-            
     else:
-        print(f"[Cenedril] No director vision found, using fallback prompt generation.")
-        last_message = state["messages"][-1]
-        cenedril_prompt = last_message.content
-        prompt = (
-            f"Pitch: {cenedril_prompt}\n\n"
-            "Write a vivid, first-person visual prompt for an AI image generator to create the very first frame of the dream. "
-            "Describe what the dreamer sees as if they are experiencing it themselves, using 'I' perspective."
-        )
-        image_prompt = [
-            {"role": "system", "content": "You are Cenedril, a master of visual storytelling."},
-            {"role": "user", "content": prompt}
-        ]
-        try:
-            reply = llm.invoke(image_prompt)
-            first_frame_prompt = reply.content.strip()
-            imn_data["pre_production"]["first_frame_prompt"] = first_frame_prompt
-            directory = os.path.join("..", "Dreams")
-            # Use file lock for writing
-            with get_imn_filelock(imn_file_path):
-                write_imn(imn_data, directory)
-            print(f"[Cenedril] Fallback prompt generated and saved to .imn file.")
-        except Exception as e:
-            print(f"Error in Cenedril during fallback prompt generation: {e}")
-            imn_data["pre_production"]["first_frame_prompt"] = "ERROR GENERATING PROMPT"
-            directory = os.path.join("..", "Dreams")
-            # Use file lock for writing
-            with get_imn_filelock(imn_file_path):
-                write_imn(imn_data, directory)
-            state["messages"] = [{"role": "assistant", "content": f"Sorry, there was an error generating the initial frame prompt."}]
-            return state
-    return state
+        print(f"[Cenedril] ⚠️ No director's vision found - skipping image prompt generation")
+    
+    return Command(goto="carthir_supervisor")
 
 
 def print_imn_agent(state: State):
@@ -514,4 +519,49 @@ def print_imn_agent(state: State):
         print("Error reading .imn file")
         return state
     print(f"\n[print_imn_agent] .imn file contents for '{imn_file_path}':\n{json.dumps(imn_data, indent=2)}\n")
-    return state 
+    return state
+
+
+def CarthirSupervisor(state: State) -> Command[Literal["narnion", "carthir_review", "cenedril", "__end__"]]:
+    """
+    Carthir Supervisor: Manages the pipeline flow and routing decisions.
+    Combines original Carthir story generation with supervisor routing logic.
+    """
+    pipeline_step = state.get("pipeline_step", "start")
+    
+    print(f"[CarthirSupervisor] Current pipeline step: {pipeline_step}")
+    
+    if pipeline_step == "start" or pipeline_step is None:
+        # First run: Generate the story content (original Carthir logic)
+        print("[CarthirSupervisor] 🎬 Starting story generation...")
+        
+        # Run original Carthir logic
+        state = Carthir(state)
+        
+        print("[CarthirSupervisor] ✅ Story generated, routing to Narnion for scene creation")
+        return Command(
+            goto="narnion",
+            update={"pipeline_step": "narnion_complete"}
+        )
+    
+    elif pipeline_step == "narnion_complete":
+        print("[CarthirSupervisor] 📝 Narnion completed, routing to CarthirReview for director's vision")
+        return Command(
+            goto="carthir_review",
+            update={"pipeline_step": "review_complete"}
+        )
+    
+    elif pipeline_step == "review_complete":
+        print("[CarthirSupervisor] 🎭 CarthirReview completed, routing to Cenedril for image generation")
+        return Command(
+            goto="cenedril",
+            update={"pipeline_step": "cenedril_complete"}
+        )
+    
+    elif pipeline_step == "cenedril_complete":
+        print("[CarthirSupervisor] 🎨 All agents completed, finishing pipeline")
+        return Command(goto="__end__")
+    
+    else:
+        print(f"[CarthirSupervisor] ⚠️ Unknown pipeline step: {pipeline_step}, ending")
+        return Command(goto="__end__") 

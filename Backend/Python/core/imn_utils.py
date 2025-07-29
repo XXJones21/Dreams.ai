@@ -138,7 +138,7 @@ def get_imn_filelock(imn_path: str):
 def _clean_json_content(raw_content: str) -> str:
     """
     Clean and extract JSON content from LLM response.
-    Handles common formatting issues like code blocks, extra characters, etc.
+    Handles common formatting issues like code blocks, extra characters, newlines in strings, etc.
     """
     content = raw_content.strip()
     
@@ -147,15 +147,64 @@ def _clean_json_content(raw_content: str) -> str:
     if codeblock_match:
         content = codeblock_match.group(1).strip()
     
-    # Remove control characters except newlines and tabs
-    content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
-    
     # Find JSON object boundaries
     json_start = content.find('{')
     json_end = content.rfind('}')
     
     if json_start != -1 and json_end != -1 and json_end > json_start:
         content = content[json_start:json_end + 1]
+    else:
+        return content  # Return as-is if no valid JSON boundaries found
+    
+    # Fix newlines and control characters within JSON string values
+    # This is a more robust approach that handles newlines in JSON strings
+    try:
+        # First, try to fix common JSON string formatting issues
+        # Replace unescaped newlines within string values
+        fixed_content = ""
+        in_string = False
+        escape_next = False
+        i = 0
+        
+        while i < len(content):
+            char = content[i]
+            
+            if escape_next:
+                # This character is escaped, add it as-is
+                fixed_content += char
+                escape_next = False
+            elif char == '\\':
+                # Next character will be escaped
+                fixed_content += char
+                escape_next = True
+            elif char == '"':
+                # Toggle string state
+                in_string = not in_string
+                fixed_content += char
+            elif in_string and char == '\n':
+                # Replace unescaped newline in string with escaped version
+                fixed_content += '\\n'
+            elif in_string and char == '\r':
+                # Replace unescaped carriage return in string with escaped version
+                fixed_content += '\\r'
+            elif in_string and char == '\t':
+                # Replace unescaped tab in string with escaped version
+                fixed_content += '\\t'
+            elif in_string and ord(char) < 32:
+                # Replace other control characters in strings with space
+                fixed_content += ' '
+            else:
+                # Regular character, add as-is
+                fixed_content += char
+            
+            i += 1
+        
+        content = fixed_content
+        
+    except Exception as e:
+        print(f"[JSON Cleaner] Warning: Error during string fixing: {e}")
+        # Fallback: remove problematic control characters
+        content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
     
     # Handle common malformed JSON issues
     # Remove trailing parentheses that sometimes appear after JSON
@@ -179,9 +228,15 @@ def parse_carthir_response(llm_response: str) -> Optional[Dict[str, str]]:
     Returns:
         Optional[Dict[str, str]]: Parsed and validated data, or None if parsing failed
     """
+    print(f"[Carthir Parser] Processing response of length: {len(llm_response)} characters")
+    
     try:
         content = _clean_json_content(llm_response)
+        print(f"[Carthir Parser] Cleaned content length: {len(content)} characters")
+        print(f"[Carthir Parser] Cleaned content preview: {content[:100]}...")
+        
         result = json.loads(content)
+        print(f"[Carthir Parser] JSON parsing successful, found {len(result)} fields")
         
         # Validate required fields
         required_fields = ["dream_name", "story_prompt", "initial_goal", "pitch"]
@@ -190,19 +245,29 @@ def parse_carthir_response(llm_response: str) -> Optional[Dict[str, str]]:
         for field in required_fields:
             value = result.get(field, "").strip()
             if not value:  # Empty or missing field
-                print(f"[Carthir Parser] Missing or empty field: {field}")
+                print(f"[Carthir Parser] ❌ Missing or empty field: {field}")
+                print(f"[Carthir Parser] Available fields: {list(result.keys())}")
                 return None
             validated_result[field] = value
+            print(f"[Carthir Parser] ✅ Validated field '{field}': {len(value)} characters")
         
-        print(f"[Carthir Parser] Successfully parsed response")
+        print(f"[Carthir Parser] ✅ Successfully parsed all required fields")
         return validated_result
         
     except json.JSONDecodeError as e:
-        print(f"[Carthir Parser] JSON decode error: {e}")
-        print(f"[Carthir Parser] Attempted to parse: {content[:200]}...")
+        print(f"[Carthir Parser] ❌ JSON decode error: {e}")
+        print(f"[Carthir Parser] Error at position: {getattr(e, 'pos', 'unknown')}")
+        print(f"[Carthir Parser] Content around error:")
+        if hasattr(e, 'pos') and e.pos:
+            start = max(0, e.pos - 50)
+            end = min(len(content), e.pos + 50)
+            print(f"[Carthir Parser] ...{content[start:end]}...")
+        else:
+            print(f"[Carthir Parser] First 200 chars: {content[:200]}...")
         return None
     except Exception as e:
-        print(f"[Carthir Parser] Unexpected error: {e}")
+        print(f"[Carthir Parser] ❌ Unexpected error: {e}")
+        print(f"[Carthir Parser] Error type: {type(e).__name__}")
         return None
 
 
@@ -297,10 +362,10 @@ def parse_narnion_response(llm_response: str) -> Optional[Dict[str, Any]]:
     """
     Parse Narnion's scene response and validate against IMN in_production schema.
     
-    Expected schema:
+    Expected schema (flexible format support):
     {
         "scene_context": str,
-        "actions": [str, str, str]
+        "actions": [str, str, str] OR [{"action_name": str, "description": str}, ...]
     }
     
     Returns:
@@ -322,8 +387,28 @@ def parse_narnion_response(llm_response: str) -> Optional[Dict[str, Any]]:
             print(f"[Narnion Parser] Missing or invalid actions array")
             return None
         
-        # Clean actions list
-        cleaned_actions = [action.strip() for action in actions if isinstance(action, str) and action.strip()]
+        # Clean actions list - handle both string arrays and object arrays
+        cleaned_actions = []
+        
+        for action in actions:
+            if isinstance(action, str) and action.strip():
+                # Simple string format
+                cleaned_actions.append(action.strip())
+            elif isinstance(action, dict):
+                # Object format with action_name and description
+                action_name = action.get("action_name", "").strip()
+                description = action.get("description", "").strip()
+                
+                if action_name:
+                    # Use action_name as the primary action text
+                    action_text = action_name
+                    if description:
+                        # Optionally add description for context (but keep it short)
+                        action_text = f"{action_name}: {description[:50]}{'...' if len(description) > 50 else ''}"
+                    cleaned_actions.append(action_text)
+                elif description:
+                    # Fallback to description if no action_name
+                    cleaned_actions.append(description.strip())
         
         if len(cleaned_actions) == 0:
             print(f"[Narnion Parser] No valid actions found")
