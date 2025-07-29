@@ -48,7 +48,9 @@ class PipelineInstance:
         workflow.add_node("cenedril", Cenedril)
         
         # Supervisor architecture: Carthir controls the flow
-        workflow.add_edge(START, "convert_prompt")
+        workflow.add_edge(START, "carthir_supervisor")
+        
+        # Convert prompt creates IMN file after story generation
         workflow.add_edge("convert_prompt", "carthir_supervisor")
         
         # All agents return to supervisor for routing decisions

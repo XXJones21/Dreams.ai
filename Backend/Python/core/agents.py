@@ -72,45 +72,39 @@ class convert_prompt_to_imn(TypedDict):
 def convert_prompt_to_imn(state: State):
     """
     Creates the .imn file using Carthir's output in the state.
-    Handles both successful and failed Carthir parsing with graceful fallbacks.
+    NO FALLBACKS - Requires valid Carthir data or fails fast.
     """
     print(f"\n[DEBUG] State at start of convert_prompt_to_imn:\n{json.dumps(state, indent=2, default=str)}\n")
     
-    # Handle both successful parsing and None fallback from Carthir
+    # Validate Carthir memory exists
     carthir_mem = state.get("carthir_memory")
     
     if carthir_mem is None:
-        # Carthir parsing failed - create fallback dream data
-        original_prompt = ""
-        if state.get("messages") and len(state["messages"]) > 0:
-            first_message = state["messages"][0]
-            if hasattr(first_message, 'content'):
-                original_prompt = first_message.content
-            elif isinstance(first_message, dict):
-                original_prompt = first_message.get("content", "")
-        
-        print(f"[convert_prompt_to_imn] Carthir parsing failed, using fallback data")
-        dream_name = f"Dream: {original_prompt[:30]}..." if original_prompt else "Untitled Dream"
-        story_prompt = original_prompt or "A mysterious dream adventure"
-        initial_goal = "To explore and discover the dream's meaning"
-        pitch = f"A dream journey based on: {original_prompt}" if original_prompt else "A mysterious dream adventure"
-    else:
-        # Carthir parsing succeeded - use the parsed data
-        dream_name = carthir_mem.get("dream_name")
-        story_prompt = carthir_mem.get("story_prompt")
-        initial_goal = carthir_mem.get("initial_goal")
-        pitch = carthir_mem.get("pitch")
+        raise ValueError("[convert_prompt_to_imn] CRITICAL ERROR: No carthir_memory found in state - Carthir agent failed to generate story data")
+    
+    # Validate all required Carthir fields
+    required_fields = ["dream_name", "story_prompt", "initial_goal", "pitch"]
+    missing_fields = [field for field in required_fields if not carthir_mem.get(field)]
+    
+    if missing_fields:
+        raise ValueError(f"[convert_prompt_to_imn] CRITICAL ERROR: Missing required Carthir fields: {missing_fields} - Carthir agent generated incomplete data")
+    
+    # Extract validated Carthir data
+    dream_name = carthir_mem["dream_name"]
+    story_prompt = carthir_mem["story_prompt"]
+    initial_goal = carthir_mem["initial_goal"]
+    pitch = carthir_mem["pitch"]
 
     user_id = state.get("user_id", "user-uuid-placeholder")
 
     # Get dream ID from state (should already be set by PipelineInstance)
     dream_id = state.get("id")
     if not dream_id:
-        raise ValueError("[convert_prompt_to_imn] No dream ID found in state - pipeline initialization error")
+        raise ValueError("[convert_prompt_to_imn] CRITICAL ERROR: No dream ID found in state - pipeline initialization error")
 
     directory = os.path.join("..", "Dreams")
 
-    # Create IMN structure with available data
+    # Create IMN structure with validated Carthir data
     imn_data = create_imn_structure(
         dream_id=dream_id,
         user_id=user_id,
@@ -124,6 +118,8 @@ def convert_prompt_to_imn(state: State):
     # Use file lock for writing
     with get_imn_filelock(imn_file_path):
         write_imn(imn_data, directory)
+    
+    print(f"[convert_prompt_to_imn] ✅ IMN file created successfully with validated Carthir data")
     return state
 
 
@@ -200,22 +196,30 @@ def Carthir(state: State):
     reply = llm.invoke(pitch_prompt)
     print(f"\n[DEBUG] Raw LLM reply from Carthir:\n{reply.content}\n")
 
-    # Use centralized, robust JSON parsing
+    # Validate LLM response
+    if not reply or not reply.content:
+        raise RuntimeError("[Carthir] CRITICAL ERROR: LLM failed to generate response - model or configuration issue")
+
+    # Use centralized, robust JSON parsing - NO FALLBACKS
     parsed_data = parse_carthir_response(reply.content)
     
-    if parsed_data:
-        # Successfully parsed - store in state for IMN structure
-        state["carthir_memory"] = parsed_data
-        # Update messages to maintain compatibility
-        state["messages"] = [{"role": "assistant", "content": parsed_data["pitch"]}]
-        print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
-        return state
-    else:
-        # Failed to parse - use fallback
-        print(f"[Carthir] Failed to parse response, using fallback")
-        state["carthir_memory"] = None
-        state["messages"] = [{"role": "assistant", "content": reply.content}]
-        return state
+    if not parsed_data:
+        raise ValueError(f"[Carthir] CRITICAL ERROR: Failed to parse LLM response as valid JSON - prompt or model issue\nRaw response: {reply.content}")
+    
+    # Validate all required fields exist
+    required_fields = ["dream_name", "story_prompt", "initial_goal", "pitch"]
+    missing_fields = [field for field in required_fields if not parsed_data.get(field)]
+    
+    if missing_fields:
+        raise ValueError(f"[Carthir] CRITICAL ERROR: Parsed data missing required fields: {missing_fields}\nParsed data: {parsed_data}")
+    
+    # Successfully parsed and validated - store in state for IMN structure
+    state["carthir_memory"] = parsed_data
+    # Update messages to maintain compatibility
+    state["messages"] = [{"role": "assistant", "content": parsed_data["pitch"]}]
+    print(f"\n[DEBUG] State at end of Carthir (before return):\n{json.dumps(state, indent=2, default=str)}\n")
+    print(f"[Carthir] ✅ Story data generated and validated successfully")
+    return state
 
 
 def CarthirReview(state: State) -> Command[Literal["carthir_supervisor"]]:
@@ -223,22 +227,26 @@ def CarthirReview(state: State) -> Command[Literal["carthir_supervisor"]]:
     Enhanced Carthir review that generates director's vision for image generation.
     Uses persistent memory to ensure the visual matches the original creative vision.
     Now works with IMN-based context retrieval for resource-aware execution.
+    NO FALLBACKS - Fails fast to identify pipeline issues.
     """
     print("\n[CarthirReview] --- DIRECTOR'S VISION REVIEW ---")
     
     dream_id = state.get("id")
     if not dream_id:
-        print("[CarthirReview] ❌ No dream ID found in state.")
-        return state
+        raise ValueError("[CarthirReview] CRITICAL ERROR: No dream ID found in state - pipeline initialization failed")
     
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
 
     # Use file lock for reading fresh context
     with get_imn_filelock(imn_file_path):
         imn_data = read_imn(imn_file_path)
+    
     if imn_data is None:
-        print("[CarthirReview] ❌ Error reading .imn file")
-        return state
+        raise FileNotFoundError(f"[CarthirReview] CRITICAL ERROR: Cannot read IMN file: {imn_file_path}")
+
+    # Validate pre_production data exists
+    if "pre_production" not in imn_data:
+        raise ValueError("[CarthirReview] CRITICAL ERROR: No pre_production data in IMN file - convert_prompt_to_imn failed")
 
     # Get context from IMN data
     carthir_mem = imn_data["pre_production"]
@@ -251,15 +259,14 @@ def CarthirReview(state: State) -> Command[Literal["carthir_supervisor"]]:
     print(f"\n[CarthirReview] Narnion's Latest Scene:")
     print(json.dumps(narnion_result, indent=2, default=str))
 
-    # Get story context for director vision
-    story_prompt = carthir_mem.get("story_prompt", "")
-    pitch = carthir_mem.get("pitch", "")
+    # Validate required story context exists from Carthir
+    story_prompt = carthir_mem.get("story_prompt")
+    pitch = carthir_mem.get("pitch")
     
-    if story_prompt:
-        original_vision = pitch or f"A dream based on: {story_prompt}"
-    else:
-        print(f"[CarthirReview] ⚠️ Using fallback vision - no story context found")
-        original_vision = "A compelling dream scene"
+    if not story_prompt or not pitch:
+        raise ValueError("[CarthirReview] CRITICAL ERROR: Missing story context from Carthir - story_prompt or pitch is empty")
+
+    original_vision = pitch or f"A dream based on: {story_prompt}"
 
     director_prompt = (
         f"Original Vision: {original_vision}\n\n"
@@ -289,41 +296,39 @@ def CarthirReview(state: State) -> Command[Literal["carthir_supervisor"]]:
         }
     ]
 
-    # Get story context for better fallback generation
-    story_context = imn_data.get("pre_production", {}).get("story_prompt", "")
+    # Generate director's vision - NO FALLBACKS
+    reply = llm.invoke(director_vision_prompt)
     
-    try:
-        reply = llm.invoke(director_vision_prompt)
-        
-        # Use centralized, robust JSON parsing with story-specific fallbacks
-        director_vision = parse_director_vision_response(reply.content, story_context)
-        
-        # Store in IMN structure
-        imn_data["pre_production"]["director_vision"] = director_vision
-        directory = os.path.join("..", "Dreams")
-        
-        # Use file lock for writing
-        with get_imn_filelock(imn_file_path):
-            write_imn(imn_data, directory)
-        
-        # Update state for next agent
-        state["messages"] = [{"role": "assistant", "content": json.dumps(director_vision)}]
-        
-        print(f"[CarthirReview] Director's vision generated and stored.")
-        print(f"Image Prompt: {director_vision.get('image_prompt', 'No prompt generated')}")
-        
-    except Exception as e:
-        print(f"[CarthirReview] Unexpected error: {e}")
-        # Even if LLM call fails, use robust fallback with story context
-        fallback_vision = parse_director_vision_response("", story_context)  # Pass story context for better fallback
-        imn_data["pre_production"]["director_vision"] = fallback_vision
-        directory = os.path.join("..", "Dreams")
-        
-        with get_imn_filelock(imn_file_path):
-            write_imn(imn_data, directory)
-        
-        state["messages"] = [{"role": "assistant", "content": json.dumps(fallback_vision)}]
-        print(f"[CarthirReview] Using story-specific fallback due to LLM error.")
+    if not reply or not reply.content:
+        raise RuntimeError("[CarthirReview] CRITICAL ERROR: LLM failed to generate response - model or configuration issue")
+    
+    # Use centralized, robust JSON parsing - NO FALLBACKS
+    director_vision = parse_director_vision_response(reply.content, story_prompt)
+    
+    if not director_vision:
+        raise ValueError(f"[CarthirReview] CRITICAL ERROR: Failed to parse director's vision response\nRaw response: {reply.content}")
+    
+    # Validate all required fields exist
+    required_fields = ["director_vision", "image_prompt", "visual_notes", "approval_criteria"]
+    missing_fields = [field for field in required_fields if not director_vision.get(field)]
+    
+    if missing_fields:
+        raise ValueError(f"[CarthirReview] CRITICAL ERROR: Director vision missing required fields: {missing_fields}\nParsed data: {director_vision}")
+    
+    # Store in IMN structure
+    imn_data["pre_production"]["director_vision"] = director_vision
+    directory = os.path.join("..", "Dreams")
+    
+    # Use file lock for writing
+    with get_imn_filelock(imn_file_path):
+        write_imn(imn_data, directory)
+    
+    # Update state for next agent
+    state["messages"] = [{"role": "assistant", "content": json.dumps(director_vision)}]
+    
+    print(f"[CarthirReview] ✅ Director's vision generated and validated successfully")
+    print(f"Image Prompt: {director_vision['image_prompt']}")
+    
     return Command(goto="carthir_supervisor")
 
 
@@ -395,141 +400,176 @@ def Narnion(state: State) -> Command[Literal["carthir_supervisor"]]:
 
 def Cenedril(state: State) -> Command[Literal["carthir_supervisor"]]:
     """
-    Cenedril: Creates structured, optimized image prompts using director's vision.
-    Now generates enhanced prompts with structured elements for superior image generation.
-    """
-    print(f"[Cenedril] 🎬 Starting image prompt generation...")
+    Cenedril: Master Cinematographer - Translates Director's Vision to Shot Composition
     
+    Director-to-Artist Workflow:
+    1. Receives director's creative brief (from CarthirReview)
+    2. Analyzes story context (from Carthir & Narnion)
+    3. Translates vision to technical shot composition
+    4. Generates optimized SDXL prompt for image generation
+    
+    NO FALLBACKS - Fails fast to identify pipeline issues
+    """
+    print(f"[Cenedril] 🎬 Starting director-to-artist translation...")
+    
+    # Phase 1: Data Validation & Extraction (Director's Brief)
     dream_id = state.get("id")
     if not dream_id:
-        print("[Cenedril] ❌ No dream ID found in state.")
-        return state
+        raise ValueError("[Cenedril] CRITICAL ERROR: No dream ID found in state - pipeline initialization failed")
+    
     imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
-    # Use file lock for reading
+    
+    # Read IMN file with file lock
     with get_imn_filelock(imn_file_path):
         imn_data = read_imn(imn_file_path)
-    if imn_data is None:
-        print("[Cenedril] ❌ Error reading .imn file")
-        return state
     
-    director_vision = imn_data["pre_production"].get("director_vision")
-    if director_vision:
-        image_prompt = director_vision.get("image_prompt", "")
-        visual_notes = director_vision.get("visual_notes", "")
-        director_vision_text = director_vision.get("director_vision", "")
-        
-        print(f"[Cenedril] 📝 Using director's vision for image generation.")
-        print(f"[Cenedril] 📏 Original prompt length: {len(image_prompt)} characters")
-        print(f"[Cenedril] 🎯 Original prompt: {image_prompt[:100]}...")
+    if imn_data is None:
+        raise FileNotFoundError(f"[Cenedril] CRITICAL ERROR: Cannot read IMN file: {imn_file_path}")
+    
+    # Validate Carthir data exists
+    pre_production = imn_data.get("pre_production")
+    if not pre_production:
+        raise ValueError("[Cenedril] CRITICAL ERROR: No pre_production data found - Carthir pipeline failed")
+    
+    # Validate director's vision exists (from CarthirReview)
+    director_vision = pre_production.get("director_vision")
+    if not director_vision:
+        raise ValueError("[Cenedril] CRITICAL ERROR: No director_vision found - CarthirReview failed to generate director's brief")
+    
+    # Validate required director components
+    required_director_fields = ["director_vision", "image_prompt", "visual_notes", "approval_criteria"]
+    missing_fields = [field for field in required_director_fields if not director_vision.get(field)]
+    if missing_fields:
+        raise ValueError(f"[Cenedril] CRITICAL ERROR: Missing director vision fields: {missing_fields} - CarthirReview incomplete")
+    
+    # Validate story context exists (from Carthir)
+    story_prompt = pre_production.get("story_prompt")
+    pitch = pre_production.get("pitch")
+    dream_name = pre_production.get("dream_name")
+    
+    if not story_prompt or not pitch or not dream_name:
+        raise ValueError("[Cenedril] CRITICAL ERROR: Missing story context - Carthir failed to generate complete story data")
+    
+    # Validate scene context exists (from Narnion)
+    in_production = imn_data.get("in_production", [])
+    if not in_production:
+        raise ValueError("[Cenedril] CRITICAL ERROR: No scenes found - Narnion failed to generate scene context")
+    
+    latest_scene = in_production[-1].get("scene_context")
+    if not latest_scene:
+        raise ValueError("[Cenedril] CRITICAL ERROR: Latest scene has no context - Narnion scene generation failed")
+    
+    print(f"[Cenedril] ✅ All required data validated - proceeding with director-to-artist translation")
+    
+    # Phase 2: Director's Vision Analysis (Concept Art Brief)
+    director_brief = {
+        "creative_vision": director_vision["director_vision"],
+        "visual_description": director_vision["image_prompt"],
+        "style_notes": director_vision["visual_notes"],
+        "approval_criteria": director_vision["approval_criteria"]
+    }
+    
+    story_context = {
+        "narrative": story_prompt,
+        "pitch": pitch,
+        "dream_title": dream_name,
+        "current_scene": latest_scene
+    }
+    
+    print(f"[Cenedril] 📋 Director's Brief: {director_brief['creative_vision'][:100]}...")
+    print(f"[Cenedril] 📖 Story Context: {len(story_context['narrative'])} chars")
+    print(f"[Cenedril] 🎭 Current Scene: {len(story_context['current_scene'])} chars")
+    
+    # Phase 3: Cinematographic Translation (Artist Interpretation)
+    enhancement_prompt = f"""
+You are Cenedril, master cinematographer translating a director's vision into a technical shot composition.
 
-        
-        # Create enhanced structured prompt using LLM
-        try:
-            # Get additional story context for character details
-            story_prompt = imn_data["pre_production"].get("story_prompt", "")
-            pitch = imn_data["pre_production"].get("pitch", "")
-            
-            # Get latest scene context if available
-            in_production = imn_data.get("in_production", [])
-            latest_scene = ""
-            if in_production:
-                latest_scene = in_production[-1].get("scene_context", "")
-            
-            print(f"[Cenedril] 📖 Story context: {len(story_prompt)} chars")
-            print(f"[Cenedril] 🎭 Latest scene: {len(latest_scene)} chars")
-            
-            enhancement_prompt = f"""
-You are Cenedril, master cinematographer specializing in SDXL image generation. Create a professional, structured prompt optimized for photorealistic results.
+DIRECTOR'S BRIEF:
+Creative Vision: {director_brief['creative_vision']}
+Visual Description: {director_brief['visual_description']}
+Style Notes: {director_brief['style_notes']}
 
 STORY CONTEXT:
-Story: {story_prompt}
-Scene: {latest_scene}
-Vision: {director_vision_text}
+Narrative: {story_context['narrative']}
+Current Scene: {story_context['current_scene']}
 
-SDXL PROMPT STRUCTURE - Generate ONLY the final prompt, no explanations:
+CINEMATOGRAPHIC TRANSLATION TASK:
+Convert the director's vision into a precise first-person perspective shot composition for SDXL image generation.
 
-[Subject/Character]: Detailed first-person perspective description
-[Photography]: Camera model, lens, lighting style, composition
-[Environment]: Setting, atmosphere, background elements  
-[Style & Quality]: Art style, quality tags, material descriptions
+TECHNICAL REQUIREMENTS:
+1. CHARACTER PERSPECTIVE: Analyze who the protagonist is and their physical viewpoint
+2. SPATIAL POSITIONING: Determine exact camera position based on character's eye level
+3. VISUAL COMPOSITION: What they see, not what others see of them
+4. TECHNICAL SPECS: Camera settings, lighting, and professional photography tags
 
-EXAMPLES:
-"First-person POV of a corgi on sandy beach, Canon EOS R5 with 85mm lens, golden hour lighting, shallow depth of field, warm sunlight filtering through palm trees, photorealistic, masterpiece, detailed textures, professional photography"
+OUTPUT FORMAT:
+Generate ONLY a clean, structured SDXL prompt (45-55 words) with these elements:
+[Perspective] + [Environment Details] + [Camera/Technical] + [Quality Tags]
 
-"Through corgi eyes: mystical forest clearing, Sony A7 III, 50mm f/1.8, soft natural lighting, dappled shadows, glowing mushrooms, moss-covered trees, cinematic composition, high quality, detailed, fantasy realism"
-
-Generate a complete structured prompt (40-60 words) with professional photography elements:"""
-            
-            enhancement_request = [
-                {"role": "system", "content": "You are Cenedril, a master cinematographer specializing in structured prompt engineering for AI image generation. You excel at extracting character details from story context."},
-                {"role": "user", "content": enhancement_prompt}
-            ]
-            
-            print(f"[Cenedril] 🚀 Generating enhanced structured prompt...")
-            reply = llm.invoke(enhancement_request)
-            raw_response = reply.content.strip()
-            
-            # Clean the prompt - remove any explanatory text or prefixes
-            enhanced_prompt = raw_response
-            
-            # Remove common prefixes that LLM might add
-            prefixes_to_remove = [
-                "Here's a structured prompt:",
-                "Here's the enhanced prompt:",
-                "Generated prompt:",
-                "Final prompt:",
-                "Structured prompt:",
-                "SDXL prompt:",
-                "Here's a ",
-                "This is a ",
-                "The prompt is:",
-                "\n"
-            ]
-            
-            for prefix in prefixes_to_remove:
-                if enhanced_prompt.startswith(prefix):
-                    enhanced_prompt = enhanced_prompt[len(prefix):].strip()
-            
-            # Remove quotes if the entire prompt is wrapped in them
-            if enhanced_prompt.startswith('"') and enhanced_prompt.endswith('"'):
-                enhanced_prompt = enhanced_prompt[1:-1].strip()
-                
-            print(f"[Cenedril] 📨 LLM response length: {len(raw_response)} characters")
-            print(f"[Cenedril] ✂️ Cleaned prompt: {enhanced_prompt}")
-            
-            # Store both original and enhanced prompts
-            imn_data["pre_production"]["first_frame_prompt"] = image_prompt
-            imn_data["pre_production"]["enhanced_image_prompt"] = enhanced_prompt
-            imn_data["pre_production"]["visual_notes"] = visual_notes
-            
-            directory = os.path.join("..", "Dreams")
-            # Use file lock for writing
-            with get_imn_filelock(imn_file_path):
-                write_imn(imn_data, directory)
-            
-            print(f"[Cenedril] ✅ Enhanced structured prompt generated and saved")
-            print(f"[Cenedril] 📏 Final prompt length: {len(enhanced_prompt)} characters")
-            print(f"[Cenedril] 🎯 SDXL optimization: {'✅ Professional structure' if 30 <= len(enhanced_prompt.split()) <= 80 else '⚠️ Consider adjusting length'}")
-            
-        except Exception as e:
-            print(f"[Cenedril] ⚠️ Error generating enhanced prompt: {e}")
-            print(f"[Cenedril] 🔧 Error type: {type(e).__name__}")
-            
-            # Create structured fallback prompt
-            fallback_prompt = f"First-person POV, {image_prompt.lower()}, Canon EOS R5, 85mm lens, natural lighting, photorealistic, high quality, detailed"
-            
-            # Store fallback with structured format
-            imn_data["pre_production"]["first_frame_prompt"] = image_prompt
-            imn_data["pre_production"]["enhanced_image_prompt"] = fallback_prompt
-            imn_data["pre_production"]["visual_notes"] = visual_notes
-            imn_data["pre_production"]["enhancement_error"] = str(e)
-            directory = os.path.join("..", "Dreams")
-            # Use file lock for writing
-            with get_imn_filelock(imn_file_path):
-                write_imn(imn_data, directory)
-            print(f"[Cenedril] 💾 Structured fallback prompt saved: {fallback_prompt}")
-    else:
-        print(f"[Cenedril] ⚠️ No director's vision found - skipping image prompt generation")
+CRITICAL: No explanatory text, no prefixes, just the final prompt.
+"""
+    
+    enhancement_request = [
+        {
+            "role": "system", 
+            "content": "You are Cenedril, master cinematographer specializing in first-person perspective shot composition. You translate director's vision into precise technical prompts."
+        },
+        {
+            "role": "user", 
+            "content": enhancement_prompt
+        }
+    ]
+    
+    # Phase 4: Shot Composition Generation (Concept Art Creation)
+    print(f"[Cenedril] 🎨 Generating shot composition from director's brief...")
+    
+    reply = llm.invoke(enhancement_request)
+    if not reply or not reply.content:
+        raise RuntimeError("[Cenedril] CRITICAL ERROR: LLM failed to generate response - model or prompt issue")
+    
+    enhanced_prompt = reply.content.strip()
+    
+    if not enhanced_prompt:
+        raise RuntimeError("[Cenedril] CRITICAL ERROR: LLM returned empty response - prompt or model configuration issue")
+    
+    # Phase 5: Quality Assurance (Director Approval)
+    word_count = len(enhanced_prompt.split())
+    if word_count < 30 or word_count > 70:
+        raise ValueError(f"[Cenedril] CRITICAL ERROR: Generated prompt has {word_count} words (expected 30-70) - LLM instruction following failed")
+    
+    # Check for common first-person perspective errors
+    perspective_errors = []
+    if "first-person pov of" in enhanced_prompt.lower():
+        perspective_errors.append("Contains third-person description ('first-person POV of')")
+    if "character" in enhanced_prompt.lower() and "viewpoint" in enhanced_prompt.lower():
+        perspective_errors.append("Describes character instead of their view")
+    
+    if perspective_errors:
+        raise ValueError(f"[Cenedril] CRITICAL ERROR: Perspective violations in generated prompt: {perspective_errors}")
+    
+    print(f"[Cenedril] ✅ Shot composition generated: {enhanced_prompt}")
+    print(f"[Cenedril] 📏 Word count: {word_count} (optimal range)")
+    print(f"[Cenedril] 🎯 First-person perspective: validated")
+    
+    # Store results in IMN structure
+    imn_data["pre_production"]["original_director_prompt"] = director_brief["visual_description"]
+    imn_data["pre_production"]["cenedril_shot_composition"] = enhanced_prompt
+    imn_data["pre_production"]["cinematography_analysis"] = {
+        "word_count": word_count,
+        "director_brief_source": "CarthirReview",
+        "story_context_source": "Carthir",
+        "scene_context_source": "Narnion",
+        "perspective_validated": True
+    }
+    
+    directory = os.path.join("..", "Dreams")
+    
+    # Write updated IMN file with file lock
+    with get_imn_filelock(imn_file_path):
+        write_imn(imn_data, directory)
+    
+    print(f"[Cenedril] ✅ Shot composition saved to IMN file")
+    print(f"[Cenedril] 🎬 Director-to-artist translation complete")
     
     return Command(goto="carthir_supervisor")
 
@@ -553,7 +593,7 @@ def print_imn_agent(state: State):
     return state
 
 
-def CarthirSupervisor(state: State) -> Command[Literal["narnion", "carthir_review", "cenedril", "__end__"]]:
+def CarthirSupervisor(state: State) -> Command[Literal["convert_prompt", "narnion", "carthir_review", "cenedril", "__end__"]]:
     """
     Carthir Supervisor: Manages the pipeline flow and routing decisions.
     Combines original Carthir story generation with supervisor routing logic.
@@ -569,31 +609,23 @@ def CarthirSupervisor(state: State) -> Command[Literal["narnion", "carthir_revie
         # Run original Carthir logic
         state = Carthir(state)
         
-        # Update IMN file with rich Carthir content
-        dream_id = state.get("id")
-        if dream_id and state.get("carthir_memory"):
-            carthir_mem = state["carthir_memory"]
-            imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
-            
-            # Read existing IMN file
-            with get_imn_filelock(imn_file_path):
-                imn_data = read_imn(imn_file_path)
-            
-            if imn_data:
-                # Update with rich Carthir content
-                imn_data["pre_production"]["dream_name"] = carthir_mem.get("dream_name", imn_data["pre_production"]["dream_name"])
-                imn_data["pre_production"]["story_prompt"] = carthir_mem.get("story_prompt", imn_data["pre_production"]["story_prompt"])
-                imn_data["pre_production"]["initial_goal"] = carthir_mem.get("initial_goal", imn_data["pre_production"]["initial_goal"])
-                imn_data["pre_production"]["pitch"] = carthir_mem.get("pitch", imn_data["pre_production"]["pitch"])
-                
-                # Write updated IMN file
-                directory = os.path.join("..", "Dreams")
-                with get_imn_filelock(imn_file_path):
-                    write_imn(imn_data, directory)
-                
-                print("[CarthirSupervisor] ✅ Updated IMN file with rich story content")
+        # Validate Carthir succeeded before routing
+        if not state.get("carthir_memory"):
+            raise ValueError("[CarthirSupervisor] CRITICAL ERROR: Carthir failed to generate carthir_memory")
         
-        print("[CarthirSupervisor] ✅ Story generated, routing to Narnion for scene creation")
+        print("[CarthirSupervisor] ✅ Story generated, routing to convert_prompt for IMN creation")
+        print(f"[CarthirSupervisor] 📊 State has carthir_memory: {bool(state.get('carthir_memory'))}")
+        
+        return Command(
+            goto="convert_prompt",
+            update={
+                "pipeline_step": "imn_created",
+                "carthir_memory": state["carthir_memory"]  # Explicitly preserve carthir_memory
+            }
+        )
+    
+    elif pipeline_step == "imn_created":
+        print("[CarthirSupervisor] 📁 IMN file created, routing to Narnion for scene creation")
         return Command(
             goto="narnion",
             update={"pipeline_step": "narnion_complete"}
