@@ -549,8 +549,32 @@ def get_dreams():
                 except Exception as e:
                     logger.error(f"Error reading IMN file {filename}: {e}")
     
-    # Combine all dreams
-    all_dreams = gui_dreams + imn_dreams
+    # Combine all dreams and deduplicate by dream ID
+    # Merge data: prefer IMN data for completeness, but preserve GUI duration
+    dreams_dict = {}
+    
+    # First add GUI dreams (with duration data)
+    for dream in gui_dreams:
+        dreams_dict[dream['id']] = dream
+    
+    # Then add/merge IMN dreams (with complete scene data)
+    for dream in imn_dreams:
+        dream_id = dream['id']
+        if dream_id in dreams_dict:
+            # Merge: keep GUI duration, use IMN scene data
+            existing_dream = dreams_dict[dream_id]
+            # Preserve duration from GUI version
+            duration = existing_dream.get('test_duration', 0)
+            # Use IMN data (more complete) but preserve duration
+            dreams_dict[dream_id] = dream
+            dreams_dict[dream_id]['test_duration'] = duration
+            print(f"[get_dreams] Merged duplicate dream {dream_id}: duration={duration}s, scenes={dream.get('scene_count', 0)}")
+        else:
+            # New dream from IMN only
+            dreams_dict[dream_id] = dream
+    
+    all_dreams = list(dreams_dict.values())
+    print(f"[get_dreams] Returned {len(all_dreams)} deduplicated dreams (GUI: {len(gui_dreams)}, IMN: {len(imn_dreams)})")
     
     # Sort dreams by creation date (newest first)
     def get_created_at(dream):

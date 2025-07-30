@@ -317,6 +317,168 @@ class SDXLTurboGenerator(ImageGenerator):
                 result['service'] = 'sdxl_turbo_error'
                 result['metadata']['sdxl_turbo_error'] = str(e)
             return result
+
+class SDXLLoRAGenerator(ImageGenerator):
+    """SDXL generator with LoRA support for enhanced first-person perspective generation"""
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        super().__init__(config)
+        self.service_name = "sdxl_lora"
+        self.pipeline = None
+        self.is_loaded = False
+        self.lora_loaded = False
+        self._setup_pipeline()
+    
+    def _setup_pipeline(self):
+        """Initialize SDXL pipeline with LoRA support"""
+        try:
+            print("[SDXL LoRA] 🚀 Initializing SDXL LoRA-enhanced pipeline...")
+            
+            # Load base SDXL pipeline (not turbo for better quality with LoRA)
+            self.pipeline = DiffusionPipeline.from_pretrained(
+                "stabilityai/stable-diffusion-xl-base-1.0",
+                torch_dtype=torch.float16,
+                variant="fp16",
+                use_safetensors=True
+            )
+            
+            # Move to GPU if available
+            if torch.cuda.is_available():
+                self.pipeline = self.pipeline.to("cuda")
+                print(f"[SDXL LoRA] ✅ Base pipeline loaded on GPU: {torch.cuda.get_device_name()}")
+            else:
+                print("[SDXL LoRA] ⚠️ CUDA not available, using CPU")
+            
+            self.is_loaded = True
+            print("[SDXL LoRA] ✅ SDXL base pipeline initialized successfully")
+            
+            # Try to load POV LoRA if available
+            self._load_pov_lora()
+            
+        except Exception as e:
+            print(f"[SDXL LoRA] ❌ Failed to initialize SDXL LoRA pipeline: {e}")
+            self.is_loaded = False
+    
+    def _load_pov_lora(self):
+        """Load Point-of-View LoRA model for enhanced first-person perspective"""
+        try:
+            # Check if POV LoRA file exists locally
+            lora_paths = [
+                "models/lora/pov_lora.safetensors",
+                "models/pov_lora.safetensors", 
+                "pov_lora.safetensors"
+            ]
+            
+            lora_path = None
+            for path in lora_paths:
+                if os.path.exists(path):
+                    lora_path = path
+                    break
+            
+            if lora_path:
+                print(f"[SDXL LoRA] 📁 Loading POV LoRA from: {lora_path}")
+                # Load LoRA weights
+                self.pipeline.load_lora_weights(lora_path)
+                self.lora_loaded = True
+                print("[SDXL LoRA] ✅ POV LoRA loaded successfully")
+                print("[SDXL LoRA] 🎯 Enhanced first-person perspective generation enabled")
+            else:
+                print("[SDXL LoRA] ⚠️ POV LoRA not found locally")
+                print("[SDXL LoRA] 💡 To enable LoRA enhancement:")
+                print("[SDXL LoRA] 1. Download POV LoRA from: https://civitai.com/models/500946")
+                print("[SDXL LoRA] 2. Place as models/lora/pov_lora.safetensors")
+                print("[SDXL LoRA] 🔄 Continuing with base SDXL (no LoRA enhancement)")
+                
+        except Exception as e:
+            print(f"[SDXL LoRA] ⚠️ Failed to load POV LoRA: {e}")
+            print("[SDXL LoRA] 🔄 Continuing with base SDXL (no LoRA enhancement)")
+            self.lora_loaded = False
+    
+    def generate_image(self, prompt: str, **kwargs) -> Optional[Dict[str, Any]]:
+        """Generate image using SDXL with optional LoRA enhancement for first-person perspective"""
+        if not self.is_loaded:
+            print(f"[SDXL LoRA] Pipeline not loaded, falling back to placeholder")
+            placeholder = PlaceholderImageGenerator()
+            result = placeholder.generate_image(prompt, **kwargs)
+            if result:
+                result['service'] = 'sdxl_lora_fallback'
+                result['metadata']['original_service'] = 'sdxl_lora'
+            return result
+        
+        try:
+            # Enhance prompt for LoRA if available
+            enhanced_prompt = self._enhance_prompt_for_lora(prompt)
+            
+            print(f"[SDXL LoRA] 🎨 Generating image with {'LoRA-enhanced' if self.lora_loaded else 'base'} prompt...")
+            if self.lora_loaded:
+                print(f"[SDXL LoRA] 🎯 POV LoRA active for enhanced first-person perspective")
+            
+            # Generation parameters optimized for quality with LoRA
+            generation_params = {
+                'prompt': enhanced_prompt,
+                'num_inference_steps': kwargs.get('num_inference_steps', 25),  # More steps for quality
+                'guidance_scale': kwargs.get('guidance_scale', 7.5),  # Standard guidance
+                'width': kwargs.get('width', 1024),  # SDXL native resolution
+                'height': kwargs.get('height', 1024),
+                'generator': torch.Generator().manual_seed(kwargs.get('seed', 42))
+            }
+            
+            print(f"[SDXL LoRA] 📝 Enhanced prompt: {enhanced_prompt[:100]}...")
+            
+            # Generate image
+            with torch.no_grad():
+                result = self.pipeline(**generation_params)
+                image = result.images[0]
+            
+            # Convert to bytes
+            image_buffer = io.BytesIO()
+            image.save(image_buffer, format='PNG')
+            image_bytes = image_buffer.getvalue()
+            
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"sdxl_{'lora_' if self.lora_loaded else ''}generated_{timestamp}.png"
+            
+            # Save image
+            image_path = self.save_image(image_bytes, filename)
+            
+            return {
+                'service': self.service_name,
+                'filename': filename,
+                'path': image_path,
+                'image_data': base64.b64encode(image_bytes).decode('utf-8'),
+                'metadata': {
+                    'prompt': enhanced_prompt,
+                    'original_prompt': prompt,
+                    'lora_enhanced': self.lora_loaded,
+                    'resolution': f"{image.width}x{image.height}",
+                    'steps': generation_params['num_inference_steps'],
+                    'guidance_scale': generation_params['guidance_scale'],
+                    'seed': kwargs.get('seed', 42),
+                    'model': 'stable-diffusion-xl-base-1.0',
+                    'lora_model': 'pov_lora' if self.lora_loaded else None
+                }
+            }
+            
+        except Exception as e:
+            print(f"[SDXL LoRA] ❌ Generation failed: {e}")
+            return None
+    
+    def _enhance_prompt_for_lora(self, prompt: str) -> str:
+        """Enhance prompt for LoRA if available, otherwise return original"""
+        if not self.lora_loaded:
+            return prompt
+        
+        # If prompt already contains POV triggers, don't add more
+        pov_triggers = ["pov", "point of view", "subjective camera", "1st person view", "first-person"]
+        if any(trigger in prompt.lower() for trigger in pov_triggers):
+            print(f"[SDXL LoRA] ✅ POV triggers detected in prompt - using as-is")
+            return prompt
+        
+        # Add LoRA activation if not present (fallback for non-Cenedril prompts)
+        enhanced = f"pov, first-person view, {prompt}"
+        print(f"[SDXL LoRA] 🔧 Enhanced prompt with POV triggers")
+        return enhanced
     
     def _optimize_prompt_for_clip(self, prompt: str, max_tokens: int = 75) -> str:
         """
@@ -437,11 +599,17 @@ class ImageGenerationManager:
     
     def _setup_generators(self):
         """Setup available image generators"""
-        # Add SDXL Turbo as the only generator
+        # Add SDXL LoRA as the primary generator for enhanced first-person perspective
+        self.generators['sdxl_lora'] = SDXLLoRAGenerator(self.config.get('sdxl_lora', {}))
+        
+        # Add SDXL Turbo as alternative for speed
         self.generators['sdxl_turbo'] = SDXLTurboGenerator(self.config.get('sdxl_turbo', {}))
         
-        # Set SDXL Turbo as default
-        self.default_generator = self.generators['sdxl_turbo']
+        # Set SDXL LoRA as default for better quality and first-person perspective
+        self.default_generator = self.generators['sdxl_lora']
+        
+        print(f"[ImageManager] 🎯 Default generator: SDXL LoRA (enhanced first-person perspective)")
+        print(f"[ImageManager] ⚡ Alternative generator: SDXL Turbo (fast generation)")
         
         # Add placeholder generator as fallback
         self.generators['placeholder'] = PlaceholderImageGenerator()

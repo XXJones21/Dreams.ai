@@ -482,7 +482,7 @@ def Cenedril(state: State) -> Command[Literal["carthir_supervisor"]]:
     
     # Phase 3: Cinematographic Translation (Artist Interpretation)
     enhancement_prompt = f"""
-You are Cenedril, master cinematographer translating a director's vision into a technical shot composition.
+You are Cenedril, master cinematographer translating a director's vision into a technical shot composition optimized for LoRA-enhanced SDXL generation.
 
 DIRECTOR'S BRIEF:
 Creative Vision: {director_brief['creative_vision']}
@@ -494,17 +494,23 @@ Narrative: {story_context['narrative']}
 Current Scene: {story_context['current_scene']}
 
 CINEMATOGRAPHIC TRANSLATION TASK:
-Convert the director's vision into a precise first-person perspective shot composition for SDXL image generation.
+Convert the director's vision into a precise first-person perspective shot composition for LoRA-enhanced SDXL image generation.
 
 TECHNICAL REQUIREMENTS:
 1. CHARACTER PERSPECTIVE: Analyze who the protagonist is and their physical viewpoint
 2. SPATIAL POSITIONING: Determine exact camera position based on character's eye level
 3. VISUAL COMPOSITION: What they see, not what others see of them
-4. TECHNICAL SPECS: Camera settings, lighting, and professional photography tags
+4. POV TRIGGER WORDS: Must include LoRA activation keywords for first-person perspective
+5. TECHNICAL SPECS: Camera settings, lighting, and professional photography tags
+
+POV LORA REQUIREMENTS:
+- MUST include at least 2 of these trigger words: "pov", "point of view", "subjective camera view", "1st person view"
+- Place trigger words naturally at the beginning of the prompt
+- Ensure they enhance rather than duplicate the perspective description
 
 OUTPUT FORMAT:
-Generate ONLY a clean, structured SDXL prompt (45-55 words) with these elements:
-[Perspective] + [Environment Details] + [Camera/Technical] + [Quality Tags]
+Generate ONLY a clean, structured SDXL+LoRA prompt (45-60 words) with this structure:
+[POV Trigger Words] + [Perspective Details] + [Environment] + [Camera/Technical] + [Quality Tags]
 
 CRITICAL: No explanatory text, no prefixes, just the final prompt.
 """
