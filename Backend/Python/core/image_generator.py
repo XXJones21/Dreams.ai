@@ -317,6 +317,40 @@ class SDXLTurboGenerator(ImageGenerator):
                 result['service'] = 'sdxl_turbo_error'
                 result['metadata']['sdxl_turbo_error'] = str(e)
             return result
+    
+    def _create_enhanced_prompt(self, base_prompt: str, director_vision: dict = None) -> str:
+        """Create enhanced prompt optimized for Dreams.ai and CLIP token limits"""
+        
+        # For SDXL Turbo, we use a simpler approach since it's optimized for speed
+        # First, optimize the base prompt for CLIP if it's too long
+        optimized_base = self._optimize_prompt_for_clip(base_prompt) if hasattr(self, '_optimize_prompt_for_clip') else base_prompt
+        
+        # Add minimal style elements for SDXL Turbo
+        essential_style = ["photorealistic", "high quality"]
+        
+        if director_vision:
+            visual_notes = director_vision.get("visual_notes", "")
+            # Only add visual notes if they're short and we have room
+            if visual_notes and len(visual_notes) < 50:
+                essential_style.append(visual_notes[:30])  # Truncate visual notes
+        
+        style_text = ", ".join(essential_style)
+        
+        # Ensure final prompt stays within reasonable limits for Turbo
+        test_prompt = f"{optimized_base}, {style_text}"
+        final_prompt = self._optimize_prompt_for_clip(test_prompt) if hasattr(self, '_optimize_prompt_for_clip') else test_prompt
+        
+        return final_prompt
+    
+    def _optimize_prompt_for_clip(self, prompt: str, max_tokens: int = 75) -> str:
+        """Optimize prompt for CLIP token limits - simplified version for Turbo"""
+        # Simple token optimization for SDXL Turbo
+        words = prompt.split()
+        if len(words) <= max_tokens:
+            return prompt
+        
+        # Truncate to max_tokens
+        return " ".join(words[:max_tokens])
 
 class SDXLLoRAGenerator(ImageGenerator):
     """SDXL generator with LoRA support for enhanced first-person perspective generation"""

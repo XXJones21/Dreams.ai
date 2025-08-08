@@ -11,8 +11,7 @@ import time
 import psutil
 import threading
 import base64
-import pytz
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import logging
@@ -54,7 +53,7 @@ class DreamCard:
         self.user_id = user_id
         self.test_duration = test_duration
         # Create timezone-aware datetime string
-        utc_now = datetime.now(pytz.UTC)
+        utc_now = datetime.now(timezone.utc)
         self.created_at = utc_now.isoformat()
         self.scene_count = 0
         self.image_data = None
@@ -555,11 +554,11 @@ def get_dreams():
     
     # First add GUI dreams (with duration data)
     for dream in gui_dreams:
-        dreams_dict[dream['id']] = dream
+        dreams_dict[dream['dream_id']] = dream
     
     # Then add/merge IMN dreams (with complete scene data)
     for dream in imn_dreams:
-        dream_id = dream['id']
+        dream_id = dream['dream_id']
         if dream_id in dreams_dict:
             # Merge: keep GUI duration, use IMN scene data
             existing_dream = dreams_dict[dream_id]
@@ -581,8 +580,7 @@ def get_dreams():
         created_at = dream.get('created_at', '2025-07-28T00:00:00Z')
         try:
             # Parse ISO format datetime and ensure timezone awareness
-            from datetime import datetime
-            import pytz
+            from datetime import datetime, timezone
             
             # Handle different datetime formats
             if created_at.endswith('Z'):
@@ -594,11 +592,8 @@ def get_dreams():
             else:
                 # Assume local timezone if no timezone info
                 dt = datetime.fromisoformat(created_at)
-                # Make it timezone-aware by assuming local timezone
-                import time
-                local_offset = time.timezone if time.daylight == 0 else time.altzone
-                local_tz = pytz.FixedOffset(-local_offset // 60)
-                dt = local_tz.localize(dt)
+                # Make it timezone-aware by assuming UTC for simplicity
+                dt = dt.replace(tzinfo=timezone.utc)
             
             return dt
         except Exception as e:
