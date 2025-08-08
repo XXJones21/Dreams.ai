@@ -1,0 +1,14 @@
+# LTX Video Generation Dependencies
+torch>=2.1.2
+diffusers>=0.34.0
+transformers>=4.44.0
+accelerate>=0.21.0
+safetensors>=0.4.0
+pillow>=9.0.0
+opencv-python>=4.8.0
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.8
+ltx-video>=0.1.2
+
+# For mobile optimization and video processing
+moviepy>=1.0.3 

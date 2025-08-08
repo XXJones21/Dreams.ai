@@ -1,0 +1,78 @@
+{
+  "system_info": {
+    "timestamp": "2025-07-29T20:43:52.321739",
+    "gpu_name": "NVIDIA GeForce RTX 4080",
+    "total_vram_gb": 15.99169921875,
+    "cpu_count": 24,
+    "total_ram_gb": 31.7252197265625,
+    "python_version": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 16:37:03) [MSC v.1929 64 bit (AMD64)]",
+    "torch_version": "2.6.0+cu118"
+  },
+  "test_prompt": "\n    First-person POV of walking through a magical forest at golden hour. \n    The camera moves forward along a winding dirt path lined with ancient oak trees. \n    Glowing mushrooms pulse with soft blue light on either side of the path. \n    Particles of golden light drift through the air like fireflies. \n    The late afternoon sun filters through the canopy above, creating dramatic \n    rays of light that illuminate the misty forest floor. The perspective \n    maintains a steady walking pace, with slight natural camera movement \n    that captures the immersive first-person experience.\n    ",
+  "test_image": "benchmark_outputs/test_input.png",
+  "models": {
+    "base_model": {
+      "model_id": "Lightricks/LTX-Video",
+      "load_metrics": {
+        "load_time_seconds": 22.66274118423462,
+        "memory_before": {
+          "ram_used_gb": 12.788944244384766,
+          "ram_percent": 40.3,
+          "vram_allocated_gb": 0.0,
+          "vram_reserved_gb": 0.0,
+          "vram_percent": 0.0
+        },
+        "memory_after": {
+          "ram_used_gb": 25.211528778076172,
+          "ram_percent": 79.5,
+          "vram_allocated_gb": 0.0,
+          "vram_reserved_gb": 0.0,
+          "vram_percent": 0.0
+        },
+        "memory_increase_gb": 0.0,
+        "model_components": [
+          "vae",
+          "text_encoder",
+          "tokenizer",
+          "transformer",
+          "scheduler"
+        ]
+      },
+      "generation_metrics": {
+        "generation_time_seconds": 95.89534544944763,
+        "video_duration_seconds": 10.041666666666666,
+        "speed_ratio": 9.549743945173208,
+        "fps": 24,
+        "resolution": "512x512",
+        "num_frames": 241,
+        "inference_steps": 50,
+        "guidance_scale": 7.5,
+        "memory_before": {
+          "ram_used_gb": 25.212444305419922,
+          "ram_percent": 79.5,
+          "vram_allocated_gb": 0.0,
+          "vram_reserved_gb": 0.0,
+          "vram_percent": 0.0
+        },
+        "memory_after": {
+          "ram_used_gb": 25.27477264404297,
+          "ram_percent": 79.7,
+          "vram_allocated_gb": 0.007935523986816406,
+          "vram_reserved_gb": 0.142578125,
+          "vram_percent": 0.04962276915208696
+        },
+        "memory_peak_gb": 0.007935523986816406,
+        "output_path": "benchmark_outputs/base_model_10sec_video.mp4",
+        "file_size_mb": 0.3762321472167969
+      },
+      "status": "success"
+    },
+    "distilled_model": {
+      "load_metrics": {
+        "error": "CUDA out of memory. Tried to allocate 128.00 MiB. GPU 0 has a total capacity of 15.99 GiB of which 0 bytes is free. Of the allocated memory 16.04 GiB is allocated by PyTorch, and 9.94 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)",
+        "load_time_seconds": 24.09238839149475
+      },
+      "status": "failed_to_load"
+    }
+  }
+}
