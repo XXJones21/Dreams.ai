@@ -1,7 +1,9 @@
 import asyncio
 import json
 import os
+import queue
 import sys
+import threading
 import uuid
 
 # Windows consoles default to cp1252; the pipeline's emoji prints would raise
@@ -18,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core.pipeline_instance import PipelineInstance
-from core.progress_broker import subscribe as subscribe_progress, unsubscribe as unsubscribe_progress
+from core.progress_broker import subscribe as subscribe_progress, unsubscribe as unsubscribe_progress, publish as publish_progress
 
 # MVP defaults: talk to ComfyUI directly on :8188. Override via env to point at
 # the Rust supervisor (COMFY_TRANSPORT=rust, COMFY_BASE_URL=http://127.0.0.1:8765).
@@ -47,11 +49,28 @@ DREAMS_DIR = os.path.join("..", "Dreams")
 
 def imn_to_dreamcard(imn_data):
     # Map .imn fields to DreamCard props, fill in defaults as needed
+    # Carthir writes the story fields into pre_production; top-level is usually
+    # empty (-> "Untitled dream"), so prefer pre_production with a top fallback.
+    pre = imn_data.get("pre_production") or {}
+    pp = imn_data.get("post_production") or {}
+    _img = pp.get("image_generation") or {}
+    _vid = pp.get("video_generation") or {}
+    _name = imn_data.get("dream_name") or pre.get("dream_name") or ""
+    _story = imn_data.get("story_prompt") or pre.get("story_prompt") or ""
+    _pitch = imn_data.get("pitch") or pre.get("pitch") or ""
     return {
         "id": imn_data.get("id"),
-        "title": imn_data.get("dream_name"),
-        "excerpt": imn_data.get("story_prompt", "")[:120],  # or other logic
-        "content": imn_data.get("pitch", ""),
+        "title": _name,
+        "excerpt": _story[:120],
+        "content": _pitch,
+        # Progressive media: the .imn is the source of truth for assets, so the
+        # client can show the first image / video even if it missed the live WS
+        # event (e.g. navigated in after the image stage finished).
+        "image_url": _img.get("asset_url"),
+        "image_status": _img.get("status"),
+        "video_url": _vid.get("asset_url"),
+        "video_status": _vid.get("status"),
+        "story_prompt": _story,
         "creator": {
             "id": imn_data.get("user_id"),
             "name": "Dreamer",  # Replace with user lookup if available
@@ -74,37 +93,53 @@ def imn_to_dreamcard(imn_data):
         "similarity_score": None,
     }
 
+# Single-flight guard: one dream pipeline at a time (the 16 GB GPU can't run two
+# without thrashing). A concurrent request gets 409 instead of contending.
+_gen_lock = threading.Lock()
+_active_dream = {"id": None}
+
+
+def _run_pipeline_bg(state: dict, dream_id: str) -> None:
+    try:
+        PipelineInstance(state).run()
+    except Exception as exc:  # surface pipeline-level failure to WS subscribers
+        try:
+            publish_progress(dream_id, {"stage": "error", "kind": "pipeline", "message": str(exc)})
+        except Exception:
+            pass
+    finally:
+        _active_dream["id"] = None
+        _gen_lock.release()
+
+
 @app.post("/api/dream")
 async def create_dream(dream: DreamPrompt):
+    """Start the dream pipeline and return its id IMMEDIATELY.
+
+    The pipeline (narrative → image → video) runs for minutes; running it
+    synchronously blocked the HTTP response long enough to hit proxy/tunnel
+    timeouts (Cloudflare 524) on phone testing. Instead, kick it off on a
+    background thread and return the id so the client can navigate to the dream
+    page and stream progress over the WS — and progressively show the title,
+    story, and first image while the video renders.
+    """
+    if not _gen_lock.acquire(blocking=False):
+        raise HTTPException(
+            status_code=409,
+            detail=f"A dream is already generating ({_active_dream['id']}). One at a time on this GPU.",
+        )
     dream_id = str(uuid.uuid4())
+    _active_dream["id"] = dream_id
     state = {
         "id": dream_id,
         "messages": [{"role": "user", "content": dream.prompt}],
         "generate_video": True,
         "video_cinematic": False,
     }
-    pipeline = PipelineInstance(state)
-    # PipelineInstance.run is synchronous and CPU/GPU-bound. Run it off the
-    # event loop so /api/dream/:id/progress WS subscribers stay responsive.
-    result = await asyncio.to_thread(pipeline.run)
-    # Carthir writes the story fields into the .imn (pre_production), not into
-    # top-level state, so read them back to populate the response.
-    pre = {}
-    imn_path = os.path.join(DREAMS_DIR, f"{dream_id}.imn")
-    if os.path.exists(imn_path):
-        try:
-            with open(imn_path, "r", encoding="utf-8") as f:
-                pre = json.load(f).get("pre_production") or {}
-        except (OSError, json.JSONDecodeError):
-            pre = {}
-    return {
-        "id": dream_id,
-        "dream_name": pre.get("dream_name") or result.get("dream_name"),
-        "story_prompt": pre.get("story_prompt") or result.get("story_prompt"),
-        "initial_goal": pre.get("initial_goal") or result.get("initial_goal"),
-        "pitch": pre.get("pitch") or result.get("pitch"),
-        "imn_filename": f"{dream_id}.imn",
-    }
+    threading.Thread(
+        target=_run_pipeline_bg, args=(state, dream_id), daemon=True, name=f"dream-{dream_id[:8]}"
+    ).start()
+    return {"id": dream_id, "status": "started"}
 
 @app.get("/api/dreams/{dream_id}")
 def get_dream(dream_id: str):
@@ -131,7 +166,9 @@ async def dream_progress(ws: WebSocket, dream_id: str):
         while True:
             try:
                 event = await asyncio.wait_for(asyncio.to_thread(q.get, True, 30.0), timeout=35.0)
-            except asyncio.TimeoutError:
+            except (asyncio.TimeoutError, queue.Empty):
+                # No event within the window (normal during long renders) — send a
+                # heartbeat and keep the socket open instead of erroring out.
                 await ws.send_text(json.dumps({"stage": "heartbeat"}))
                 continue
             await ws.send_text(json.dumps(event))

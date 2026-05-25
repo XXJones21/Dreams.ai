@@ -526,20 +526,22 @@ CRITICAL: No explanatory text, no prefixes, just the final prompt.
     if not enhanced_prompt:
         raise RuntimeError("[Cenedril] CRITICAL ERROR: LLM returned empty response - prompt or model configuration issue")
     
-    # Phase 5: Quality Assurance (Director Approval)
+    # Phase 5: Quality guidance (SOFT). A prompt-length / perspective heuristic
+    # must never abort the whole dream — warn and proceed. (Was a hard ValueError
+    # that crashed the entire pipeline on e.g. 73 words; see CLAUDE.md
+    # "Cenedril's strict ... validation can fail noisily ... tolerance pass".)
     word_count = len(enhanced_prompt.split())
     if word_count < 30 or word_count > 70:
-        raise ValueError(f"[Cenedril] CRITICAL ERROR: Generated prompt has {word_count} words (expected 30-70) - LLM instruction following failed")
-    
-    # Check for common first-person perspective errors
+        print(f"[Cenedril] ⚠️ Shot prompt has {word_count} words (target 30-70); proceeding anyway.")
+
+    # Soft first-person perspective checks — warn, don't crash.
     perspective_errors = []
     if "first-person pov of" in enhanced_prompt.lower():
-        perspective_errors.append("Contains third-person description ('first-person POV of')")
+        perspective_errors.append("Contains third-person framing ('first-person POV of')")
     if "character" in enhanced_prompt.lower() and "viewpoint" in enhanced_prompt.lower():
         perspective_errors.append("Describes character instead of their view")
-    
     if perspective_errors:
-        raise ValueError(f"[Cenedril] CRITICAL ERROR: Perspective violations in generated prompt: {perspective_errors}")
+        print(f"[Cenedril] ⚠️ Perspective warnings (proceeding): {perspective_errors}")
     
     print(f"[Cenedril] ✅ Shot composition generated: {enhanced_prompt}")
     print(f"[Cenedril] 📏 Word count: {word_count} (optimal range)")
