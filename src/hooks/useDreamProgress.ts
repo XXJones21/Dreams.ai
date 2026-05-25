@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { WS_BASE_URL } from "../lib/api";
 
 export type DreamProgressEvent = {
   stage: "submit" | "progress" | "executing" | "executed" | "completed" | "error" | "skipped" | "heartbeat";
@@ -30,7 +31,7 @@ export type DreamProgressState = {
  * tracks the most recently completed image/video asset URL so the page
  * can swap in the final media without re-fetching the IMN.
  */
-export function useDreamProgress(dreamId: string | undefined, baseUrl: string = "ws://localhost:8000"): DreamProgressState {
+export function useDreamProgress(dreamId: string | undefined, baseUrl: string = WS_BASE_URL): DreamProgressState {
   const [state, setState] = useState<DreamProgressState>({
     connected: false,
     events: [],

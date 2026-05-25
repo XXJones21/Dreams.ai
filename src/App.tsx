@@ -11,6 +11,8 @@ import ProfilePage from './components/profile/ProfilePage';
 import FeedPage from './pages/FeedPage';
 import AuthTest from './components/auth/AuthTest';
 import DreamDetailPage from "./pages/DreamDetailPage";
+import CreateDreamPage from "./pages/CreateDreamPage";
+import InteractivePlayerPage from "./pages/InteractivePlayerPage";
 import { supabase } from './lib/supabase';
 
 function SupabaseTest() {
@@ -64,7 +66,10 @@ function App() {
             />
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/dreams" element={<FeedPage />} />
+            <Route path="/create" element={<CreateDreamPage />} />
             <Route path="/dreams/:dreamId" element={<DreamDetailPage />} />
+            {/* Open, unauthenticated test route (Milestone 2 placeholder) */}
+            <Route path="/play/:id" element={<InteractivePlayerPage />} />
             <Route path="/auth/test" element={<AuthTest />} />
             {/* Catch all route */}
             <Route path="*" element={<HomePage />} />

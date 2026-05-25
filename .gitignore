@@ -165,6 +165,13 @@ cython_debug/
 
 # Dreams.ai Specific Exclusions
 
+# Frontend source must not be caught by the Python-oriented rules above
+# (notably `lib/` and `*.svg`). Keep src/ tracked.
+!src/lib/
+!src/lib/**
+!src/**/*.svg
+!public/**/*.svg
+
 # Generated Images - All generated images should not be tracked
 Backend/Python/generated_images/
 *.png
