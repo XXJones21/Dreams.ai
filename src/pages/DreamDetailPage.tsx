@@ -4,7 +4,7 @@ import { ArrowLeft, AlertCircle, Play, Loader2 } from "lucide-react";
 import MobileNav from "../components/ui/MobileNav";
 import Button from "../components/ui/Button";
 import { useDreamProgress, type DreamProgressEvent } from "../hooks/useDreamProgress";
-import { fetchDream, ApiError, API_BASE_URL } from "../lib/api";
+import { fetchDream, ApiError, API_BASE_URL, mediaUrl } from "../lib/api";
 import type { Dream } from "../components/feed/DreamCard";
 
 const STAGE_LABELS: Record<string, string> = {
@@ -38,23 +38,50 @@ const DreamDetailPage: React.FC = () => {
   useEffect(() => {
     if (!dreamId) return;
     const ac = new AbortController();
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout>;
     setLoading(true);
     setError(null);
-    fetchDream(dreamId, ac.signal)
-      .then((data) => setDream(data))
-      .catch((err) => {
-        if (ac.signal.aborted) return;
+    const poll = async () => {
+      try {
+        const data = (await fetchDream(dreamId, ac.signal)) as Dream;
+        if (stop) return;
+        setDream(data);
+        setLoading(false);
+        setError(null);
+        // The .imn is the source of truth for assets — keep polling until the
+        // video lands so a missed WS event still surfaces the finished media.
+        if (!data?.video_url) timer = setTimeout(poll, 2500);
+      } catch (err) {
+        if (stop || ac.signal.aborted) return;
+        if (err instanceof ApiError && err.status === 404) {
+          // Async pipeline just started; the .imn isn't written yet — keep waiting.
+          timer = setTimeout(poll, 2000);
+          return;
+        }
         setError(err instanceof ApiError ? err.message : "Failed to load dream");
-      })
-      .finally(() => !ac.signal.aborted && setLoading(false));
-    return () => ac.abort();
+        setLoading(false);
+      }
+    };
+    poll();
+    return () => {
+      stop = true;
+      ac.abort();
+      clearTimeout(timer);
+    };
   }, [dreamId]);
+
+  // Live WS asset wins; otherwise fall back to whatever the .imn already has.
+  // Rewrite ComfyUI localhost:8188 URLs to the same-origin /comfy proxy so they
+  // load on a phone over the tunnel.
+  const imageSrc = mediaUrl(progress.imageAsset ?? dream?.image_url ?? null);
+  const videoSrc = mediaUrl(progress.videoAsset ?? dream?.video_url ?? null);
 
   const videoBusy =
     progress.latest?.kind === "video" &&
     !["completed", "error", "skipped"].includes(progress.latest.stage);
   const showProgress =
-    !progress.videoAsset && (progress.latest != null || progress.connected);
+    !videoSrc && (progress.latest != null || progress.connected);
 
   return (
     <div className="min-h-[100dvh] bg-oled-bg text-oled-text">
@@ -91,16 +118,16 @@ const DreamDetailPage: React.FC = () => {
             {/* Portrait media stage */}
             <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-black">
               <div className="relative aspect-[9/16] w-full">
-                {progress.videoAsset ? (
+                {videoSrc ? (
                   <>
                     <video
                       ref={videoRef}
-                      src={progress.videoAsset}
+                      src={videoSrc}
                       className="absolute inset-0 h-full w-full object-contain"
                       playsInline
                       controls={isPlaying}
                       preload="metadata"
-                      poster={progress.imageAsset ?? undefined}
+                      poster={imageSrc ?? undefined}
                       onPlay={() => setIsPlaying(true)}
                       onPause={() => setIsPlaying(false)}
                     />
@@ -116,16 +143,16 @@ const DreamDetailPage: React.FC = () => {
                       </button>
                     )}
                   </>
-                ) : progress.imageAsset ? (
+                ) : imageSrc ? (
                   <img
-                    src={progress.imageAsset}
+                    src={imageSrc}
                     alt="Generated scene"
                     className="absolute inset-0 h-full w-full object-contain"
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-oled-text/50">
                     <Loader2 className="h-7 w-7 animate-spin motion-reduce:animate-none" />
-                    <p className="text-sm">Waiting for first frame…</p>
+                    <p className="text-sm">Dreaming up the first frame…</p>
                   </div>
                 )}
               </div>

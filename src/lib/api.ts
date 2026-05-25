@@ -8,14 +8,19 @@
 //   VITE_API_BASE_URL=http://localhost:8000        -> ws://localhost:8000
 //   VITE_API_BASE_URL=https://dreams.example.com   -> wss://dreams.example.com
 
-const DEFAULT_API_BASE = "http://localhost:8000";
-
+// Default to SAME-ORIGIN (empty base) so REST/WS go through the Vite dev proxy
+// (see vite.config.ts) — one tunnel, no CORS. Set VITE_API_BASE_URL to talk to a
+// separate backend origin directly instead (e.g. http://localhost:8000).
 export const API_BASE_URL: string = (
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) || DEFAULT_API_BASE
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) || ""
 ).replace(/\/+$/, "");
 
-/** WS/WSS base derived from the HTTP(S) API base. */
-export const WS_BASE_URL: string = API_BASE_URL.replace(/^http/, "ws");
+/** WS/WSS base. Derived from the API base, or from the page origin when same-origin. */
+export const WS_BASE_URL: string = API_BASE_URL
+  ? API_BASE_URL.replace(/^http/, "ws")
+  : typeof window !== "undefined"
+    ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`
+    : "";
 
 /** Build a full REST URL for a backend path (path may start with or without `/`). */
 export function apiUrl(path: string): string {
@@ -25,6 +30,17 @@ export function apiUrl(path: string): string {
 /** Build a full WS URL for a backend path. */
 export function wsUrl(path: string): string {
   return `${WS_BASE_URL}/${path.replace(/^\/+/, "")}`;
+}
+
+/**
+ * Rewrite a ComfyUI asset URL (`http://127.0.0.1:8188/view?...`) to a
+ * same-origin `/comfy/...` path so it loads through the Vite dev proxy — the
+ * raw localhost:8188 host is unreachable from a phone over the tunnel.
+ * Pass-through for null or non-ComfyUI URLs.
+ */
+export function mediaUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  return raw.replace(/^https?:\/\/(127\.0\.0\.1|localhost):8188/i, "/comfy");
 }
 
 export type CreateDreamResponse = {

@@ -26,6 +26,12 @@ export interface Dream {
   is_trending: boolean;
   is_featured: boolean;
   similarity_score?: number;
+  // Progressive media from the .imn (present once each stage finishes).
+  image_url?: string | null;
+  image_status?: string | null;
+  video_url?: string | null;
+  video_status?: string | null;
+  story_prompt?: string | null;
 }
 
 interface DreamCardProps {
