@@ -134,6 +134,62 @@ You should see events like:
 
 ---
 
+## 2b. Mobile flow (phone, mobile redesign — `feat/mobile-redesign`)
+
+The mobile-first surface lets a phone (1) create a dream from a prompt, (2) watch live WS progress, (3) play the portrait video. Routes:
+
+| Route | Purpose |
+|---|---|
+| `/create` | Mobile-first prompt entry → `POST /api/dream` → navigates to the dream |
+| `/dreams/:id` | Watch WS progress (image then video) + play the portrait 9:16 video |
+| `/play/:id` | **Milestone-2 placeholder** — open/unauthenticated; currently just plays the video (no tap-to-segment yet) |
+
+### Env configuration (one-time)
+
+The API base is env-driven (`src/lib/api.ts`). Copy `.env.example` → `.env`:
+
+```
+VITE_API_BASE_URL=http://localhost:8000          # local dev
+# VITE_API_BASE_URL=https://<backend-tunnel-host> # phone over a tunnel
+```
+
+The WebSocket URL is derived automatically (`http`→`ws`, `https`→`wss`).
+
+### Quick LAN check (Android, http) — no tunnel
+
+`vite.config.ts` sets `server.host = true`, so Vite is reachable at `http://<dev-LAN-IP>:5173` (see the "Network:" line printed by `npm run dev`). On the same Wi-Fi, open that URL on the phone. Note: iOS blocks secure-context APIs over plain http; use the tunnel for iOS.
+
+### HTTPS tunnel (both iOS + Android — recommended)
+
+Two origins must be tunnelled and reachable: the **Vite app** (5173) and the **backend API** (8000). Point `VITE_API_BASE_URL` at the tunnelled *backend* origin, then open the tunnelled *app* origin on the phone.
+
+Cloudflare (ephemeral, no login required for `trycloudflare.com`):
+
+```powershell
+# Terminal A — tunnel the backend API:
+cloudflared tunnel --url http://localhost:8000
+# -> https://<random>.trycloudflare.com   (put this in VITE_API_BASE_URL, then restart `npm run dev`)
+
+# Terminal B — tunnel the Vite app:
+cloudflared tunnel --url http://localhost:5173
+# -> open this https URL on the phone
+```
+
+ngrok alternative: `ngrok http 8000` and `ngrok http 5173` (free ngrok requires a login/authtoken — that's a USER step; the agent will not run an authenticated tunnel for you). A *named* Cloudflare tunnel also requires `cloudflared login`; the quick `--url` form above does not.
+
+> **USER STEP:** running any tunnel that requires auth (named Cloudflare tunnel, or ngrok) is on you — install the CLI and authenticate, then paste the backend URL into `.env`.
+
+### Backend CORS — origins to allow (lives in the OTHER worktree)
+
+`api_server.py`'s `allow_origins` (in `D:\Dreams.ai-backend\...`, **not editable from this worktree**) must include the origins the phone uses. Currently it allows `http://localhost:5173` + `http://127.0.0.1:5173` + a Netlify URL. For mobile testing, **add**:
+
+- the Vite LAN origin, e.g. `http://10.1.95.5:5173` (Android quick check), and
+- both tunnel origins, e.g. `https://<app>.trycloudflare.com` (the app, for the WS handshake) and — if the browser sends Origin to it — `https://<backend>.trycloudflare.com`.
+
+Simplest for dev: allow a regex / `allow_origins=["*"]` (note: `allow_credentials=True` is incompatible with `*`; if credentials stay on, list the explicit tunnel origins instead). This change belongs to the backend track.
+
+---
+
 ## 3. Troubleshooting
 
 **`[CenedrilImage] engram_comfy not installed, skipping image generation`**

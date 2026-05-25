@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Brain, Sparkles, User, LogOut, Home, Library, TrendingUp } from 'lucide-react';
+import { Menu, X, Brain, Sparkles, User, LogOut, Home, Library, TrendingUp, Wand2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuthContext } from './auth/AuthProvider';
 import { signOut } from '../lib/supabase';
@@ -99,7 +99,11 @@ const Header: React.FC = () => {
     }
   };
 
-  const navigationItems = getNavigationItems();
+  // Always surface the mobile create flow first.
+  const navigationItems = [
+    { href: '/create', label: 'Create', icon: Wand2 },
+    ...getNavigationItems(),
+  ];
 
   return (
     <>
