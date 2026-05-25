@@ -32,8 +32,22 @@ class PipelineInstance:
             self.dream_id = str(uuid.uuid4())
             self.state["id"] = self.dream_id
         
+        # Preload models before building workflow
+        self._preload_models()
+        
         # Build the LangGraph workflow
         self.graph = self._build_langgraph_workflow()
+
+    def _preload_models(self):
+        """Preload all models before pipeline execution"""
+        try:
+            from core.model_manager import ModelManager
+            model_manager = ModelManager.get_instance()
+            model_manager.preload_for_pipeline()
+            print(f"[Pipeline] ✅ Models preloaded for dream {self.dream_id}")
+        except Exception as e:
+            print(f"[Pipeline] ⚠️ Model preloading failed: {e}")
+            print("[Pipeline] Continuing with on-demand model loading...")
 
     def _build_langgraph_workflow(self):
         """Build LangGraph workflow with Carthir as supervisor"""
@@ -46,17 +60,21 @@ class PipelineInstance:
         workflow.add_node("narnion", Narnion)
         workflow.add_node("carthir_review", CarthirReview)
         workflow.add_node("cenedril", Cenedril)
-        
+        workflow.add_node("cenedril_image", CenedrilImageGenerator)
+        workflow.add_node("cenedril_video", CenedrilVideoGenerator)
+
         # Supervisor architecture: Carthir controls the flow
         workflow.add_edge(START, "carthir_supervisor")
-        
+
         # Convert prompt creates IMN file after story generation
         workflow.add_edge("convert_prompt", "carthir_supervisor")
-        
+
         # All agents return to supervisor for routing decisions
         workflow.add_edge("narnion", "carthir_supervisor")
         workflow.add_edge("carthir_review", "carthir_supervisor")
         workflow.add_edge("cenedril", "carthir_supervisor")
+        workflow.add_edge("cenedril_image", "carthir_supervisor")
+        workflow.add_edge("cenedril_video", "carthir_supervisor")
         
         return workflow.compile()
 

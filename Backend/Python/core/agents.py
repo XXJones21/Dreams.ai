@@ -18,6 +18,7 @@ from core.imn_utils import (
     write_imn, read_imn, create_imn_structure, validate_imn_structure, get_imn_filelock,
     parse_carthir_response, parse_director_vision_response, parse_narnion_response, create_scene_for_imn
 )
+from core.progress_broker import publish as publish_progress
 from langchain_community.chat_models import ChatLlamaCpp
 
 # Load environment and initialize LLM (if needed)
@@ -29,33 +30,16 @@ load_dotenv()
 import threading
 import os
 
-# Check if we're running in a multi-threaded environment (Flask)
-is_flask_server = threading.active_count() > 1 or os.environ.get('FLASK_RUN_PORT') is not None
+# Use ModelManager to get pre-loaded LLM
+from core.model_manager import ModelManager
 
-# Optimize threads for environment
-if is_flask_server:
-    # Conservative threading for Flask server to avoid contention
-    optimal_threads = min(8, os.cpu_count() // 2)
-    print(f"[GGUF] Detected Flask server environment - using {optimal_threads} threads")
-else:
-    # Aggressive threading for CLI/standalone
-    optimal_threads = min(16, os.cpu_count())
-    print(f"[GGUF] Detected CLI environment - using {optimal_threads} threads")
+def get_llm():
+    """Get the pre-loaded LLM instance from ModelManager"""
+    model_manager = ModelManager.get_instance()
+    return model_manager.get_llm()
 
-llm = ChatLlamaCpp(
-    model_path="models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
-    temperature=0.7,
-    max_tokens=512,  # Further reduced for faster generation
-    top_p=0.9,
-    verbose=False,  # Disable verbose for speed
-    n_ctx=1024,  # Further reduced context window for speed
-    n_threads=optimal_threads,  # Dynamic thread allocation
-    n_batch=1024,  # Larger batch for GPU processing
-    use_mmap=True,  # Memory mapping for faster loading
-    use_mlock=False,  # Disable memory locking to allow OS management
-    f16_kv=True,  # Use half precision for key-value cache to save memory
-    n_gpu_layers=35,  # Offload layers to GPU (try max layers first)
-)
+# Initialize LLM reference (will be loaded when first accessed)
+llm = None
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -64,6 +48,10 @@ class State(TypedDict):
     user_id: str | None
     carthir_memory: dict | None
     pipeline_step: Annotated[str | None, last_value]
+    # Set by the API layer when the request opts into video; gates CenedrilVideoGenerator.
+    generate_video: Annotated[bool | None, last_value]
+    # Set by the API layer when the dream wants cinematic Wan2.2 instead of LTX defaults.
+    video_cinematic: Annotated[bool | None, last_value]
 
 class convert_prompt_to_imn(TypedDict):
     message_type: Literal["story_prompt", "dream_name", "initial_goal", "pitch"]
@@ -193,7 +181,7 @@ def Carthir(state: State):
         }
     ]
 
-    reply = llm.invoke(pitch_prompt)
+    reply = get_llm().invoke(pitch_prompt)
     print(f"\n[DEBUG] Raw LLM reply from Carthir:\n{reply.content}\n")
 
     # Validate LLM response
@@ -297,7 +285,7 @@ def CarthirReview(state: State) -> Command[Literal["carthir_supervisor"]]:
     ]
 
     # Generate director's vision - NO FALLBACKS
-    reply = llm.invoke(director_vision_prompt)
+    reply = get_llm().invoke(director_vision_prompt)
     
     if not reply or not reply.content:
         raise RuntimeError("[CarthirReview] CRITICAL ERROR: LLM failed to generate response - model or configuration issue")
@@ -372,7 +360,7 @@ def Narnion(state: State) -> Command[Literal["carthir_supervisor"]]:
         {"role": "system", "content": "You are Narnion, a master of interactive narrative."},
         {"role": "user", "content": prompt}
     ]
-    reply = llm.invoke(story_outline)
+    reply = get_llm().invoke(story_outline)
     
     # Use centralized, robust JSON parsing
     parsed_scene = parse_narnion_response(reply.content)
@@ -529,7 +517,7 @@ CRITICAL: No explanatory text, no prefixes, just the final prompt.
     # Phase 4: Shot Composition Generation (Concept Art Creation)
     print(f"[Cenedril] 🎨 Generating shot composition from director's brief...")
     
-    reply = llm.invoke(enhancement_request)
+    reply = get_llm().invoke(enhancement_request)
     if not reply or not reply.content:
         raise RuntimeError("[Cenedril] CRITICAL ERROR: LLM failed to generate response - model or prompt issue")
     
@@ -580,6 +568,189 @@ CRITICAL: No explanatory text, no prefixes, just the final prompt.
     return Command(goto="carthir_supervisor")
 
 
+def CenedrilImageGenerator(state: State) -> Command[Literal["carthir_supervisor"]]:
+    """Hands Cenedril's shot composition to the engram_comfy harness for actual image generation.
+
+    Cenedril (above) only authors the prompt; until this node existed the
+    pipeline never invoked image generation. The result is written to
+    post_production.image_generation in the IMN so the API surface and the
+    frontend can resolve an asset URL.
+    """
+    print("[CenedrilImage] Starting image generation via engram_comfy harness")
+
+    dream_id = state.get("id")
+    if not dream_id:
+        raise ValueError("[CenedrilImage] CRITICAL ERROR: No dream ID in state")
+
+    imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+    with get_imn_filelock(imn_file_path):
+        imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        raise FileNotFoundError(f"[CenedrilImage] Cannot read IMN: {imn_file_path}")
+
+    pre = imn_data.get("pre_production") or {}
+    prompt = pre.get("cenedril_shot_composition")
+    if not prompt:
+        raise ValueError("[CenedrilImage] cenedril_shot_composition missing; Cenedril prompt stage failed")
+
+    # Narrative is done; free the LLM's VRAM so ComfyUI's Flux load isn't starved
+    # on the 16 GB GPU. The LLM lazily reloads on the next dream.
+    try:
+        from core.model_manager import ModelManager
+        ModelManager.get_instance().unload_llm()
+    except Exception as err:  # noqa: BLE001 - never block image gen on this
+        print(f"[CenedrilImage] LLM unload skipped: {err}")
+
+    try:
+        from comfy_local_mcp import ComfyImageGenerator
+    except ImportError as err:
+        print(f"[CenedrilImage] comfy_local_mcp not installed, skipping image generation: {err}")
+        publish_progress(dream_id, {"stage": "skipped", "kind": "image", "reason": str(err)})
+        return Command(goto="carthir_supervisor")
+
+    # Default to the proven Flux GGUF workflow at portrait 9:16 (aesthetic north star).
+    image_workflow = "scene_image_flux"
+    publish_progress(dream_id, {"stage": "submit", "kind": "image", "workflow": image_workflow})
+    generator = ComfyImageGenerator(default_workflow=image_workflow)
+    result = generator.generate_image(prompt, workflow=image_workflow, width=768, height=1344)
+
+    if not result:
+        print("[CenedrilImage] Image generation returned no result; recording failure in IMN")
+        imn_data.setdefault("post_production", {})["image_generation"] = {
+            "service": "comfy",
+            "status": "failed",
+            "prompt": prompt,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        publish_progress(dream_id, {"stage": "error", "kind": "image", "message": "generator returned no result"})
+    else:
+        meta = result.get("metadata", {}) or {}
+        imn_data.setdefault("post_production", {})["image_generation"] = {
+            "service": "comfy",
+            "status": "ok",
+            "workflow": meta.get("workflow"),
+            "prompt": prompt,
+            "prompt_id": meta.get("prompt_id"),
+            "seed": meta.get("seed"),
+            "asset_url": meta.get("asset_url"),
+            "filename": result.get("filename"),
+            "filepath": result.get("filepath"),
+            "generated_at": meta.get("generated_at"),
+            "model": meta.get("workflow"),
+        }
+        in_production = imn_data.get("in_production") or []
+        if in_production:
+            in_production[-1]["frame_image"] = meta.get("asset_url") or result.get("filepath")
+        print(f"[CenedrilImage] Asset: {meta.get('asset_url') or result.get('filepath')}")
+        publish_progress(dream_id, {
+            "stage": "completed",
+            "kind": "image",
+            "asset_url": meta.get("asset_url"),
+            "filepath": result.get("filepath"),
+            "prompt_id": meta.get("prompt_id"),
+        })
+
+    with get_imn_filelock(imn_file_path):
+        write_imn(imn_data, os.path.join("..", "Dreams"))
+
+    return Command(goto="carthir_supervisor")
+
+
+def CenedrilVideoGenerator(state: State) -> Command[Literal["carthir_supervisor"]]:
+    """Image-to-video stage. Runs only when state['generate_video'] is True."""
+    if not state.get("generate_video"):
+        print("[CenedrilVideo] generate_video flag not set; skipping")
+        return Command(goto="carthir_supervisor")
+
+    print("[CenedrilVideo] Starting video generation via engram_comfy harness")
+
+    dream_id = state.get("id")
+    if not dream_id:
+        raise ValueError("[CenedrilVideo] CRITICAL ERROR: No dream ID in state")
+    imn_file_path = os.path.join("..", "Dreams", f"{dream_id}.imn")
+    with get_imn_filelock(imn_file_path):
+        imn_data = read_imn(imn_file_path)
+    if imn_data is None:
+        raise FileNotFoundError(f"[CenedrilVideo] Cannot read IMN: {imn_file_path}")
+
+    image_block = (imn_data.get("post_production") or {}).get("image_generation") or {}
+    image_input = image_block.get("asset_url") or image_block.get("filepath")
+    prompt = (imn_data.get("pre_production") or {}).get("cenedril_shot_composition")
+    if not image_input or not prompt:
+        print("[CenedrilVideo] Missing image_input or prompt; skipping video stage")
+        return Command(goto="carthir_supervisor")
+
+    try:
+        from comfy_local_mcp import ComfyVideoGenerator
+    except ImportError as err:
+        print(f"[CenedrilVideo] comfy_local_mcp not installed, skipping: {err}")
+        publish_progress(dream_id, {"stage": "skipped", "kind": "video", "reason": str(err)})
+        return Command(goto="carthir_supervisor")
+
+    # scene_video_ltx2 = LTX-2.3 GGUF two-stage T2V (portrait 9:16), verified on the 4080.
+    # It is text-to-video (driven by the Cenedril shot prompt); image_input is passed but
+    # harmlessly ignored since this workflow has no I2V override. Wan2.2 stays the cinematic path.
+    workflow = "scene_video_wan22" if state.get("video_cinematic") else "scene_video_ltx2"
+
+    # First-person POV is a prompt-engineering lever for LTX-2.3 (it defaults to 3rd-person
+    # otherwise). Prepend a POV preamble + pass strict negatives so every scene matches the
+    # dark/dreamlike first-person Aesthetic North Star. Tested: this reliably locks POV and
+    # eliminates stray figures. See CLAUDE.md "Aesthetic North Star".
+    POV_PREAMBLE = (
+        "First-person POV, head-mounted camera, the camera is my own eyes, my hands may "
+        "drift into the lower frame. No other person visible. "
+    )
+    POV_NEGATIVE = (
+        "other people, other person, figures, silhouettes, humans, crowd, third person, "
+        "full body, blurry, low quality, still frame, watermark, text, subtitles, cartoon, deformed"
+    )
+    video_prompt = POV_PREAMBLE + prompt
+
+    publish_progress(dream_id, {"stage": "submit", "kind": "video", "workflow": workflow})
+    generator = ComfyVideoGenerator(default_workflow=workflow)
+    result = generator.generate_video(
+        video_prompt, image_input=image_input, workflow=workflow,
+        negative_prompt=POV_NEGATIVE,
+    )
+
+    if not result:
+        imn_data.setdefault("post_production", {})["video_generation"] = {
+            "service": "comfy_video",
+            "status": "failed",
+            "workflow": workflow,
+            "prompt": video_prompt,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        publish_progress(dream_id, {"stage": "error", "kind": "video", "message": "generator returned no result"})
+    else:
+        meta = result.get("metadata", {}) or {}
+        imn_data.setdefault("post_production", {})["video_generation"] = {
+            "service": "comfy_video",
+            "status": "ok",
+            "workflow": workflow,
+            "prompt": video_prompt,
+            "image_input": image_input,
+            "prompt_id": meta.get("prompt_id"),
+            "asset_url": meta.get("asset_url"),
+            "filename": result.get("filename"),
+            "filepath": result.get("filepath"),
+            "generated_at": meta.get("generated_at"),
+        }
+        print(f"[CenedrilVideo] Asset: {meta.get('asset_url') or result.get('filepath')}")
+        publish_progress(dream_id, {
+            "stage": "completed",
+            "kind": "video",
+            "asset_url": meta.get("asset_url"),
+            "filepath": result.get("filepath"),
+            "prompt_id": meta.get("prompt_id"),
+        })
+
+    with get_imn_filelock(imn_file_path):
+        write_imn(imn_data, os.path.join("..", "Dreams"))
+
+    return Command(goto="carthir_supervisor")
+
+
 def print_imn_agent(state: State):
     """
     Reads and prints the .imn file using the filename from the state.
@@ -599,7 +770,7 @@ def print_imn_agent(state: State):
     return state
 
 
-def CarthirSupervisor(state: State) -> Command[Literal["convert_prompt", "narnion", "carthir_review", "cenedril", "__end__"]]:
+def CarthirSupervisor(state: State) -> Command[Literal["convert_prompt", "narnion", "carthir_review", "cenedril", "cenedril_image", "cenedril_video", "__end__"]]:
     """
     Carthir Supervisor: Manages the pipeline flow and routing decisions.
     Combines original Carthir story generation with supervisor routing logic.
@@ -652,7 +823,24 @@ def CarthirSupervisor(state: State) -> Command[Literal["convert_prompt", "narnio
         )
     
     elif pipeline_step == "cenedril_complete":
-        print("[CarthirSupervisor] 🎨 All agents completed, finishing pipeline")
+        print("[CarthirSupervisor] 🎨 Cenedril prompt ready, routing to image generator (engram_comfy)")
+        return Command(
+            goto="cenedril_image",
+            update={"pipeline_step": "cenedril_image_complete"},
+        )
+
+    elif pipeline_step == "cenedril_image_complete":
+        if state.get("generate_video"):
+            print("[CarthirSupervisor] 🎬 Image ready, routing to video generator")
+            return Command(
+                goto="cenedril_video",
+                update={"pipeline_step": "cenedril_video_complete"},
+            )
+        print("[CarthirSupervisor] ✅ Image generated, finishing pipeline (no video requested)")
+        return Command(goto="__end__")
+
+    elif pipeline_step == "cenedril_video_complete":
+        print("[CarthirSupervisor] ✅ Video generated, finishing pipeline")
         return Command(goto="__end__")
     
     else:

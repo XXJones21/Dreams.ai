@@ -15,4 +15,7 @@ llama-cpp-python
 filelock
 pytz
 
+# Shared local ComfyUI client + MCP (ComfyLocalMCP). Used by CenedrilImage/Video agents.
+-e D:/Tools/ComfyLocalMCP
+
 

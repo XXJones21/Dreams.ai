@@ -46,24 +46,41 @@ The system automatically detects the runtime environment and optimizes according
 
 ## 🧪 Test Suite & Quality Assurance
 
-Dreams.ai includes a comprehensive testing infrastructure designed for both developers and users:
+> **Looking for the end-to-end "how do I run this?" guide?** See **[TESTING.md](TESTING.md)** — covers prerequisites (ComfyUI bootstrap), the GUI flow, and the FastAPI + React flow, with troubleshooting.
+
+Dreams.ai includes a comprehensive testing infrastructure designed for both developers and users.
+
+### Prerequisite: ComfyUI on `127.0.0.1:8188`
+
+As of the May 2026 refactor, image and video generation runs through the shared **engram_comfy** harness instead of in-process diffusers. You need a local ComfyUI running with SDXL-Turbo + LTX-Video models before any test will produce visuals.
+
+One-time bootstrap: **`D:\Tools\personalAI\Engram\Resources\engram_comfy\bootstrap\README.md`**.
 
 ### Quick Test Suite Access
 
-**🎯 Recommended: Use Launcher Scripts**
-```bash
+**🎯 Recommended: GUI launcher**
+```powershell
 # From project root (Windows)
+.\start_gui_test.ps1        # PowerShell launcher
 start_gui_test.bat          # Windows Batch launcher
-start_gui_test.ps1          # PowerShell launcher
-
-# From Backend/Python directory
-start_gui_test.bat          # Local batch launcher
-start_gui_test.ps1          # Local PowerShell launcher
 ```
 
-**Manual Launch**
-```bash
-cd Backend/Python
+Launches `test_gui.py` (Flask on :5000). Sets `COMFY_TRANSPORT=direct` so the pipeline talks to your local ComfyUI. Open `http://localhost:5000`, paste a prompt, click run.
+
+**Full FastAPI + React flow** (includes video stage and live WebSocket progress)
+```powershell
+# Shell 1 — ComfyUI (see TESTING.md for the exact launch line)
+# Shell 2 — Dreams.ai backend
+cd Backend\Python
+.venv\Scripts\activate
+uvicorn api_server:app --host 127.0.0.1 --port 8000 --reload
+# Shell 3 — Vite
+npm run dev
+```
+
+**Manual Flask launch**
+```powershell
+cd Backend\Python
 python test_gui.py
 ```
 
@@ -288,29 +305,42 @@ Place your GGUF model file in `Backend/Python/models/`:
 Backend/Python/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
 ```
 
-### 5. Start the Services
-```bash
-# Terminal 1: Start the backend
-cd Backend/Python
-python api_server.py
+### 5. ComfyUI bootstrap (one-time)
 
-# Terminal 2: Start the frontend
+Image/video generation lives in a local ComfyUI on `127.0.0.1:8188`. Follow:
+
+> **`D:\Tools\personalAI\Engram\Resources\engram_comfy\bootstrap\README.md`**
+
+This updates your existing portable ComfyUI install, drops in `extra_model_paths.yaml`, downloads the three single-file checkpoints (SDXL-Turbo, LTX-Video, t5xxl), and installs the `ComfyUI-LTXVideo` custom node.
+
+### 6. Start the Services
+```powershell
+# Shell 1: ComfyUI (see bootstrap README for the exact launch line)
+
+# Shell 2: Dreams.ai backend
+cd Backend\Python
+.venv\Scripts\activate
+uvicorn api_server:app --host 127.0.0.1 --port 8000 --reload
+
+# Shell 3: Frontend
 npm run dev
 ```
 
-### 6. Verify Installation
-- Backend should be running on `http://localhost:8000`
-- Frontend should be running on `http://localhost:5173`
-- Check the API docs at `http://localhost:8000/docs`
+### 7. Verify Installation
+- ComfyUI: `http://127.0.0.1:8188` (drag in `engram_comfy/workflows/scene_image_sdxl_turbo.json`, click Queue)
+- Backend: `http://localhost:8000/docs`
+- Frontend: `http://localhost:5173`
 
-### 7. Run Test Suite
-```bash
-# Quick test with GUI interface
-start_gui_test.bat  # or start_gui_test.ps1
+### 8. Run Test Suite
 
-# Or run comprehensive tests
-cd Backend/Python
-python test_pipeline.py
+See **[TESTING.md](TESTING.md)** for the full guide. TL;DR:
+
+```powershell
+.\start_gui_test.ps1                       # GUI flow on :5000 (your normal path)
+# or fire one request against the FastAPI backend:
+curl.exe -X POST http://localhost:8000/api/dream `
+  -H "content-type: application/json" `
+  -d '{\"prompt\":\"A lighthouse keeper finds a message in a bottle\"}'
 ```
 
 ---

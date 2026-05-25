@@ -19,6 +19,11 @@ import logging
 # Add the current directory to the path so we can import from main
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Match api_server.py: default to talking to a local ComfyUI on :8188 via
+# engram_comfy. Override with COMFY_TRANSPORT=rust + COMFY_BASE_URL when the
+# Rust supervisor is in use. The pipeline's CenedrilImage/Video agents read this.
+os.environ.setdefault("COMFY_TRANSPORT", "direct")
+
 from core.pipeline_instance import PipelineInstance
 from core.imn_utils import validate_imn_structure, read_imn, create_imn_structure, write_imn, get_imn_filelock
 from core.image_generator import generate_dream_image
@@ -695,8 +700,23 @@ def get_debug_info():
     global debug_info
     return jsonify(debug_info)
 
+@app.route('/api/model-status')
+def get_model_status():
+    """Get model loading status"""
+    from core.model_manager import ModelManager
+    model_manager = ModelManager.get_instance()
+    return jsonify(model_manager.get_status())
+
 if __name__ == '__main__':
     logger.info("Starting Dreams.ai GUI Test Suite...")
+    
+    # Pre-load all models at startup
+    logger.info("🔄 Pre-loading models at startup...")
+    from core.model_manager import ModelManager
+    model_manager = ModelManager.get_instance()
+    model_manager.load_all_models()
+    logger.info("✅ All models loaded and ready!")
+    
     logger.info("Server will be available at: http://localhost:5000")
     
     # Disable Flask's default logging to avoid Windows console issues

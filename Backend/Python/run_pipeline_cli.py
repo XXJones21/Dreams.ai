@@ -17,6 +17,13 @@ def main():
     parser.add_argument('--user_id', type=str, default="cli-user", help='User ID for the dream')
     args = parser.parse_args()
 
+    # Pre-load models before running pipeline
+    # print("🔄 Loading models...")
+    # from core.model_manager import ModelManager
+    # model_manager = ModelManager.get_instance()
+    # model_manager.load_all_models()
+    # print("✅ Models loaded, running pipeline...")
+
     print(f"Running pipeline test with prompt: {args.prompt}")
     start_time = time.time()
     dream_card = run_pipeline_test(args.prompt, args.user_id)

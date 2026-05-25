@@ -208,7 +208,11 @@ class SDXLTurboGenerator(ImageGenerator):
         self.service_name = "sdxl_turbo"
         self.pipeline = None
         self.is_loaded = False
-        self._setup_pipeline()
+        # Use ModelManager to get pre-loaded pipeline
+        from core.model_manager import ModelManager
+        model_manager = ModelManager.get_instance()
+        self.pipeline = model_manager.get_sdxl_turbo()
+        self.is_loaded = self.pipeline is not None
     
     def _setup_pipeline(self):
         """Initialize SDXL Turbo pipeline"""
@@ -361,7 +365,11 @@ class SDXLLoRAGenerator(ImageGenerator):
         self.pipeline = None
         self.is_loaded = False
         self.lora_loaded = False
-        self._setup_pipeline()
+        # Use ModelManager to get pre-loaded pipeline
+        from core.model_manager import ModelManager
+        model_manager = ModelManager.get_instance()
+        self.pipeline = model_manager.get_sdxl_lora()
+        self.is_loaded = self.pipeline is not None
     
     def _setup_pipeline(self):
         """Initialize SDXL pipeline with LoRA support"""
