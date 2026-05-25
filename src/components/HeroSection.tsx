@@ -4,6 +4,7 @@ import ArtDecoColumns from './ArtDecoColumns';
 import { ChevronDown, Play, Sparkles, Zap, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import AuthModal from './auth/AuthModal';
+import { apiUrl } from '../lib/api';
 // If '@supabase/supabase-js' types are not available, provide fallback types:
 type SessionFallback = { user: any } | null;
 type AuthChangeEventFallback = string;
@@ -80,7 +81,7 @@ const HeroSection: React.FC = () => {
     setDreamResult(null);
     setShowPopup(true);
     try {
-      const response = await fetch("http://localhost:8000/api/dream", {
+      const response = await fetch(apiUrl("/api/dream"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: dreamPrompt }),
