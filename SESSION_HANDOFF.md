@@ -1,43 +1,50 @@
-# Session Handoff — 2026-05-24
+# Session Handoff — 2026-05-25
 
 > Resume doc for Dreams.ai. Read `CLAUDE.md` first for durable project context; this is "what just happened / do this next."
 
 ## Headline
-**Local video generation now works.** LTX-2.3 GGUF text-to-video produces coherent, on-prompt, portrait 9:16 clips on the 16 GB RTX 4080 — after a long noise-debugging saga, root-caused and fixed. Productionized into ComfyLocalMCP (`scene_video_ltx2`) and wired as Dreams' default video workflow.
+**The full linear E2E runs on a phone, and the video stage is now true image-to-video.** Prompt → narrative → first-person Flux image → LTX-2.3 GGUF I2V video (start frame = that image) → plays portrait 9:16 on the phone over the tunnel. Image↔video drift is much reduced (motion-only video prompt + gentle camera motion + I2V strength 0.9). The tap-to-pause interactive player shell (E2E #2 Step 2 frontend) is built against a stubbed `/continue`.
 
 ## Status
-- **Branch:** `main` — still uncommitted (video work + earlier ComfyLocalMCP productization not yet committed).
-- **GPU stack:** ✅ image (Flux Q4 GGUF, ~55 s) and ✅ video (LTX-2.3 GGUF) both verified end-to-end.
-- **ComfyUI:** shared with Valinor on `:8188`; ~15.8 GB free at rest. One job at a time; restarts are the user's call.
+- **Worktrees / branches:**
+  - `D:\Dreams.ai` → `main` (durable docs; feature branches **not yet merged**).
+  - `D:\Dreams.ai-backend` → `feat/e2e-linear-pipeline` @ `8eaa1f3` (I2V graft + anti-drift agent fixes).
+  - `D:\Dreams.ai-frontend` → `feat/mobile-redesign` @ `06aebee` (mobile UI + interactive player).
+  - `D:\Tools\ComfyLocalMCP` → `main` (workflow lives here; frame bump uncommitted — see below).
+- **GPU stack:** ✅ image (Flux Q4 GGUF) and ✅ video (LTX-2.3 GGUF **I2V**) verified end-to-end through the real Dreams pipeline, on the phone.
+- **ComfyUI:** shared with Valinor on `:8188`; ~14.8 GB free at rest. One job at a time; restarts are the user's call.
 
 ## What's Done (this session)
-- **Diagnosed & fixed the video noise (two root causes):**
-  1. The entire `ComfyUI-LTXVideo` pack (76 nodes) silently failed to import — `pyramid_blending.py` imports `pad` from `kornia.geometry.transform.pyramid`, absent in kornia 0.8.3 (latest PyPI; pack targets kornia main). **Shim applied:** `pad = F.pad` in that file (overwritten on `git pull` — upstream PR pending).
-  2. **The actual noise cause:** `DualCLIPLoaderGGUF` clip2 must be `ltx-2.3-22b-dev_embeddings_connectors.safetensors` (the learned LTX connector), **NOT** `ltx-2.3_text_projection_bf16.safetensors`. clip1 = Gemma GGUF. Found by extracting the workflow embedded in `unsloth/LTX-2.3-GGUF`'s `unsloth_flowers.mp4`.
-- **Productionized video (ComfyLocalMCP @ `D:\Tools\ComfyLocalMCP`):**
-  - `comfy_local_mcp/workflows/scene_video_ltx2.json` — proven LTX-2.3 GGUF two-stage T2V, portrait 9:16, parameterized (prompt/negative/seed/width/height/frames/frame_rate + 7 `ltx2_*` model roles).
-  - `config.py` — added 7 `ltx2_*` MODEL_ROLES.
-  - `server.py` — `recommend_workflow` profile for `scene_video_ltx2`.
-  - `workflows/__init__.py` — `load_workflow` now ignores undeclared logical overrides (so passing `image_input` to a T2V workflow no longer crashes; I2V workflows unaffected). Tested both paths.
-- **Dreams:** `core/agents.py` `CenedrilVideoGenerator` default video workflow → `scene_video_ltx2`.
-- **Timing measured:** ~5 s clip (121 frames) ≈ 263 s; ~10 s clip (241 frames) ≈ 457 s (7.6 min). ~45 s compute per second of video. `CreateVideo`→`SaveVideo` writes the mp4 natively.
-- **Docs:** updated this repo's `CLAUDE.md`, ComfyLocalMCP `README.md`, Engram `Projects/dreams-ai/claude.md`; memory file `ltx23-gguf-video-works`.
+- **T2V → I2V (Step 1).** `scene_video_ltx2.json` grafted an image-conditioning branch (`VHS_LoadImagePath` → `LTXVPreprocess` → `LTXVImgToVideoConditionOnly`, nodes 60–63) onto the proven unsloth GGUF graph; the generated Flux frame is now the video start frame. Overrides added: `image_input`, `i2v_strength`, `i2v_bypass`. Strength tuned 0.7 → **0.9**. (`comfy_local_mcp` `281cae1`, `d7555cb`.)
+- **Anti-drift agent fixes** (`core/agents.py`, backend `e54cee7`, `a344e06`, `8eaa1f3`):
+  - `CenedrilVideoGenerator` now feeds the **local frame path** (`image_block["filepath"]`, not `asset_url`, which `VHS_LoadImagePath` can't read).
+  - Video prompt = **POV preamble + motion-only** `cenedril_camera_motion` (no longer re-describes the scene the frame already shows).
+  - Cenedril **image** prompt: first-person POV enforced (camera = eyes; forbid figures/bodies/silhouettes/from-behind), LLM preamble + stray quotes stripped.
+  - `cenedril_camera_motion` = a **second LLM call** for *gentle, observe-only* motion (forbids lurch/shake/spin/warp/morph/glitch/blur — the big drift driver).
+  - Cenedril strict perspective/word-count checks **softened from hard crash → warning** (a flaky validation no longer blocks the image stage).
+- **Mobile-first frontend** (frontend worktree): OLED theme + primitives, env-driven `API_BASE_URL`, Vite `/api` + `/comfy` proxies, `mediaUrl` rewrite (`127.0.0.1:8188` → same-origin so the phone loads assets), async create + **progressive display** (poll `.imn`, seed media, WS heartbeat), refreshed `/create` example prompts.
+- **Interactive player (Step 2 frontend, `b5e9f15`):** `InteractivePlayerPage` — fullscreen-on-play, tap-to-pause, `<canvas>` frame capture + normalized tap (x,y), scene `actions` as chips → POST to a **stubbed** `/continue`.
+- **Robustness:** async `POST /api/dream` (background thread + single-flight 409) to dodge the Cloudflare 524 tunnel timeout; WS handler catches `queue.Empty` → heartbeat; `imn_to_dreamcard` reads title/story from `pre_production` + exposes media URLs.
+- **Duration bump (uncommitted, this turn):** `scene_video_ltx2.json` node 10 `frames` 121 → **241** (~10 s) per the user's call; description carries a revert note. **Untested with I2V on 16 GB — the ×2 upscale peak may OOM; drop back to 121 if it does.**
+- **Docs:** `interactive-video-segmentation-pipeline.pdf` + `docs/interactive-video-pipeline-design.md` + `docs/frontend-redesign-plan.md` added; this `CLAUDE.md` + `SESSION_HANDOFF.md` updated.
 
 ## What's Pending (next, in priority order)
-1. **Speed/quality adjustments** (the user's stated next focus): single-stage variant (skip upscale/refine — roughly halves time), quant tradeoffs (Q3 vs Q4_K_M unet), fewer frames, and locking **first-person POV** (currently needs explicit GoPro/own-hands/"no other person" cuing — defaults to 3rd person).
-2. **Full Dreams E2E run** with `generate_video=True` to confirm `post_production.video_generation` is written (narrative → image → video). Heavy (LLM + image + video, VRAM contention) — run deliberately.
-3. **Commit** the video + ComfyLocalMCP work (still uncommitted on `main`).
-4. **Upstream PR** to Lightricks/ComfyUI-LTXVideo for the `pad` import (draft in chat).
-5. Earlier deferred image levers: t5 fp8 swap, Flux Krea, `state["aspect_ratio"]`.
+1. **Confirm the 10 s (241-frame) run** completes without OOM on the phone test, and judge full-clip drift. If it OOMs → revert node 10 to 121 and commit at 5 s.
+2. **Step 2 backend (`#30`):** `POST /api/dream/{id}/continue` (multipart paused-frame PNG + action + tap x/y → I2V stage with paused frame as `image_input`, action as the motion prompt → append a scene, stream over WS, single-flight guarded) + add `scene_context`/`actions` to the `imn_to_dreamcard` GET projection. Integrate the stubbed frontend `continueDream` against it.
+3. **Merge to `main`:** fold `feat/e2e-linear-pipeline` + `feat/mobile-redesign` (and commit the ComfyLocalMCP frame bump) back to `main` to re-sync, as last round.
+4. **Agent-parse robustness:** retry/tolerance for transient Narnion/director parse failures so one flaky LLM call doesn't crash the whole dream.
+5. **LTX-Director spike** (interaction/continuity milestone): install the `LTXDirector` node + checkpoint, graft into the GGUF graph for stronger directed motion / scene continuity — the real lever for residual drift the (OOMing) stage-2 conditioning can't provide here.
+6. Earlier deferred image levers: t5 fp8 swap, Flux Krea, first-class `state["aspect_ratio"]`.
 
 ## Gotchas for Next Session
-- **The connector is the whole ballgame for LTX-2.3 GGUF text:** clip2 = connectors file, not text_projection. Wrong clip2 → pure noise.
-- **The kornia `pad` shim is required** for ANY LTX-2.3 advanced node to load; it's overwritten by node-pack updates.
-- **LTX-2.3 fp8 checkpoint is NOT viable here** (needs 32 GB VRAM; ~0 free RAM) — GGUF is the only fit on this box.
-- **Shared ComfyUI/GPU with Valinor** — free the GPU before heavy video runs; don't restart without asking.
-- Plus the prior image gotchas (Flux 16-ch VAE; `update_*dependencies.bat` breaks CUDA torch) still apply — see `CLAUDE.md`.
+- **I2V needs the frame PATH, not the URL** — `VHS_LoadImagePath` reads from disk; `asset_url` (`http://127.0.0.1:8188/...`) won't load.
+- **The video prompt must drive MOTION, not re-describe the scene** — the start frame sets the scene; re-describing it fights the conditioning and causes drift. Keep motion gentle (no lurch/shake/blur).
+- **Stage-2 latent conditioning OOMs the 16 GB card** at the ×2 upscale peak — don't re-add it; that's why residual end-drift remains and why LTX-Director is the path.
+- **241 frames (10 s) + I2V + ×2 upscale is near the VRAM ceiling** — watch for OOM; node 10 `frames` reverts to 121 for 5 s.
+- **The connector is still the whole ballgame for LTX-2.3 GGUF text:** `DualCLIPLoaderGGUF` clip2 = `…embeddings_connectors.safetensors`, NOT text_projection. Plus the kornia `pad = F.pad` shim (overwritten on node-pack update). See `CLAUDE.md`.
+- **Shared ComfyUI/GPU with Valinor** — one heavy job at a time; don't restart/free without asking. Don't run authenticated tunnels.
 
 ## Reference Material
-- **Working LTX-2.3 recipe + gotchas:** memory `ltx23-gguf-video-works`; `scene_video_ltx2.json` `_meta.notes`; Engram `Projects/dreams-ai/claude.md` → "Local Inference — VIDEO Verified".
-- **Engram project context:** `D:\Tools\Valinor\Engram\Projects\dreams-ai\claude.md` (also at `D:\Tools\personalAI\Engram\...`, linked).
+- **Working LTX-2.3 recipe + gotchas:** memory `ltx23-gguf-video-works`; `scene_video_ltx2.json` `_meta.notes`; Engram `Projects/dreams-ai/claude.md`.
+- **Interactive design doc:** `docs/interactive-video-segmentation-pipeline.pdf` + `docs/interactive-video-pipeline-design.md`.
 - **Aesthetic North Star:** The Archive In Between, Gloomstomper/@voidstomper (portrait 9:16 first-person dark/dreamlike shorts).

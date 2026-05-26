@@ -284,3 +284,6 @@ Thumbs.db
 # Temporary Directories
 tmp/
 temp/
+
+# Locally generated ComfyUI assets (COMFY_ASSETS_DIR) — large mp4/png, never commit
+generated_assets/
